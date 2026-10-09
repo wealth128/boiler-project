@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Schema;
 
 /*
  * Starter-kit features that conflict with the plan stay off: no sign-up,
- * no reset by email, no email verification, no two-factor, no passkeys.
+ * no email, no reset by email, no email verification, no two-factor, no passkeys.
  * Admin / System Admin reset passwords (planning/rbac.md).
  */
 
@@ -38,8 +38,8 @@ it('answers the removed pages with 404', function (string $uri) {
     '/.well-known/passkey-endpoints',
 ]);
 
-it('does not send a signed-in user without email to a verify-email page', function () {
-    $this->actingAs(User::factory()->create(['email' => null]))
+it('does not send a signed-in user to a verify-email page', function () {
+    $this->actingAs(User::factory()->create())
         ->get('/encode')
         ->assertOk();
 
@@ -47,7 +47,8 @@ it('does not send a signed-in user without email to a verify-email page', functi
 });
 
 it('has no columns or tables for the removed features', function () {
-    expect(Schema::hasColumn('users', 'email_verified_at'))->toBeFalse()
+    expect(Schema::hasColumn('users', 'email'))->toBeFalse()
+        ->and(Schema::hasColumn('users', 'email_verified_at'))->toBeFalse()
         ->and(Schema::hasColumn('users', 'two_factor_secret'))->toBeFalse()
         ->and(Schema::hasTable('passkeys'))->toBeFalse()
         ->and(Schema::hasTable('password_reset_tokens'))->toBeFalse();

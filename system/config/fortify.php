@@ -43,8 +43,11 @@ return [
     |
     */
 
-    'username' => 'email',
+    // Login is by username (CLAUDE.md). The check itself, with the
+    // 5-wrong-password lock, is App\Actions\Fortify\AuthenticateUser.
+    'username' => 'username',
 
+    // Only used by reset-by-email, which is turned off below.
     'email' => 'email',
 
     /*

@@ -50,7 +50,7 @@ class HandleInertiaRequests extends Middleware
 
     /**
      * Only what the menu and top bar need. The rest of the user record
-     * (lock counter, delete info, email...) never reaches the browser.
+     * (lock counter, delete info...) never reaches the browser.
      *
      * @return array{id: int, name: string, username: string, role: string, office: string}|null
      */

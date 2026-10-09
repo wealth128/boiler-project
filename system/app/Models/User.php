@@ -16,13 +16,13 @@ use Illuminate\Support\Carbon;
 
 /**
  * A system account. Accounts are created by Admin or System Admin only.
- * No email verification, no password reset by email, no two-factor and no
- * passkeys: Admin / System Admin reset passwords (planning/rbac.md).
+ * Login is by username; there is no email. No password reset by email, no
+ * two-factor and no passkeys: Admin / System Admin reset passwords
+ * (planning/rbac.md). The login check and lock: Actions/Fortify/AuthenticateUser.
  *
  * @property int $id
  * @property string $name
  * @property string $username
- * @property string|null $email
  * @property string $password
  * @property Role $role
  * @property Office $office
@@ -33,7 +33,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['name', 'username', 'email', 'password', 'role', 'office', 'is_active'])]
+#[Fillable(['name', 'username', 'password', 'role', 'office', 'is_active'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {

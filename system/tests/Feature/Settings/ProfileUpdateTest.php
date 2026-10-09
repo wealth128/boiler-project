@@ -47,15 +47,14 @@ class ProfileUpdateTest extends TestCase
             ->assertSessionHasErrors('name');
     }
 
-    public function test_profile_update_ignores_email_username_and_role()
+    public function test_profile_update_ignores_username_and_role()
     {
-        $user = User::factory()->create(['email' => null]);
+        $user = User::factory()->create();
         $username = $user->username;
 
         $this->actingAs($user)
             ->patch(route('profile.update'), [
                 'name' => 'Juan Dela Cruz',
-                'email' => 'someone@example.com',
                 'username' => 'hacker',
                 'role' => 'admin',
             ])
@@ -63,7 +62,6 @@ class ProfileUpdateTest extends TestCase
 
         $user->refresh();
 
-        $this->assertNull($user->email);
         $this->assertSame($username, $user->username);
         $this->assertSame('encoder', $user->role->value);
     }

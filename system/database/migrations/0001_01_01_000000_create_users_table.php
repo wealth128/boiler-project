@@ -10,8 +10,8 @@ return new class extends Migration
      * Run the migrations.
      *
      * Extended from the starter kit (planning/database-schema.md, "users").
-     * Login is by username. `email` stays only because the starter kit's
-     * Fortify login still uses it; it becomes optional and is reviewed in Step 3.
+     * Login is by username. `email` came with the starter kit and is
+     * dropped by 2026_10_09_000001_drop_email_from_users_table (Step 3).
      * No email verification and no password reset by email, so there is no
      * `email_verified_at` column and no `password_reset_tokens` table.
      */

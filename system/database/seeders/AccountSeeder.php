@@ -58,7 +58,6 @@ class AccountSeeder extends Seeder
         User::create([
             'name' => $name,
             'username' => $username,
-            'email' => null,
             'password' => $password, // hashed by the model cast
             'role' => $role,
             'office' => $office,

@@ -15,10 +15,10 @@ class SecurityTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_password_page_is_displayed_without_email_or_extra_confirmation()
+    public function test_password_page_is_displayed_without_extra_confirmation()
     {
-        // Seeded accounts have no email. They must reach this page directly.
-        $user = User::factory()->create(['email' => null]);
+        // Accounts have no email. They must reach this page directly.
+        $user = User::factory()->create();
 
         $this->actingAs($user)
             ->get(route('security.edit'))
@@ -31,9 +31,9 @@ class SecurityTest extends TestCase
             );
     }
 
-    public function test_appearance_page_opens_for_a_user_without_email()
+    public function test_appearance_page_opens()
     {
-        $this->actingAs(User::factory()->create(['email' => null]))
+        $this->actingAs(User::factory()->create())
             ->get(route('appearance.edit'))
             ->assertOk();
     }

@@ -44,9 +44,8 @@ export type User = Timestamps &
     Trashable & {
         id: number;
         name: string;
+        /** Login name, lowercase. There is no email. */
         username: string;
-        /** Kept only for starter-kit compatibility. Login is by username. */
-        email: string | null;
         role: Role;
         office: Office;
         is_active: boolean;

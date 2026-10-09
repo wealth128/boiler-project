@@ -8,6 +8,7 @@ Features: `encode`, `records`, `reports`, `lists` (dropdown lists at /settings/l
 
 | Folder                        | Global or feature | What goes there                                                                  |
 | ----------------------------- | ----------------- | -------------------------------------------------------------------------------- |
+| `Actions/Fortify/`            | Login             | `AuthenticateUser`: username login, 5-wrong-password lock, login audit entries   |
 | `Enums/`                      | Global            | Fixed value lists: Role, Office, Category, Sex, BackupStatus                     |
 | `Models/`                     | Global            | One model per table. `Models/Concerns/MovesToTrash` holds the soft-delete logic. |
 | `Services/`                   | Global            | Shared logic: AuditLogger, ReportBuilder, TrashService, BackupService            |
@@ -52,4 +53,4 @@ Features: `encode`, `records`, `reports`, `lists` (dropdown lists at /settings/l
 
 ## Starter kit leftovers
 
-`components/` (top level, outside `ui/` and `shared/`), `layouts/settings/`, and `pages/auth/` and `pages/settings/` come from the starter kit. They cover the login, confirm-password, profile (name only), change-password and appearance screens. Email verification, reset by email, two-factor and passkeys were removed. Step 3 (Login) reworks them. Don't add new code there.
+`components/` (top level, outside `ui/` and `shared/`), `layouts/settings/`, and `pages/auth/` and `pages/settings/` come from the starter kit. They cover the login, confirm-password, profile (name only), change-password and appearance screens. Sign-up, email, email verification, reset by email, two-factor and passkeys were removed. The login page was reworked in Step 3 (username, prototype style). Don't add new code there.

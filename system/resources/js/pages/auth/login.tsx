@@ -1,8 +1,6 @@
 import { Form, Head } from '@inertiajs/react';
-import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
@@ -12,87 +10,89 @@ type Props = {
     status?: string;
 };
 
-// No "Forgot password" link: Admin or System Admin resets passwords
-// (planning/rbac.md). The email field becomes Username in Step 3.
+// Same field label style as the prototype's login panel.
+const labelClass = 'text-xs font-semibold tracking-wide text-muted-foreground';
+
+/**
+ * Login by username (prototype/prototype.html, "Login"). The server sends
+ * every refusal as the "username" error: wrong password with the attempts
+ * left, locked, or deactivated (app/Actions/Fortify/AuthenticateUser.php).
+ *
+ * No sign-up and no "Forgot password": Admin or System Admin creates
+ * accounts and resets passwords (planning/rbac.md).
+ */
 export default function Login({ status }: Props) {
     return (
         <>
             <Head title="Log in" />
 
+            {status && <p className="text-sm font-medium text-ok">{status}</p>}
+
             <Form
                 {...store.form()}
                 resetOnSuccess={['password']}
-                className="flex flex-col gap-6"
+                resetOnError={['password']}
+                className="grid gap-3.5"
             >
                 {({ processing, errors }) => (
                     <>
-                        <div className="grid gap-6">
-                            <div className="grid gap-2">
-                                <Label htmlFor="email">Email address</Label>
-                                <Input
-                                    id="email"
-                                    type="email"
-                                    name="email"
-                                    required
-                                    autoFocus
-                                    tabIndex={1}
-                                    autoComplete="email"
-                                    placeholder="email@example.com"
-                                />
-                                <InputError message={errors.email} />
-                            </div>
+                        <div className="grid gap-1">
+                            <Label htmlFor="username" className={labelClass}>
+                                Username
+                            </Label>
+                            <Input
+                                id="username"
+                                type="text"
+                                name="username"
+                                required
+                                autoFocus
+                                autoComplete="username"
+                                autoCapitalize="none"
+                                spellCheck={false}
+                                aria-invalid={!!errors.username}
+                                aria-describedby="login-error"
+                            />
+                        </div>
 
-                            <div className="grid gap-2">
-                                <Label htmlFor="password">Password</Label>
-                                <PasswordInput
-                                    id="password"
-                                    name="password"
-                                    required
-                                    tabIndex={2}
-                                    autoComplete="current-password"
-                                    placeholder="Password"
-                                />
-                                <InputError message={errors.password} />
-                            </div>
-
-                            <div className="flex items-center space-x-3">
-                                <Checkbox
-                                    id="remember"
-                                    name="remember"
-                                    tabIndex={3}
-                                />
-                                <Label htmlFor="remember">Remember me</Label>
-                            </div>
-
-                            <Button
-                                type="submit"
-                                className="mt-4 w-full"
-                                tabIndex={4}
-                                disabled={processing}
-                                data-test="login-button"
+                        <div className="grid gap-1">
+                            <Label htmlFor="password" className={labelClass}>
+                                Password
+                            </Label>
+                            <PasswordInput
+                                id="password"
+                                name="password"
+                                required
+                                autoComplete="current-password"
+                                aria-invalid={!!errors.username}
+                                aria-describedby="login-error"
+                            />
+                            <p
+                                id="login-error"
+                                role="alert"
+                                className="text-xs text-bad empty:hidden"
+                                data-test="login-error"
                             >
-                                {processing && <Spinner />}
-                                Log in
-                            </Button>
+                                {errors.username ?? errors.password}
+                            </p>
                         </div>
 
-                        <div className="text-center text-sm text-muted-foreground">
-                            No account or forgot your password? Ask the Admin.
-                        </div>
+                        <Button
+                            type="submit"
+                            className="w-full"
+                            disabled={processing}
+                            data-test="login-button"
+                        >
+                            {processing && <Spinner />}
+                            Log in
+                        </Button>
+
+                        <p className="text-xs text-muted-foreground">
+                            No account or forgot your password? Ask the Admin or
+                            System Admin.
+                        </p>
                     </>
                 )}
             </Form>
-
-            {status && (
-                <div className="mb-4 text-center text-sm font-medium text-green-600">
-                    {status}
-                </div>
-            )}
         </>
     );
 }
-
-Login.layout = {
-    title: 'Log in to your account',
-    description: 'Enter your email and password below to log in',
-};

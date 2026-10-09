@@ -30,8 +30,8 @@ class UserFactory extends Factory
     {
         return [
             'name' => fake()->name(),
-            'username' => fake()->unique()->userName(),
-            'email' => fake()->unique()->safeEmail(),
+            // Lowercase, like real usernames (login lowercases what is typed).
+            'username' => Str::lower(fake()->unique()->userName()),
             'password' => static::$password ??= Hash::make('password'),
             'role' => Role::Encoder,
             'office' => Office::ER,
