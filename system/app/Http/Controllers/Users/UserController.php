@@ -6,6 +6,7 @@ use App\Http\Controllers\Concerns\StubResponses;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Response;
 
 class UserController extends Controller
@@ -24,6 +25,8 @@ class UserController extends Controller
 
     public function update(User $user): RedirectResponse
     {
+        Gate::authorize('update', $user);
+
         return $this->notBuiltYet("Edit user {$user->username}");
     }
 
@@ -32,6 +35,8 @@ class UserController extends Controller
      */
     public function destroy(User $user): RedirectResponse
     {
+        Gate::authorize('delete', $user);
+
         return $this->notBuiltYet("Delete user {$user->username}");
     }
 }

@@ -3,12 +3,15 @@
 namespace App\Providers;
 
 use App\Actions\Fortify\AuthenticateUser;
+use App\Models\User;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
+use Laravel\Fortify\Contracts\LoginResponse;
 use Laravel\Fortify\Fortify;
 
 /**
@@ -23,7 +26,21 @@ class FortifyServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // After login, go to the role's landing page (Role::landingRoute()).
+        // A page asked for before login is not reopened: on a shared PC it
+        // may belong to the previous user's role.
+        $this->app->instance(LoginResponse::class, new class implements LoginResponse
+        {
+            public function toResponse($request)
+            {
+                /** @var User $user */
+                $user = $request->user();
+
+                return $request->wantsJson()
+                    ? new JsonResponse(['two_factor' => false])
+                    : redirect()->route($user->role->landingRoute());
+            }
+        });
     }
 
     /**

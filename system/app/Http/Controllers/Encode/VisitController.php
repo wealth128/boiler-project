@@ -6,6 +6,7 @@ use App\Http\Controllers\Concerns\StubResponses;
 use App\Http\Controllers\Controller;
 use App\Models\Visit;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Gate;
 
 class VisitController extends Controller
 {
@@ -24,6 +25,8 @@ class VisitController extends Controller
      */
     public function update(Visit $visit): RedirectResponse
     {
+        Gate::authorize('update', $visit);
+
         return $this->notBuiltYet("Edit visit {$visit->visit_no}");
     }
 }

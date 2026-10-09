@@ -14,7 +14,7 @@ export type UsePermissionsReturn = {
 
 /**
  * Role checks for showing or hiding parts of a screen, e.g.
- * `const { can } = usePermissions(); can('trash.manage')`.
+ * `const { can } = usePermissions(); can('manage-trash')`.
  */
 export function usePermissions(): UsePermissionsReturn {
     const { auth } = usePage().props;

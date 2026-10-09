@@ -23,6 +23,18 @@ enum Role: string
         };
     }
 
+    /**
+     * Route name of the first page after login, and of "/" when signed in.
+     */
+    public function landingRoute(): string
+    {
+        return match ($this) {
+            self::Encoder, self::Admin => 'encode.index',
+            self::Viewer => 'reports.index',
+            self::SystemAdmin => 'users.index',
+        };
+    }
+
     /** @return list<string> */
     public static function values(): array
     {

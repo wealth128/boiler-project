@@ -32,7 +32,9 @@ return [
     |
     */
 
-    'lifetime' => (int) env('SESSION_LIFETIME', 120),
+    // 2 days, so there is no idle timeout. Sessions end on Log out or at the
+    // daily cutoff (config census.session_cutoff).
+    'lifetime' => (int) env('SESSION_LIFETIME', 2880),
 
     'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', false),
 

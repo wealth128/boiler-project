@@ -17,8 +17,10 @@ use Illuminate\Validation\ValidationException;
  * - Unknown and soft-deleted (Trash) accounts get "wrong username or
  *   password" with no attempt count, since there is no counter to show.
  * - A locked account is refused before the password is checked.
- * - Each wrong password adds 1 to failed_attempts. At 5 the account locks
- *   (locked_at is set) and "user.locked" goes to the audit log.
+ * - Each wrong password adds 1 to failed_attempts and writes
+ *   "user.login_failed" to the audit log. At 5 the account locks
+ *   (locked_at is set) and "user.locked" goes to the audit log too.
+ *   Unknown usernames are not logged: there is no account to attach them to.
  * - A deactivated account is refused even with the right password.
  * - A successful login resets failed_attempts to 0 and writes "user.login".
  *
@@ -80,6 +82,8 @@ class AuthenticateUser
         // One atomic update, so two wrong tries at the same moment both count.
         DB::table('users')->where('id', $user->id)->increment('failed_attempts');
         $attempts = (int) DB::table('users')->where('id', $user->id)->value('failed_attempts');
+
+        $this->audit->log('user.login_failed', $user, ['failed_attempts' => $attempts], by: $user);
 
         if ($attempts < self::MAX_ATTEMPTS) {
             $left = self::MAX_ATTEMPTS - $attempts;

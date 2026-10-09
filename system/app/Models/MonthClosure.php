@@ -40,6 +40,16 @@ class MonthClosure extends Model
         return static::query()->where('period', $period)->where('is_closed', true)->exists();
     }
 
+    /**
+     * What a user is told when a closed month blocks an action.
+     */
+    public static function closedMessage(string $period): string
+    {
+        $month = Carbon::parse($period.'-01')->format('F Y');
+
+        return "{$month} is closed. The Admin must reopen it first.";
+    }
+
     /** @return BelongsTo<User, $this> */
     public function closedBy(): BelongsTo
     {

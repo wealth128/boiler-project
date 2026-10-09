@@ -72,7 +72,9 @@ class ProfileUpdateTest extends TestCase
 
         $this->actingAs($user)
             ->delete('/settings/profile', ['password' => 'password'])
-            ->assertMethodNotAllowed();
+            // No such route. The catch-all 404 page (routes/web.php) answers
+            // every method, so this is 404 rather than 405.
+            ->assertNotFound();
 
         $this->assertNotNull($user->fresh());
     }

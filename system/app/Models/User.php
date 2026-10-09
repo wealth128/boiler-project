@@ -77,4 +77,17 @@ class User extends Authenticatable
     {
         return in_array($this->role, $roles, true);
     }
+
+    /**
+     * Is there an active Admin account (not in Trash), other than $except?
+     * Only one may exist (planning/rbac.md).
+     */
+    public static function activeAdminExists(?User $except = null): bool
+    {
+        return static::query()
+            ->where('role', Role::Admin)
+            ->where('is_active', true)
+            ->when($except, fn ($query) => $query->whereKeyNot($except->getKey()))
+            ->exists();
+    }
 }

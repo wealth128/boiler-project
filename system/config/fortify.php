@@ -74,7 +74,8 @@ return [
     |
     */
 
-    'home' => '/dashboard',
+    // "/" sends each role to its own landing page (routes/web.php).
+    'home' => '/',
 
     /*
     |--------------------------------------------------------------------------

@@ -1,25 +1,27 @@
 import type { Role } from '@/types';
 
 /*
- * Which roles may do what (planning/rbac.md, permission matrix).
+ * Which roles may open which pages (planning/rbac.md, permission matrix).
  *
- * The screens use this only to show or hide menu items and buttons.
- * The server is what actually blocks access (role middleware and
- * Policies), so keep both in step when a rule changes.
+ * Same names and roles as the server's Gates (app/Enums/Permission.php).
+ * The screens use this only to show or hide menu items and buttons; the
+ * server is what actually blocks access (role: middleware and Policies).
+ * tests/Feature/Rbac/GateTest.php fails if this list and the Gates differ,
+ * so change both together.
+ *
+ * Rules about one record (edit own visit on the same day, closed month,
+ * can't delete the Admin...) are not here: the server decides those.
  */
 export const PERMISSIONS = {
-    'visits.encode': ['encoder', 'admin'],
-    'patients.search': ['encoder', 'admin'],
-    'visits.edit-any': ['admin'],
-    'records.view': ['admin'],
-    'records.delete': ['admin'],
-    'reports.view': ['admin', 'viewer'],
-    'months.manage': ['admin'],
-    'lists.manage': ['admin'],
-    'users.manage': ['admin', 'system_admin'],
-    'audit.view': ['admin'],
-    'trash.manage': ['admin'],
-    'backups.view': ['admin'],
+    'encode-visits': ['encoder', 'admin'],
+    'view-records': ['admin'],
+    'view-reports': ['admin', 'viewer'],
+    'close-month': ['admin'],
+    'manage-lists': ['admin'],
+    'manage-users': ['admin', 'system_admin'],
+    'view-audit': ['admin'],
+    'manage-trash': ['admin'],
+    'view-backups': ['admin'],
 } as const satisfies Record<string, readonly Role[]>;
 
 export type Permission = keyof typeof PERMISSIONS;

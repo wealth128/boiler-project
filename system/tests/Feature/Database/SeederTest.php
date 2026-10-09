@@ -9,12 +9,15 @@ use App\Models\Rank;
 use App\Models\Setting;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
+use Database\Seeders\DevUserSeeder;
 use Illuminate\Support\Facades\Hash;
 
 beforeEach(function () {
     config([
         'census.seed.admin_password' => 'test-admin-pass',
         'census.seed.sysadmin_password' => 'test-sysadmin-pass',
+        'census.seed.encoder_password' => 'test-encoder-pass',
+        'census.seed.viewer_password' => 'test-viewer-pass',
     ]);
 });
 
@@ -99,4 +102,47 @@ it('can run twice without duplicating rows or resetting passwords', function () 
         ->and(AgeBracket::count())->toBe(6)
         ->and(Hash::check('changed-by-admin', User::where('username', 'admin')->value('password')))->toBeTrue()
         ->and(Setting::valueOf('hospital_name'))->toBe('AFP Medical Center');
+});
+
+// --- Development test accounts (DevUserSeeder) ---------------------------
+
+it('creates the encoder and viewer test accounts with passwords from config', function () {
+    $this->seed(DevUserSeeder::class);
+
+    $encoder = User::where('username', 'encoder')->firstOrFail();
+    $viewer = User::where('username', 'viewer')->firstOrFail();
+
+    expect($encoder->role)->toBe(Role::Encoder)
+        ->and($encoder->office)->toBe(Office::ER)
+        ->and(Hash::check('test-encoder-pass', $encoder->password))->toBeTrue()
+        ->and($viewer->role)->toBe(Role::Viewer)
+        ->and($viewer->office)->toBe(Office::Command)
+        ->and(Hash::check('test-viewer-pass', $viewer->password))->toBeTrue();
+});
+
+it('skips a test account whose password is not set', function () {
+    config(['census.seed.viewer_password' => '']);
+
+    $this->seed(DevUserSeeder::class);
+
+    expect(User::where('username', 'encoder')->exists())->toBeTrue()
+        ->and(User::where('username', 'viewer')->exists())->toBeFalse();
+});
+
+it('adds the test accounts to the full seed only when APP_ENV is local', function () {
+    $this->seed(DatabaseSeeder::class);
+    expect(User::count())->toBe(2); // testing: admin + sysadmin only
+
+    app()->detectEnvironment(fn () => 'local');
+    $this->seed(DatabaseSeeder::class);
+
+    expect(User::pluck('username')->sort()->values()->all())->toBe(['admin', 'encoder', 'sysadmin', 'viewer']);
+});
+
+it('never creates test accounts in production, even when called directly', function () {
+    app()->detectEnvironment(fn () => 'production');
+
+    (new DevUserSeeder)->run();
+
+    expect(User::count())->toBe(0);
 });

@@ -22,5 +22,10 @@ class DatabaseSeeder extends Seeder
             AgeBracketSeeder::class,
             SettingSeeder::class,
         ]);
+
+        // Test accounts for the Encoder and Viewer roles: dev PCs only.
+        if (app()->environment('local')) {
+            $this->call(DevUserSeeder::class);
+        }
     }
 }

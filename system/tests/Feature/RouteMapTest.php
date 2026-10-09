@@ -7,7 +7,8 @@ use Illuminate\Support\Facades\Route;
 
 /*
  * The route map from planning/setup-and-structure.md, section 3.
- * Role checks come in Step 4; here every route only needs a signed-in user.
+ * Which role may use which route: tests/Feature/Rbac/RoleAccessTest.php.
+ * The stub checks below sign in as Admin, who may use every route.
  */
 
 dataset('route map', [
@@ -45,14 +46,35 @@ dataset('route map', [
     ['POST', 'backups/run', 'backups.run'],
 ]);
 
-it('registers every planned route behind auth', function (string $method, string $uri, string $name) {
+it('registers every planned route behind auth and a role rule', function (string $method, string $uri, string $name) {
     $route = Route::getRoutes()->getByName($name);
 
     expect($route)->not->toBeNull("Route {$name} is missing")
         ->and($route->uri())->toBe($uri)
         ->and($route->methods())->toContain($method)
-        ->and($route->gatherMiddleware())->toContain('auth');
+        ->and($route->gatherMiddleware())->toContain('auth')
+        ->and(collect($route->gatherMiddleware())->contains(fn ($m) => is_string($m) && str_starts_with($m, 'role:')))
+        ->toBeTrue("Route {$name} has no role: rule");
 })->with('route map');
+
+it('puts a role rule on every signed-in route except the own-account pages', function () {
+    // Open to every signed-in role: own profile, password, appearance,
+    // password confirmation and logout.
+    $everyone = [
+        'settings', 'settings/profile', 'settings/security', 'settings/password',
+        'settings/appearance', 'user/confirm-password', 'user/confirmed-password-status', 'logout',
+    ];
+
+    $missing = collect(Route::getRoutes()->getRoutes())
+        ->filter(fn ($route) => collect($route->gatherMiddleware())->contains(fn ($m) => is_string($m) && str_starts_with($m, 'auth')))
+        ->reject(fn ($route) => in_array($route->uri(), $everyone, true))
+        ->reject(fn ($route) => collect($route->gatherMiddleware())->contains(fn ($m) => is_string($m) && str_starts_with($m, 'role:')))
+        ->map(fn ($route) => implode('|', $route->methods()).' '.$route->uri())
+        ->values()
+        ->all();
+
+    expect($missing)->toBe([]);
+});
 
 it('sends guests to the login page', function () {
     $this->get('/encode')->assertRedirect(route('login'));
@@ -61,7 +83,7 @@ it('sends guests to the login page', function () {
 });
 
 it('shows the placeholder page on every planned screen', function (string $uri) {
-    $this->actingAs(User::factory()->create())
+    $this->actingAs(User::factory()->admin()->create())
         ->get($uri)
         ->assertOk()
         ->assertInertia(fn ($page) => $page->component('placeholder')->has('title'));
@@ -71,14 +93,15 @@ it('shows the placeholder page on every planned screen', function (string $uri) 
 ]);
 
 it('answers the patient search with JSON', function () {
-    $this->actingAs(User::factory()->create())
+    $this->actingAs(User::factory()->encoder()->create())
         ->getJson('/patients/search?q=cruz')
         ->assertOk()
         ->assertJson(['query' => 'cruz', 'data' => []]);
 });
 
 it('answers stub form actions with a "not built yet" toast', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->admin()->create();
+    $encoder = User::factory()->encoder()->create();
     $visit = Visit::factory()->create();
     $patient = Patient::factory()->create();
 
@@ -92,7 +115,7 @@ it('answers stub form actions with a "not built yet" toast', function () {
         ['post', '/months/2026-09/close'],
         ['post', '/settings/diagnoses'],
         ['put', '/settings/age-brackets/1'],
-        ['post', "/users/{$user->id}/unlock"],
+        ['post', "/users/{$encoder->id}/unlock"],
         ['post', '/trash/visits/1/restore'],
         ['delete', '/trash'],
         ['post', '/backups/run'],
@@ -102,7 +125,7 @@ it('answers stub form actions with a "not built yet" toast', function () {
 });
 
 it('rejects bad periods, list names and Trash types', function () {
-    $this->actingAs(User::factory()->create());
+    $this->actingAs(User::factory()->admin()->create());
 
     $this->post('/months/2026-13/close')->assertNotFound();
     $this->post('/months/sept/close')->assertNotFound();

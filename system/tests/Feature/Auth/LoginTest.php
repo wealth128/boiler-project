@@ -9,7 +9,8 @@ use Inertia\Testing\AssertableInertia as Assert;
 /*
  * Step 3 login rules (CLAUDE.md, planning/rbac.md): username + password,
  * lock after 5 wrong passwords, deactivated / locked / deleted accounts
- * refused, login and lock written to audit_logs, no public sign-up.
+ * refused, login, wrong password, lock and logout written to audit_logs,
+ * no public sign-up.
  * Factory users have the password "password".
  */
 
@@ -36,7 +37,8 @@ it('shows the login screen with a username field', function () {
 it('logs in with the correct username and password', function () {
     $user = User::factory()->create(['username' => 'er.cruz']);
 
-    login('er.cruz')->assertRedirect(route('dashboard', absolute: false));
+    // Encoders land on the Encode page (tests/Feature/Rbac/LandingPageTest.php).
+    login('er.cruz')->assertRedirect(route('encode.index', absolute: false));
 
     $this->assertAuthenticatedAs($user);
 });
@@ -97,7 +99,30 @@ it('counts wrong passwords and shows the attempts left', function () {
 
     $this->assertGuest();
     expect($user->fresh()->locked_at)->toBeNull()
-        ->and(AuditLog::count())->toBe(0);
+        ->and(AuditLog::where('action', 'user.login_failed')->count())->toBe(4)
+        ->and(AuditLog::where('action', 'user.locked')->exists())->toBeFalse();
+});
+
+it('writes user.login_failed to the audit log for a wrong password', function () {
+    $user = User::factory()->create(['username' => 'er.cruz']);
+
+    login('er.cruz', 'wrong-password');
+    login('er.cruz', 'wrong-password');
+
+    $entries = AuditLog::orderBy('id')->get();
+    expect($entries)->toHaveCount(2)
+        ->and($entries->pluck('action')->unique()->all())->toBe(['user.login_failed'])
+        ->and($entries->pluck('changes')->all())->toBe([['failed_attempts' => 1], ['failed_attempts' => 2]])
+        ->and($entries[0]->user_id)->toBe($user->id)
+        ->and($entries[0]->subject_type)->toBe('users')
+        ->and($entries[0]->subject_id)->toBe($user->id)
+        ->and($entries[0]->ip_address)->toBe('127.0.0.1');
+});
+
+it('writes nothing to the audit log for an unknown username', function () {
+    login('nobody', 'wrong-password');
+
+    expect(AuditLog::count())->toBe(0);
 });
 
 it('gives an unknown username the same message without a count', function () {
@@ -141,7 +166,11 @@ it('writes user.locked to the audit log once', function () {
         login('er.cruz', 'wrong-password');
     }
 
-    $entry = AuditLog::sole();
+    // 5 counted wrong passwords, then one lock. Tries 6 and 7 hit the lock
+    // before the password is checked, so they are not counted again.
+    expect(AuditLog::where('action', 'user.login_failed')->count())->toBe(5);
+
+    $entry = AuditLog::where('action', 'user.locked')->sole();
     expect($entry->action)->toBe('user.locked')
         ->and($entry->user_id)->toBe($user->id)
         ->and($entry->subject_type)->toBe('users')
@@ -229,12 +258,26 @@ it('has no forgot-password pages', function () {
 
 // --- Logout and throttle ------------------------------------------------
 
-it('logs out', function () {
-    $this->actingAs(User::factory()->create())
+it('logs out and writes user.logout to the audit log', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
         ->post(route('logout'))
         ->assertRedirect(route('home'));
 
     $this->assertGuest();
+
+    $entry = AuditLog::sole();
+    expect($entry->action)->toBe('user.logout')
+        ->and($entry->user_id)->toBe($user->id)
+        ->and($entry->subject_type)->toBe('users')
+        ->and($entry->subject_id)->toBe($user->id);
+});
+
+it('writes nothing when a signed-out visitor posts to logout', function () {
+    $this->post(route('logout'))->assertRedirect(route('login'));
+
+    expect(AuditLog::count())->toBe(0);
 });
 
 it('lets the 6th try through the throttle so the lock message shows', function () {
