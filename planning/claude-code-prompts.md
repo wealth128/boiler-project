@@ -63,26 +63,29 @@ Then run php artisan migrate:fresh --seed, php artisan test, npm run types:check
 
 ## Prompt 3: Login
 ```
-Step 3 – Login (UI + backend):
-1. Change login to USERNAME + password (not email). Remove/disable the public registration routes and pages, and remove password reset by email (Admin resets passwords).
-2. Lock the account after 5 wrong passwords (failed_attempts, locked_at). Show "X attempts left" and a locked message. Reset the counter on success. Block deactivated, locked and soft-deleted users.
-3. Write audit_logs entries for login lock and successful login.
-4. Style the login page like prototype/prototype.html using AuthLayout.
-5. Pest tests: correct login, wrong password count, lock at 5, locked user can't log in, deleted user can't log in, no /register route.
-Run php artisan test and npm run build. Stop and summarize how I can test it in the browser.
+Step 3 – Login (UI + backend). Registration, email verification, reset-by-email, 2FA and passkeys were already removed in Prompt 2.5. Don't add them back.
+1. Change login to USERNAME + password: config/fortify.php 'username' => 'username', and the login page field "Username" (not email). Keep lowercase usernames.
+2. Lock the account after 5 wrong passwords (failed_attempts, locked_at). Show "X attempts left" and a clear locked message ("Your account is locked. Ask the Admin or System Admin to unlock it."). Reset the counter on success. Block deactivated, locked and soft-deleted users with a clear message each.
+3. Create app/Services/AuditLogger (global, reused later by every feature) and use it to log: successful login, failed login, account locked, logout.
+4. Style the login page like prototype/prototype.html using AuthLayout (hospital name from settings).
+5. After login, go to /dashboard for now (role-based landing pages come in Step 4).
+6. Pest tests: correct login, wrong password count, lock at 5, locked user can't log in, deactivated user can't log in, deleted user can't log in, audit entries written, no /register route.
+Run php artisan test (patient_census_test only), npm run types:check and npm run build. Fix errors. Stop and summarize how I can test it in the browser.
 ```
 
 ## Prompt 4: RBAC
 ```
-Step 4 – RBAC (follow planning/rbac.md exactly):
+Step 4 – RBAC (follow planning/rbac.md exactly).
+0. Leftover from Step 3: also write audit_logs entries for a wrong password (action user.login_failed, on the existing user only) and for logout (user.logout), using App\Services\AuditLogger. Add tests.
 1. EnsureRole middleware (role:admin,encoder,...) and apply it to every route group in routes/web.php per the matrix.
-2. Gates: manage-users (admin, system_admin), manage-lists, manage-trash, close-month, view-audit (admin), view-reports (admin, viewer).
+2. Gates: manage-users (admin, system_admin), manage-lists, manage-trash, close-month, view-audit, view-backups (admin), view-reports (admin, viewer).
 3. Policies: VisitPolicy (encoder edits own visit same day only; admin any; nobody when the month is closed), UserPolicy (can't delete self or the Admin; only one active Admin), TrashPolicy.
-4. Share the user's role and permissions with the frontend (Inertia shared props) and add a usePermissions hook. The sidebar shows only allowed pages.
-5. Friendly 403, 404 and 500 pages.
-6. Create test users for each role in a dev-only seeder.
-7. Pest tests: every role vs every route group (allowed / 403), closed-month edit blocked, same-day edit rule.
-Run php artisan test and npm run build. Stop and summarize, with a table of role → pages they can open.
+4. Landing page by role after login, replacing the starter kit dashboard: encoder → /encode, admin → /encode, viewer (CO) → /reports, system_admin → /users. "/" redirects to /login when signed out, or to the user's landing page when signed in. Delete the starter kit welcome and dashboard pages and their tests.
+5. Keep lib/permissions.ts (frontend) in step with the Gates. The sidebar shows only allowed pages (already built, verify it).
+6. Friendly 403, 404 and 500 pages (pages/errors). They must work for signed-out users too.
+7. Dev-only seeder (not run in production) with one test user per role: encoder, admin is the existing one, system_admin is the existing one, viewer. Passwords from .env.
+8. Pest tests: every role against every route group (allowed or 403), landing page per role, closed-month edit blocked, same-day edit rule, can't delete self or Admin.
+Run php artisan test (patient_census_test only), npm run types:check and npm run build. Fix errors. Stop and summarize, with a table of role → pages they can open.
 ```
 
 ---
