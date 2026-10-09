@@ -1,0 +1,920 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Patient Encoding & Reports</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: app shell — top bar + left nav, working area with form/table panels. Desktop-first 1366x768, stacks on narrow screens. */
+:root{
+  --bg:#f3f5f8; --surface:#ffffff; --surface-2:#eef1f6; --line:#d6dce6;
+  --fg:#16202e; --muted:#5b6678; --navy:#1b3a6b; --navy-ink:#ffffff; --navy-soft:#e3eaf6;
+  --ok:#1f7a4d; --ok-soft:#e1f2e9; --warn:#9a5b00; --warn-soft:#fbefd9; --bad:#b3261e; --bad-soft:#fbe4e2;
+  --focus:#3b6fd1;
+  --font:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono:"IBM Plex Mono", Consolas, "Courier New", monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f141c; --surface:#161d28; --surface-2:#1d2633; --line:#2c3746;
+  --fg:#e5eaf2; --muted:#9aa6b8; --navy:#7fa6e6; --navy-ink:#0f141c; --navy-soft:#1f2c44;
+  --ok:#5cc28f; --ok-soft:#173326; --warn:#e2a94a; --warn-soft:#352a14; --bad:#f08079; --bad-soft:#3a1d1b; --focus:#8fb3f0; color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#0f141c; --surface:#161d28; --surface-2:#1d2633; --line:#2c3746;
+  --fg:#e5eaf2; --muted:#9aa6b8; --navy:#7fa6e6; --navy-ink:#0f141c; --navy-soft:#1f2c44;
+  --ok:#5cc28f; --ok-soft:#173326; --warn:#e2a94a; --warn-soft:#352a14; --bad:#f08079; --bad-soft:#3a1d1b; --focus:#8fb3f0; color-scheme:dark;}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 var(--font)}
+[hidden]{display:none!important}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.mono{font-family:var(--mono)}
+.num{font-variant-numeric:tabular-nums}
+
+/* Top bar */
+.topbar{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;padding:10px 16px;background:var(--navy);color:var(--navy-ink)}
+.brand{display:flex;flex-direction:column;line-height:1.2;margin-right:auto}
+.brand b{font-size:15px;letter-spacing:.01em}
+.brand small{opacity:.8;font-size:12px}
+.viewas{display:flex;align-items:center;gap:8px;font-size:12px}
+.viewas select{background:transparent;border:1px solid currentColor;border-radius:4px;padding:4px 6px;color:inherit}
+.viewas select option{color:#16202e}
+.who{font-size:13px;text-align:right;line-height:1.25}
+.who small{display:block;opacity:.8}
+.proto{background:var(--warn-soft);color:var(--warn);font-size:12px;padding:6px 16px;border-bottom:1px solid var(--line)}
+
+/* Shell */
+.shell{display:grid;grid-template-columns:200px 1fr;min-height:calc(100% - 90px)}
+nav.side{background:var(--surface);border-right:1px solid var(--line);padding:12px 8px;display:flex;flex-direction:column;gap:2px}
+nav.side button{all:unset;cursor:pointer;padding:9px 12px;border-radius:6px;color:var(--muted);font-weight:500}
+nav.side button:hover{background:var(--surface-2);color:var(--fg)}
+nav.side button[aria-current="page"]{background:var(--navy-soft);color:var(--navy);font-weight:600}
+nav.side button:focus-visible{outline:2px solid var(--focus)}
+nav.side .logout{margin-top:auto}
+main{padding:20px 16px 40px;min-width:0}
+.pagehead{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 16px;margin-bottom:16px}
+.pagehead h1{font-size:20px;margin:0;text-wrap:balance}
+.pagehead p{margin:0;color:var(--muted)}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;min-width:0}
+.panel-h{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.panel-h h2{font-size:14px;margin:0;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.panel-b{padding:16px}
+
+/* Forms */
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:2fr 2fr 1fr}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field label,.lbl{font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.02em}
+.field label .req{color:var(--bad)}
+input[type=text],input[type=date],input[type=number],input[type=password],input[type=search],select,textarea{
+  width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:6px;background:var(--surface);min-height:38px}
+input[readonly]{background:var(--surface-2);color:var(--muted)}
+select:disabled{background:var(--surface-2);color:var(--muted)}
+textarea{min-height:60px;resize:vertical}
+.err{color:var(--bad);font-size:12px}
+.has-err input,.has-err select{border-color:var(--bad)}
+.hint{font-size:12px;color:var(--muted)}
+.seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg label{flex:1;text-align:center;padding:8px 0;cursor:pointer;font-weight:500;color:var(--fg);font-size:14px;letter-spacing:0}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label+label{border-left:1px solid var(--line)}
+.seg input:checked+span{color:var(--navy);font-weight:700}
+.seg label:has(input:checked){background:var(--navy-soft)}
+.seg label:has(input:focus-visible){outline:2px solid var(--focus);outline-offset:-2px}
+
+.btn{white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 16px;border-radius:6px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-weight:600;min-height:38px}
+.btn:hover{background:var(--surface-2)}
+.btn.primary{background:var(--navy);border-color:var(--navy);color:var(--navy-ink)}
+.btn.primary:hover{filter:brightness(1.1)}
+.btn.danger{color:var(--bad);border-color:var(--bad)}
+.btn.sm{padding:4px 10px;min-height:30px;font-size:13px}
+.btn.link{border:0;background:none;color:var(--navy);padding:4px 6px;min-height:0}
+.actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--surface-2);color:var(--muted);white-space:nowrap}
+.chip.opd{background:var(--ok-soft);color:var(--ok)}
+.chip.er{background:var(--bad-soft);color:var(--bad)}
+.chip.adm{background:var(--navy-soft);color:var(--navy)}
+.chip.new{background:var(--warn-soft);color:var(--warn)}
+.chip.void{background:var(--surface-2);color:var(--muted);text-decoration:line-through}
+
+/* Encode */
+.encode{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px;align-items:start}
+.search-wrap{position:relative}
+.results{position:absolute;z-index:5;left:0;right:0;top:100%;margin-top:4px;background:var(--surface);border:1px solid var(--line);border-radius:6px;box-shadow:0 6px 20px rgb(0 0 0 / .12);max-height:260px;overflow:auto}
+.results button{all:unset;display:flex;justify-content:space-between;gap:10px;width:100%;box-sizing:border-box;padding:9px 12px;cursor:pointer}
+.results button:hover,.results button:focus-visible{background:var(--navy-soft)}
+.results .none{padding:10px 12px;color:var(--muted)}
+.selected{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;background:var(--surface-2);border-radius:6px}
+.autoline{display:flex;flex-wrap:wrap;gap:8px 24px;padding:10px 12px;border:1px dashed var(--line);border-radius:6px}
+.autoline div{display:flex;flex-direction:column}
+.autoline b{font-family:var(--mono);font-weight:500}
+.editbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 12px;background:var(--warn-soft);color:var(--warn);border-radius:6px;font-weight:500}
+.today-list{list-style:none;margin:0;padding:0}
+.today-list li{display:grid;grid-template-columns:auto 1fr auto;gap:2px 10px;padding:10px 16px;border-bottom:1px solid var(--line);align-items:center}
+.today-list li:last-child{border-bottom:0}
+.today-list .t{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.today-list .n{font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.today-list .d{grid-column:2;color:var(--muted);font-size:12px}
+.empty{padding:20px 16px;color:var(--muted)}
+
+/* Tables */
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;background:var(--surface-2);white-space:nowrap}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+tr.voided td{color:var(--muted);text-decoration:line-through}
+tr.voided td.keep{text-decoration:none}
+tr.voidrow td{background:var(--bad-soft)}
+.filters{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;align-items:end}
+
+/* Reports */
+.rcontrols{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) auto;gap:10px;align-items:end}
+.sheet{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:28px 28px 32px;max-width:980px}
+.sheet-h{text-align:center;border-bottom:2px solid var(--fg);padding-bottom:12px;margin-bottom:18px}
+.sheet-h .org{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.sheet-h h2{margin:4px 0 2px;font-size:18px}
+.sheet-h .per{font-family:var(--mono);font-size:13px}
+.cat{margin-top:22px}
+.cat h3{display:flex;align-items:center;gap:10px;font-size:15px;margin:0 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.totals{display:flex;gap:28px;flex-wrap:wrap;margin:0 0 12px}
+.totals div{display:flex;flex-direction:column}
+.totals b{font-size:24px;font-variant-numeric:tabular-nums}
+.totals span{font-size:12px;color:var(--muted)}
+.rgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.rgrid .wide{grid-column:span 2}
+.rbox h4{margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.rbox table td,.rbox table th{padding:5px 8px}
+.rbox tr.br td{font-weight:700;background:var(--surface-2)}
+.rbox tr.rk td:first-child{padding-left:20px}
+.sign{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:36px}
+.sign div{border-top:1px solid var(--fg);padding-top:6px;font-size:12px;color:var(--muted)}
+.sign b{display:block;color:var(--fg);font-size:13px}
+.closed{display:inline-flex;gap:6px;align-items:center;padding:4px 10px;border-radius:6px;background:var(--surface-2);font-size:12px;font-weight:600}
+
+/* Settings */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:16px;flex-wrap:wrap}
+.tabs button{all:unset;cursor:pointer;padding:9px 14px;border-bottom:2px solid transparent;color:var(--muted);font-weight:600}
+.tabs button[aria-selected="true"]{color:var(--navy);border-color:var(--navy)}
+.tabs button:focus-visible{outline:2px solid var(--focus)}
+.lists{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.taglist{display:flex;flex-wrap:wrap;gap:6px}
+.addrow{display:flex;gap:8px;margin-top:10px}
+.ranks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.ranks h5{margin:0 0 6px;font-size:13px}
+.lrows{list-style:none;margin:0;padding:0;border:1px solid var(--line);border-radius:6px;max-height:340px;overflow:auto}
+.lrows li{display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid var(--line);min-height:40px}
+.lrows li:last-child{border-bottom:0}
+.lrows li .nm{flex:1;min-width:0}
+.lrows li.off .nm{color:var(--muted);text-decoration:line-through}
+.lrows li input{min-height:32px;padding:5px 8px}
+.lrows li input[type=number]{max-width:90px}
+.rbtabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.rbtabs button{all:unset;cursor:pointer;padding:5px 12px;border:1px solid var(--line);border-radius:999px;font-weight:600;font-size:13px;color:var(--muted)}
+.rbtabs button[aria-pressed="true"]{background:var(--navy);border-color:var(--navy);color:var(--navy-ink)}
+.rbtabs button:focus-visible{outline:2px solid var(--focus)}
+.snap{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;padding:8px 12px;margin-bottom:14px;border-radius:6px;background:var(--navy-soft);color:var(--navy);font-size:13px;font-weight:500}
+
+/* Login */
+.login{min-height:100%;display:grid;place-items:center;padding:24px 16px}
+.login .panel{width:min(400px,100%)}
+.login h1{font-size:18px;margin:0}
+
+/* Toast */
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:6px;font-weight:500;box-shadow:0 6px 20px rgb(0 0 0 / .2);max-width:calc(100% - 32px)}
+
+@media (max-width:1100px){.encode{grid-template-columns:1fr}.rgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.rgrid .wide{grid-column:span 2}.filters,.rcontrols{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:720px){.shell{grid-template-columns:1fr}nav.side{flex-direction:row;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line)}nav.side .logout{margin-top:0;margin-left:auto}
+  .g2,.g3,.lists,.ranks,.rgrid,.filters,.rcontrols{grid-template-columns:1fr}.rgrid .wide{grid-column:auto}.sheet{padding:18px 14px}.sign{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast" class="toast" role="status" hidden></div>
+
+<script>
+/* ---------- Reference data (sample; editable by Admin in the real system) ---------- */
+const CATS = ["OPD","ER","Admission"];
+const CAT_CLASS = {OPD:"opd",ER:"er",Admission:"adm"};
+const BRANCHES = ["Army","Navy","Air Force","Marines","Others"];
+const RANKS = {
+  "Army":["GEN","LTGEN","MGEN","BGEN","COL","LTC","MAJ","CPT","1LT","2LT","CMS","SMS","MSG","TSG","SSG","SGT","CPL","PFC","PVT"],
+  "Navy":["ADM","VADM","RADM","COMMO","CAPT","CDR","LCDR","LT","LTJG","ENS","CMCPO","MCPO","SCPO","CPO","PO1","PO2","PO3","SN1","SN2","ASN"],
+  "Air Force":["GEN","LTGEN","MGEN","BGEN","COL","LTC","MAJ","CPT","1LT","2LT","CMS","SMS","MSG","TSG","SSG","SGT","A1C","A2C","AM"],
+  "Marines":["MGEN","BGEN","COL","LTC","MAJ","CPT","1LT","2LT","CMS","SMS","MSG","TSG","SSG","SGT","CPL","PFC","PVT"],
+  "Others":["Dependent","Retiree","Civilian Employee","Civilian","Other (specify)"]
+};
+let DIAGNOSES = ["Hypertension","Upper Respiratory Tract Infection","Acute Gastroenteritis","Urinary Tract Infection","Pneumonia","Diabetes Mellitus Type 2","Dengue Fever","Musculoskeletal Strain","Bronchial Asthma","Laceration","Acute Tonsillopharyngitis","Fracture","Other (specify)"];
+let BRACKETS = [[0,17],[18,25],[26,35],[36,45],[46,59],[60,200]];
+const OFF = {diag:new Set(), br:new Set(), rank:{}}; // removed (inactive) list items: hidden from encoding, kept for history
+const brKey = b => b[0]+"-"+b[1];
+const actDiag = keep => DIAGNOSES.filter(d=>!OFF.diag.has(d)||d===keep);
+const actRanks = (b,keep) => RANKS[b].filter(x=>!OFF.rank[b].has(x)||x===keep);
+const actBrackets = () => BRACKETS.filter(b=>!OFF.br.has(brKey(b)));
+const TODAY = new Date(2026,9,7,10,30); // prototype "now": 07-Oct-2026 10:30
+BRANCHES.forEach(b=>OFF.rank[b]=new Set());
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const MONTHS_LONG = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+const USERS = [
+  {u:"er.cruz", name:"Cruz, Joanna", role:"Encoder", office:"ER", active:true},
+  {u:"er.santos", name:"Santos, Mark", role:"Encoder", office:"ER", active:true},
+  {u:"opd.reyes", name:"Reyes, Liza", role:"Encoder", office:"OPD", active:false, note:"Encoding off in v1.0"},
+  {u:"adm.bautista", name:"Bautista, Ramon", role:"Encoder", office:"Admission", active:false, note:"Encoding off in v1.0"},
+  {u:"admin.garcia", name:"Garcia, Elena", role:"Admin", office:"Admin", active:true},
+  {u:"co", name:"Commanding Officer", role:"Viewer", office:"Command", active:true},
+  {u:"sysadmin", name:"System Administrator", role:"System Admin", office:"IT", active:true},
+  {u:"er.ramos", name:"Ramos, Carlo", role:"Encoder", office:"ER", active:true, locked:true},
+  {u:"er.test", name:"Test Account (never used)", role:"Encoder", office:"ER", active:true}
+];
+const VIEW_AS = {encoder:USERS[0], admin:USERS[4], co:USERS[5], sysadmin:USERS[6]};
+const MAX_TRIES = 5;
+
+/* ---------- Sample records (deterministic) ---------- */
+function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const R = rng(20261007);
+const pick = a => a[Math.floor(R()*a.length)];
+const LAST = ["Santos","Reyes","Bautista","Garcia","Mendoza","Torres","Villanueva","Ramos","Aquino","Castillo","Navarro","Dela Cruz","Flores","Gonzales","Lopez","Rivera","Morales","Domingo","Pascual","Salazar","Fernandez","Valdez","Soriano","Manalo","Tolentino","Panganiban"];
+const FIRST_M = ["Juan","Jose","Mark","Paolo","Ramon","Carlo","Miguel","Rafael","Dennis","Arnel","Jerome","Noel"];
+const FIRST_F = ["Maria","Ana","Liza","Grace","Joy","Rosa","Elena","Carmela","Kristine","Aileen","Jenny","Marites"];
+const MI = "ABCDEFGLMNPRSTV";
+
+const state = {
+  screen:"login", viewAs:"encoder", view:"encode",
+  patients:[], visits:[], audit:[], closed:new Set(["2026-08"]),
+  enc:{sel:null, editing:null, errors:{}, q:""},
+  rec:{from:"2026-09-01", to:"2026-10-07", cat:"", branch:"", q:"", tab:"visits"},
+  trash:[], del:null, purge:null,
+  rep:{type:"Monthly", month:"2026-09", q:"3", year:"2026", from:"2026-09-01", to:"2026-09-30", cat:"All", ran:true},
+  setTab:"users", tries:0, loginMsg:"", le:null, rankBranch:"Navy", snaps:{}
+};
+let pSeq=0, vSeq=0;
+const pid = () => "P-" + String(++pSeq).padStart(6,"0");
+const vid = () => "V-" + String(++vSeq).padStart(6,"0");
+
+(function seed(){
+  for(let i=0;i<34;i++){
+    const sex = R()<0.72?"Male":"Female";
+    const branch = R()<0.88 ? pick(["Army","Army","Navy","Navy","Air Force","Marines"]) : "Others";
+    let rank = branch==="Others" ? pick(["Dependent","Dependent","Retiree","Civilian Employee","Civilian"]) : (()=>{const l=RANKS[branch];return l[Math.min(l.length-1, Math.floor(Math.pow(R(),0.55)*l.length))]})();
+    const age = branch==="Others" && rank==="Dependent" ? 3+Math.floor(R()*55) : rank==="Retiree" ? 57+Math.floor(R()*20) : 21+Math.floor(R()*35);
+    const by = 2026-age-1, bm = Math.floor(R()*12), bd = 1+Math.floor(R()*27);
+    state.patients.push({id:pid(), last:pick(LAST), first:pick(sex==="Male"?FIRST_M:FIRST_F), mi:MI[Math.floor(R()*MI.length)], sex, birth:`${by}-${String(bm+1).padStart(2,"0")}-${String(bd).padStart(2,"0")}`, branch, rank});
+  }
+  const start = new Date(2026,7,1).getTime(), end = TODAY.getTime()-3600e3*2;
+  for(let i=0;i<150;i++){
+    const p = pick(state.patients);
+    const ts = new Date(start + R()*(end-start));
+    const cat = R()<0.55?"OPD":R()<0.7?"ER":"Admission";
+    const d = pick(DIAGNOSES.slice(0,-1));
+    addVisit({pid:p.id, ts, cat, diag:d, diagOther:"", branch:p.branch, rank:p.rank, rankOther:"", age:ageAt(p.birth, ts), remarks:"", by: pick(["er.cruz","er.santos"])}, true);
+  }
+  // a few visits today by the logged-in encoder
+  [[7,5],[8,40],[9,55]].forEach(([h,m],k)=>{const p=state.patients[k*5+2];const ts=new Date(2026,9,7,h,m);addVisit({pid:p.id,ts,cat:["ER","OPD","Admission"][k],diag:DIAGNOSES[k*3],diagOther:"",branch:p.branch,rank:p.rank,rankOther:"",age:ageAt(p.birth,ts),remarks:k===2?"From ER, admitted to ward":"",by:"er.cruz"},true)});
+  state.visits.sort((a,b)=>a.ts-b.ts);
+  const v = state.visits[40]; v.voided=true; v.voidReason="Duplicate entry";
+  state.trash.push({tid:1, type:"visit", ref:v.id, label:"", by:"admin.garcia", at:new Date(2026,8,20,14,5), reason:"Duplicate entry"});
+})();
+
+function addVisit(o, silent){
+  const v = {id:vid(), voided:false, voidReason:"", ...o};
+  state.visits.push(v);
+  if(!silent) log(`Encoded ${v.id} for ${v.pid} (${v.cat})`);
+  return v;
+}
+function log(what){state.audit.unshift({ts:new Date(), who:me().u, what})}
+
+/* ---------- Helpers ---------- */
+const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const me = () => VIEW_AS[state.viewAs];
+const pad = n => String(n).padStart(2,"0");
+const fmtDT = d => `${pad(d.getDate())}-${MONTHS[d.getMonth()]}-${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const fmtT = d => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const iso = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const sameDay = (a,b) => iso(a)===iso(b);
+function ageAt(birth, at){ if(!birth) return ""; const b=new Date(birth+"T00:00"); if(isNaN(b)) return ""; let a=at.getFullYear()-b.getFullYear(); const m=at.getMonth()-b.getMonth(); if(m<0||(m===0&&at.getDate()<b.getDate())) a--; return a; }
+const bracketLabel = ([a,b]) => b>=200 ? `${a} & above` : `${a}–${b}`;
+const bracketOf = age => BRACKETS.find(([a,b])=>age>=a&&age<=b);
+const P = id => state.patients.find(p=>p.id===id);
+const fullName = p => `${p.last}, ${p.first} ${p.mi}.`;
+const rankText = v => v.rank==="Other (specify)" ? (v.rankOther||"Other") : v.rank;
+const diagText = v => v.diag==="Other (specify)" ? `Other: ${v.diagOther}` : v.diag;
+const catChip = c => `<span class="chip ${CAT_CLASS[c]}">${c}</span>`;
+function toast(msg){const t=document.getElementById("toast");t.textContent=msg;t.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(()=>t.hidden=true,2600)}
+const opts = (list, sel, ph) => (ph?`<option value="">${ph}</option>`:"") + list.map(x=>`<option${x===sel?" selected":""}>${esc(x)}</option>`).join("");
+
+const TYPE_LABEL = {visit:"Visit", patient:"Patient", diag:"Diagnosis", rank:"Rank / type", bracket:"Age bracket", user:"User account", month:"Month report"};
+const ymOf = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}`;
+function trashAdd(type, ref, reason, extra){ state.trash.unshift({tid:Date.now()+Math.random(), type, ref, reason, by:me().u, at:new Date(TODAY.getTime()+(Date.now()%3600e3)), ...(extra||{})}); }
+function trashLabel(e){
+  if(e.type==="visit"){ const v=state.visits.find(x=>x.id===e.ref); const p=v&&P(v.pid); return v?`${v.id} · ${fullName(p)} · ${v.cat} · ${fmtDT(v.ts).slice(0,11)}`:e.ref; }
+  if(e.type==="patient"){ const p=P(e.ref); return p?`${p.id} · ${fullName(p)}`:e.ref; }
+  if(e.type==="rank") return `${e.ref} (${e.branch})`;
+  if(e.type==="bracket"){ const [a,b]=e.ref.split("-").map(Number); return bracketLabel([a,b]); }
+  if(e.type==="user"){ const u=USERS.find(x=>x.u===e.ref); return u?`${u.name} (${u.u})`:e.ref; }
+  if(e.type==="month"){ const [y,m]=e.ref.split("-").map(Number); return `${MONTHS_LONG[m-1]} ${y} · all ${e.ids.length} visits`; }
+  return e.ref;
+}
+function canPurge(e){
+  const plural=(n,w)=>`${n} ${w}${n>1?"s":""}`;
+  if(e.type==="month" && state.closed.has(e.ref)) return "This month is closed. Reopen the month first.";
+  if(e.type==="visit"){ const v=state.visits.find(x=>x.id===e.ref); const ym=ymOf(v.ts); if(state.closed.has(ym)) return `Its month (${MONTHS_LONG[v.ts.getMonth()]} ${v.ts.getFullYear()}) is closed. Reopen the month first.`; }
+  if(e.type==="patient"){ const n=state.visits.filter(v=>v.pid===e.ref).length; if(n) return `Still has ${plural(n,"visit")}, including any in Trash. Permanently delete those first.`; }
+  if(e.type==="diag"){ const n=state.visits.filter(v=>v.diag===e.ref).length; if(n) return `Used by ${plural(n,"visit")}. It can stay in Trash only.`; }
+  if(e.type==="rank"){ const n=state.visits.filter(v=>v.branch===e.branch&&v.rank===e.ref).length; if(n) return `Used by ${plural(n,"visit")}. It can stay in Trash only.`; }
+  if(e.type==="user"){ const n=state.visits.filter(v=>v.by===e.ref).length+state.audit.filter(a=>a.who===e.ref).length; if(n) return `Has ${plural(n,"record")} in visits or the audit log. It can stay in Trash only.`; }
+  return "";
+}
+function delRow(type, key, colspan){
+  if(!state.del || state.del.type!==type || state.del.key!==String(key)) return "";
+  const inner = `<div class="actions"><label for="delReason"><b>Move to Trash?</b> Reason (required):</label><input type="text" id="delReason" style="max-width:320px" placeholder="e.g. Duplicate entry, encoded by mistake"><button class="btn danger sm" data-act="confirmDel">Move to Trash</button><button class="btn sm" data-act="cancelDel">Cancel</button><span class="err" id="delErr"></span></div>`;
+  return colspan ? `<tr class="voidrow"><td colspan="${colspan}">${inner}</td></tr>` : `<li style="background:var(--bad-soft)">${inner}</li>`;
+}
+
+/* ---------- Render ---------- */
+const NAV = {
+  encoder:[["encode","Encode Patient"]],
+  admin:[["encode","Encode Patient"],["records","Patient Records"],["reports","Reports"],["settings","Admin Settings"],["trash","Trash"]],
+  co:[["reports","Reports"]],
+  sysadmin:[["settings","User Accounts"]]
+};
+function render(){
+  const app = document.getElementById("app");
+  if(state.screen==="login"){ app.innerHTML = loginView(); return; }
+  const u = me();
+  const nav = NAV[state.viewAs];
+  if(!nav.some(n=>n[0]===state.view)) state.view = nav[0][0];
+  app.innerHTML = `
+  <header class="topbar">
+    <div class="brand"><b>[Hospital Name] · Patient Encoding & Reports</b><small>Armed Forces of the Philippines Medical Facility</small></div>
+    <label class="viewas">Prototype: view as
+      <select id="viewAs">${[["encoder","ER Encoder"],["admin","Admin"],["co","Commanding Officer"],["sysadmin","System Admin"]].map(([k,l])=>`<option value="${k}"${k===state.viewAs?" selected":""}>${l}</option>`).join("")}</select></label>
+    <div class="who">${esc(u.name)}<small>${esc(u.role)} · ${esc(u.office)}</small></div>
+  </header>
+  <div class="proto">Prototype for review. Data is sample only and resets on reload. Export and print buttons are placeholders.</div>
+  <div class="shell">
+    <nav class="side" aria-label="Main">
+      ${nav.map(([k,l])=>`<button data-nav="${k}"${k===state.view?' aria-current="page"':""}>${l}${k==="trash"&&state.trash.length?` <span class="chip num">${state.trash.length}</span>`:""}</button>`).join("")}
+      <button class="logout" data-act="logout">Log out</button>
+    </nav>
+    <main>${({encode:encodeView,records:recordsView,reports:reportsView,settings:settingsView,trash:trashView})[state.view]()}</main>
+  </div>`;
+  if(state.view==="encode") bindEncode();
+}
+
+function loginView(){
+  return `<div class="login"><div class="panel">
+    <div class="panel-h" style="flex-direction:column;align-items:flex-start;gap:2px"><h1>[Hospital Name]</h1><span class="hint">Patient Encoding & Reports</span></div>
+    <form class="panel-b grid" id="loginForm">
+      <div class="field"><label for="lg-u">Username</label><input type="text" id="lg-u" value="er.cruz" autocomplete="username"></div>
+      <div class="field"><label for="lg-p">Password</label><input type="password" id="lg-p" value="password" autocomplete="current-password">
+        <span class="hint">Demo: the correct password is "password". Try a wrong one to see the 5-attempt lock.</span>
+        <span class="err" id="lg-err">${state.loginMsg||""}</span></div>
+      <div class="field"><label for="lg-as">Prototype: log in as</label>
+        <select id="lg-as"><option value="encoder">ER Encoder (Cruz, Joanna)</option><option value="admin">Admin (Garcia, Elena)</option><option value="co">Commanding Officer</option><option value="sysadmin">System Admin</option></select>
+        <span class="hint">In the real system the account decides the role and office.</span></div>
+      <button class="btn primary" type="submit">Log in</button>
+    </form></div></div>`;
+}
+
+/* ----- Encode ----- */
+function encodeView(){
+  const u = me(), e = state.enc, sel = e.sel ? P(e.sel) : null;
+  const ed = e.editing ? state.visits.find(v=>v.id===e.editing) : null;
+  const src = ed || (sel ? lastVisitOf(sel.id) : null);
+  const base = ed ? P(ed.pid) : sel;
+  const canPickCat = u.office==="ER" || u.role==="Admin";
+  const defCat = ed ? ed.cat : (CATS.includes(u.office) ? u.office : "ER");
+  const branch = src?.branch || "";
+  const rank = src?.rank || "";
+  const nextId = "P-" + String(pSeq+1).padStart(6,"0");
+  const err = k => e.errors[k] ? `<span class="err">${e.errors[k]}</span>` : "";
+  const ec = k => e.errors[k] ? " has-err" : "";
+  const mine = state.visits.filter(v=>!v.voided && v.by===u.u && sameDay(v.ts,TODAY)).sort((a,b)=>b.ts-a.ts);
+  return `
+  <div class="pagehead"><h1>${ed?"Edit Visit":"Encode Patient"}</h1><p>Office: ${esc(u.office)}. Each save records one visit.</p></div>
+  <div class="encode">
+    <section class="panel">
+      <div class="panel-b grid">
+        ${ed ? `<div class="editbar">Editing ${ed.id} · ${esc(fullName(P(ed.pid)))} <button class="btn sm" data-act="cancelEdit">Cancel edit</button></div>` : `
+        <div class="field search-wrap">
+          <label for="pSearch">Find returning patient</label>
+          <input type="search" id="pSearch" placeholder="Type last name or Patient ID, e.g. Santos or P-000012" value="${esc(e.q)}" autocomplete="off">
+          <div class="results" id="pResults" hidden></div>
+          <span class="hint">Search first so a returning patient keeps the same Patient ID.</span>
+        </div>`}
+        <div class="autoline">
+          <div><span class="lbl">Patient ID</span><b>${base ? base.id : nextId}</b></div>
+          <div><span class="lbl">Date & time</span><b>${ed ? fmtDT(ed.ts) : "Set on save"}</b></div>
+          <div><span class="lbl">Status</span><span>${base ? `<span class="chip">Returning patient</span>` : `<span class="chip new">New patient</span>`}</span></div>
+          ${sel && !ed ? `<div style="justify-content:flex-end"><button class="btn sm" data-act="clearSel">Not this patient</button></div>`:""}
+        </div>
+        <div class="grid g3">
+          <div class="field${ec("last")}"><label for="f-last">Last name <span class="req">*</span></label><input type="text" id="f-last" value="${esc(base?.last)}">${err("last")}</div>
+          <div class="field${ec("first")}"><label for="f-first">First name <span class="req">*</span></label><input type="text" id="f-first" value="${esc(base?.first)}">${err("first")}</div>
+          <div class="field"><label for="f-mi">M.I.</label><input type="text" id="f-mi" maxlength="2" value="${esc(base?.mi)}"></div>
+        </div>
+        <div class="grid g3">
+          <div class="field${ec("sex")}"><span class="lbl">Sex <span class="req" style="color:var(--bad)">*</span></span>
+            <div class="seg" role="radiogroup" aria-label="Sex">
+              ${["Male","Female"].map(s=>`<label><input type="radio" name="f-sex" value="${s}"${base?.sex===s?" checked":""}><span>${s}</span></label>`).join("")}
+            </div>${err("sex")}</div>
+          <div class="field${ec("birth")}"><label for="f-birth">Birthdate <span class="req">*</span></label><input type="date" id="f-birth" max="${iso(TODAY)}" value="${esc(base?.birth)}">${err("birth")}</div>
+          <div class="field${ec("age")}"><label for="f-age">Age <span class="req">*</span></label><input type="number" id="f-age" min="0" max="120" value="${base?.birth ? ageAt(base.birth, ed?ed.ts:TODAY) : ""}">${err("age")}<span class="hint">Auto from birthdate</span></div>
+        </div>
+        <div class="grid g2">
+          <div class="field${ec("branch")}"><label for="f-branch">Branch of service <span class="req">*</span></label><select id="f-branch">${opts(BRANCHES, branch, "Select branch")}</select>${err("branch")}</div>
+          <div class="field${ec("rank")}"><label for="f-rank" id="rankLbl">${branch==="Others"?"Type":"Rank"} <span class="req">*</span></label>
+            <select id="f-rank"${branch?"":" disabled"}>${branch?opts(actRanks(branch, rank), rank, branch==="Others"?"Select type":"Select rank"):`<option value="">Select branch first</option>`}</select>${err("rank")}
+            <input type="text" id="f-rankOther" placeholder="Specify" value="${esc(src?.rankOther)}"${rank==="Other (specify)"?"":" hidden"}></div>
+        </div>
+        <div class="grid g2">
+          <div class="field${ec("diag")}"><label for="f-diag">Diagnosis <span class="req">*</span></label><select id="f-diag">${opts(actDiag(ed?.diag), ed?.diag, "Select diagnosis")}</select>${err("diag")}
+            <input type="text" id="f-diagOther" placeholder="Specify diagnosis" value="${esc(ed?.diagOther)}"${ed?.diag==="Other (specify)"?"":" hidden"}></div>
+          <div class="field"><label for="f-cat">Category</label><select id="f-cat"${canPickCat?"":" disabled"}>${opts(CATS, defCat)}</select>
+            <span class="hint">${canPickCat?"ER can encode for any category.":"Set by your office."}</span></div>
+        </div>
+        <div class="field"><label for="f-remarks">Remarks</label><textarea id="f-remarks" placeholder="Optional. e.g. From ER, admitted to ward; repeat visit">${esc(ed?.remarks)}</textarea></div>
+        <div class="actions">
+          <button class="btn primary" data-act="save">${ed?"Save changes":"Save & New"}</button>
+          ${ed?"":`<button class="btn" data-act="clearForm">Clear</button>`}
+          <span class="hint">Tab moves between fields. Ctrl+Enter saves.</span>
+        </div>
+      </div>
+    </section>
+    <aside class="panel">
+      <div class="panel-h"><h2>My entries today</h2><span class="chip num">${mine.length}</span></div>
+      ${mine.length? `<ul class="today-list">${mine.map(v=>{const p=P(v.pid);return `<li class="${v.voided?"voided":""}"><span class="t">${fmtT(v.ts)}</span><span class="n">${esc(fullName(p))}</span>${catChip(v.cat)}<span class="d">${esc(diagText(v))}</span><span style="grid-column:3;justify-self:end">${v.voided?`<span class="chip void">Voided</span>`:`<button class="btn link sm" data-edit="${v.id}">Edit</button>`}</span></li>`}).join("")}</ul>` : `<p class="empty">No entries yet today. Saved patients appear here and can be edited until midnight.</p>`}
+    </aside>
+  </div>`;
+}
+function lastVisitOf(id){ return state.visits.filter(v=>v.pid===id&&!v.voided).sort((a,b)=>b.ts-a.ts)[0]; }
+
+function bindEncode(){
+  const q = document.getElementById("pSearch"), box = document.getElementById("pResults");
+  if(q){
+    const show = () => {
+      const s = q.value.trim().toLowerCase(); state.enc.q = q.value;
+      if(s.length<2){box.hidden=true;return}
+      const hits = state.patients.filter(p=>p.id.toLowerCase().includes(s)||`${p.last} ${p.first}`.toLowerCase().includes(s)).slice(0,8);
+      box.innerHTML = hits.length ? hits.map(p=>`<button type="button" data-pick="${p.id}"><span><b>${esc(fullName(p))}</b> · ${p.sex} · ${esc(p.birth)}</span><span class="mono">${p.id}</span></button>`).join("") : `<div class="none">No match. Fill in the form below as a new patient.</div>`;
+      box.hidden=false;
+    };
+    q.addEventListener("input", show);
+    q.addEventListener("focus", show);
+  }
+  const b = document.getElementById("f-birth"), a = document.getElementById("f-age");
+  b.addEventListener("change", ()=>{ a.value = ageAt(b.value, TODAY); });
+  const br = document.getElementById("f-branch"), rk = document.getElementById("f-rank");
+  br.addEventListener("change", ()=>{
+    const v = br.value;
+    rk.disabled = !v;
+    rk.innerHTML = v ? opts(actRanks(v), "", v==="Others"?"Select type":"Select rank") : `<option value="">Select branch first</option>`;
+    document.getElementById("rankLbl").innerHTML = (v==="Others"?"Type":"Rank")+` <span class="req">*</span>`;
+    document.getElementById("f-rankOther").hidden = true;
+  });
+  rk.addEventListener("change", ()=>{ document.getElementById("f-rankOther").hidden = rk.value!=="Other (specify)"; });
+  const dg = document.getElementById("f-diag");
+  dg.addEventListener("change", ()=>{ document.getElementById("f-diagOther").hidden = dg.value!=="Other (specify)"; });
+  document.querySelector("main").addEventListener("keydown", ev=>{ if(ev.key==="Enter"&&(ev.ctrlKey||ev.metaKey)){ev.preventDefault();saveEncode()} });
+}
+
+function readForm(){
+  const g = id => document.getElementById(id)?.value.trim() ?? "";
+  return {last:g("f-last"), first:g("f-first"), mi:g("f-mi").replace(/\./g,"").toUpperCase(), sex:document.querySelector('input[name="f-sex"]:checked')?.value||"",
+    birth:g("f-birth"), age:g("f-age"), branch:g("f-branch"), rank:g("f-rank"), rankOther:g("f-rankOther"), diag:g("f-diag"), diagOther:g("f-diagOther"),
+    cat:g("f-cat"), remarks:g("f-remarks")};
+}
+function saveEncode(){
+  const f = readForm(), e = {};
+  if(!f.last) e.last="Enter the last name.";
+  if(!f.first) e.first="Enter the first name.";
+  if(!f.sex) e.sex="Choose Male or Female.";
+  if(!f.birth) e.birth="Enter the birthdate.";
+  if(f.age===""||+f.age<0||+f.age>120) e.age="Enter an age from 0 to 120.";
+  if(!f.branch) e.branch="Choose the branch of service.";
+  if(!f.rank) e.rank= f.branch==="Others" ? "Choose the patient type." : "Choose the rank.";
+  else if(f.rank==="Other (specify)"&&!f.rankOther) e.rank="Type the patient type.";
+  if(!f.diag) e.diag="Choose a diagnosis.";
+  else if(f.diag==="Other (specify)"&&!f.diagOther) e.diag="Type the diagnosis.";
+  state.enc.errors = e;
+  if(Object.keys(e).length){ render(); restore(f); document.querySelector(".has-err input,.has-err select")?.focus(); return; }
+
+  const st = state.enc;
+  if(st.editing){
+    const v = state.visits.find(x=>x.id===st.editing), p = P(v.pid);
+    Object.assign(p,{last:f.last,first:f.first,mi:f.mi,sex:f.sex,birth:f.birth});
+    Object.assign(v,{age:+f.age,branch:f.branch,rank:f.rank,rankOther:f.rankOther,diag:f.diag,diagOther:f.diagOther,cat:f.cat,remarks:f.remarks});
+    log(`Edited ${v.id}`); toast(`Changes saved to ${v.id}`);
+  } else {
+    let p = st.sel ? P(st.sel) : null;
+    if(!p){ p = {id:pid(), last:f.last, first:f.first, mi:f.mi, sex:f.sex, birth:f.birth}; state.patients.push(p); }
+    else Object.assign(p,{last:f.last,first:f.first,mi:f.mi,sex:f.sex,birth:f.birth});
+    p.branch=f.branch; p.rank=f.rank;
+    const now = new Date(TODAY.getTime() + (Date.now()%3600e3)); // keeps prototype on 07-Oct
+    const v = addVisit({pid:p.id, ts:now, cat:f.cat, diag:f.diag, diagOther:f.diagOther, branch:f.branch, rank:f.rank, rankOther:f.rankOther, age:+f.age, remarks:f.remarks, by:me().u});
+    toast(`Saved ${p.id} · ${fullName(p)} · ${v.cat}`);
+  }
+  state.enc = {sel:null, editing:null, errors:{}, q:""};
+  render(); document.getElementById("pSearch")?.focus();
+}
+function restore(f){
+  const s=(id,v)=>{const el=document.getElementById(id); if(el) el.value=v};
+  ["last","first","mi","birth","age","diagOther","remarks","rankOther"].forEach(k=>s("f-"+k,f[k]));
+  if(f.sex) document.querySelector(`input[name="f-sex"][value="${f.sex}"]`).checked=true;
+  s("f-branch",f.branch); const rk=document.getElementById("f-rank");
+  if(f.branch){rk.disabled=false;rk.innerHTML=opts(actRanks(f.branch,f.rank),f.rank,f.branch==="Others"?"Select type":"Select rank");document.getElementById("rankLbl").innerHTML=(f.branch==="Others"?"Type":"Rank")+` <span class="req">*</span>`}
+  document.getElementById("f-rankOther").hidden = f.rank!=="Other (specify)";
+  s("f-diag",f.diag); document.getElementById("f-diagOther").hidden = f.diag!=="Other (specify)";
+  s("f-cat",f.cat);
+}
+
+/* ----- Records ----- */
+function recordsView(){
+  const r = state.rec;
+  const q = r.q.trim().toLowerCase();
+  const tabs = `<div class="tabs" role="tablist"><button role="tab" data-rtab="visits" aria-selected="${r.tab==="visits"}">Visits</button><button role="tab" data-rtab="patients" aria-selected="${r.tab==="patients"}">Patients</button></div>`;
+  if(r.tab==="patients"){
+    const rows = state.patients.filter(p=>!p.deleted && (!q || `${p.last} ${p.first}`.toLowerCase().includes(q) || p.id.toLowerCase().includes(q))).sort((a,b)=>a.last.localeCompare(b.last));
+    return `<div class="pagehead"><h1>Patient Records</h1><p>${rows.length} patients. A patient can be moved to Trash only after all their visits are in Trash.</p></div>${tabs}
+    <section class="panel"><div class="panel-b filters"><div class="field" style="grid-column:span 2"><label for="r-q">Search</label><input type="search" id="r-q" placeholder="Name or Patient ID" value="${esc(r.q)}"></div></div>
+    <div class="tablewrap"><table><thead><tr><th>Patient ID</th><th>Name</th><th>Sex</th><th>Birthdate</th><th class="n">Visits</th><th></th></tr></thead><tbody>
+    ${rows.slice(0,60).map(p=>{const n=state.visits.filter(v=>v.pid===p.id&&!v.voided).length; return `<tr><td class="mono">${p.id}</td><td>${esc(fullName(p))}</td><td>${p.sex}</td><td class="mono">${p.birth}</td><td class="n">${n}</td>
+      <td><button class="btn link sm" style="color:var(--bad)" data-sdel="patient|${p.id}">Delete</button></td></tr>${delRow("patient",p.id,6)}`}).join("") || `<tr><td colspan="6" class="empty">No patients match.</td></tr>`}
+    </tbody></table></div></section>`;
+  }
+  const from = new Date(r.from+"T00:00"), to = new Date(r.to+"T23:59:59");
+  const rows = state.visits.filter(v=>{
+    if(v.voided) return false;
+    if(v.ts<from||v.ts>to) return false;
+    if(r.cat && v.cat!==r.cat) return false;
+    if(r.branch && v.branch!==r.branch) return false;
+    if(q){const p=P(v.pid); if(!(`${p.last} ${p.first}`.toLowerCase().includes(q)||p.id.toLowerCase().includes(q)||v.id.toLowerCase().includes(q))) return false;}
+    return true;
+  }).sort((a,b)=>b.ts-a.ts);
+  const shown = rows.slice(0,60);
+  return `
+  <div class="pagehead"><h1>Patient Records</h1><p>${rows.length} visits match. Deleted visits go to Trash and are left out of reports.</p></div>
+  ${tabs}
+  <section class="panel">
+    <div class="panel-b filters">
+      <div class="field"><label for="r-from">From</label><input type="date" id="r-from" value="${r.from}"></div>
+      <div class="field"><label for="r-to">To</label><input type="date" id="r-to" value="${r.to}"></div>
+      <div class="field"><label for="r-cat">Category</label><select id="r-cat">${opts(CATS, r.cat, "All categories")}</select></div>
+      <div class="field"><label for="r-branch">Branch</label><select id="r-branch">${opts(BRANCHES, r.branch, "All branches")}</select></div>
+      <div class="field"><label for="r-q">Search</label><input type="search" id="r-q" placeholder="Name, Patient ID or Visit ID" value="${esc(r.q)}"></div>
+    </div>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Date & time</th><th>Visit</th><th>Patient ID</th><th>Name</th><th>Sex</th><th class="n">Age</th><th>Branch / Rank</th><th>Diagnosis</th><th>Category</th><th>Encoded by</th><th></th></tr></thead>
+      <tbody>${shown.map(v=>{const p=P(v.pid); return `
+        <tr><td class="mono">${fmtDT(v.ts)}</td><td class="mono">${v.id}</td><td class="mono">${p.id}</td><td>${esc(fullName(p))}</td><td>${p.sex[0]}</td><td class="n">${v.age}</td>
+        <td>${esc(v.branch)} · ${esc(rankText(v))}</td><td>${esc(diagText(v))}${v.remarks?`<div class="hint">${esc(v.remarks)}</div>`:""}</td><td>${catChip(v.cat)}</td><td>${esc(v.by)}</td>
+        <td><div class="actions" style="gap:4px;flex-wrap:nowrap"><button class="btn link sm" data-aedit="${v.id}">Edit</button><button class="btn link sm" style="color:var(--bad)" data-sdel="visit|${v.id}">Delete</button></div></td></tr>
+        ${delRow("visit",v.id,11)}`}).join("") || `<tr><td colspan="11" class="empty">No visits match these filters.</td></tr>`}
+      </tbody></table></div>
+    ${rows.length>shown.length?`<p class="hint" style="padding:10px 16px;margin:0">Showing the latest 60. Narrow the filters to see more.</p>`:""}
+  </section>`;
+}
+
+/* ----- Trash ----- */
+function trashView(){
+  const pu = state.purge;
+  const confirmRow = (key, word, colspan) => `<tr class="voidrow"><td colspan="${colspan}"><div class="actions"><label for="purgeTxt"><b>${key==="ALL"?"Empty Trash?":"Delete permanently?"}</b> This can't be undone. Type <span class="mono">${esc(word)}</span> to confirm:</label><input type="text" id="purgeTxt" style="max-width:240px" autocomplete="off"><button class="btn danger sm" data-act="confirmPurge">Delete permanently</button><button class="btn sm" data-act="cancelPurge">Cancel</button><span class="err" id="purgeErr"></span></div></td></tr>`;
+  const rows = state.trash.map(e=>{const why=canPurge(e); return `<tr><td>${TYPE_LABEL[e.type]}</td><td>${esc(trashLabel(e))}</td><td>${esc(e.reason)}</td><td class="mono">${esc(e.by)}</td><td class="mono">${fmtDT(e.at)}</td>
+    <td><div class="actions" style="gap:4px;flex-wrap:nowrap"><button class="btn link sm" data-restore="${e.tid}">Restore</button>${why?`<span class="hint" title="${esc(why)}">Can't delete permanently</span>`:`<button class="btn link sm" style="color:var(--bad)" data-purge="${e.tid}">Delete permanently</button>`}</div>${why?`<div class="hint">${esc(why)}</div>`:""}</td></tr>
+    ${pu===String(e.tid)?confirmRow(e.tid, e.ref, 6):""}`}).join("");
+  return `<div class="pagehead"><h1>Trash</h1><p>Deleted items wait here until Admin restores them or deletes them permanently. Nothing is emptied automatically.</p></div>
+  <section class="panel">
+    <div class="panel-h"><h2>${state.trash.length} item${state.trash.length===1?"":"s"}</h2>${state.trash.length?`<button class="btn sm danger" style="margin-left:auto" data-act="emptyTrash">Empty Trash</button>`:""}</div>
+    ${state.trash.length?`<div class="tablewrap"><table><thead><tr><th>Type</th><th>Item</th><th>Reason</th><th>Deleted by</th><th>When</th><th></th></tr></thead><tbody>
+    ${pu==="ALL"?confirmRow("ALL","EMPTY TRASH",6):""}${rows}</tbody></table></div>`:`<p class="empty">Trash is empty.</p>`}
+  </section>
+  <p class="hint">Items still used by visits, or visits in a closed month, can't be deleted permanently. They stay in Trash so past records and reports stay correct. Permanently deleted data still exists in backups until the backups rotate out.</p>`;
+}
+
+/* ----- Reports ----- */
+function reportRange(){
+  const r = state.rep;
+  if(r.type==="Monthly"){const [y,m]=r.month.split("-").map(Number); return [new Date(y,m-1,1), new Date(y,m,1), `${MONTHS_LONG[m-1]} ${y}`];}
+  if(r.type==="Quarterly"){const y=+r.year,q=+r.q; return [new Date(y,(q-1)*3,1), new Date(y,q*3,1), `Q${q} ${y} (${MONTHS[(q-1)*3]}–${MONTHS[q*3-1]})`];}
+  if(r.type==="Annual"){const y=+r.year; return [new Date(y,0,1), new Date(y+1,0,1), `Calendar Year ${y}`];}
+  const a=new Date(r.from+"T00:00"), b=new Date(r.to+"T00:00"); b.setDate(b.getDate()+1);
+  return [a,b,`${fmtDT(a).slice(0,11)} to ${fmtDT(new Date(b-1)).slice(0,11)}`];
+}
+function tally(cat, a, b){
+  const vs = state.visits.filter(v=>!v.voided && v.cat===cat && v.ts>=a && v.ts<b);
+  const latest = new Map(); vs.forEach(v=>{const c=latest.get(v.pid); if(!c||v.ts>c.ts) latest.set(v.pid,v)});
+  const pts = [...latest.values()];
+  const brs = actBrackets();
+  const sex = {Male:0,Female:0}, age = brs.map(()=>0), diag = {}, br = {}; let noBr = 0;
+  pts.forEach(v=>{
+    const p=P(v.pid); sex[p.sex]++;
+    const i = brs.findIndex(([x,y])=>v.age>=x&&v.age<=y); if(i>=0) age[i]++; else noBr++;
+    const d = v.diag==="Other (specify)" ? "Others" : v.diag; diag[d]=(diag[d]||0)+1;
+    br[v.branch] ??= {total:0, ranks:{}}; br[v.branch].total++; const rt=rankText(v); br[v.branch].ranks[rt]=(br[v.branch].ranks[rt]||0)+1;
+  });
+  let dl = Object.entries(diag).filter(([k])=>k!=="Others").sort((x,y)=>y[1]-x[1]||x[0].localeCompare(y[0]));
+  let others = diag.Others||0; dl.slice(10).forEach(([,n])=>others+=n); dl = dl.slice(0,10); if(others) dl.push(["Others",others]);
+  return {patients:pts.length, visits:vs.length, sex, age, ageLabels:brs.map(bracketLabel), noBr, diag:dl, br};
+}
+function reportsView(){
+  const r = state.rep, u = me();
+  const [a,b,label] = reportRange();
+  const cats = r.cat==="All" ? CATS : [r.cat];
+  const ym = r.type==="Monthly" ? r.month : null;
+  const isClosed = ym && state.closed.has(ym);
+  const yearOpts = ["2025","2026"];
+  const monthOpts = []; for(let y=2026;y>=2025;y--) for(let m=12;m>=1;m--){ const k=`${y}-${pad(m)}`; if(k<="2026-10") monthOpts.push(`<option value="${k}"${k===r.month?" selected":""}>${MONTHS_LONG[m-1]} ${y}</option>`); }
+  const snap = isClosed ? state.snaps[ym] : null;
+  const sections = snap ? snap.sections.filter(s=>cats.includes(s.c)) : cats.map(c=>{const t=tally(c,a,b); return {c,t}});
+  const gp = snap ? snap.gp : new Set(state.visits.filter(v=>!v.voided&&cats.includes(v.cat)&&v.ts>=a&&v.ts<b).map(v=>v.pid)).size;
+  const gv = sections.reduce((s,x)=>s+x.t.visits,0);
+  return `
+  <div class="pagehead"><h1>Reports</h1><p>Counts each patient once per category in the period. Deleted visits (in Trash) are excluded.</p></div>
+  <section class="panel" style="margin-bottom:16px">
+    <div class="panel-b rcontrols">
+      <div class="field"><label for="rp-type">Period type</label><select id="rp-type">${opts(["Monthly","Quarterly","Annual","Custom range"], r.type==="Custom"?"Custom range":r.type)}</select></div>
+      ${r.type==="Monthly"?`<div class="field"><label for="rp-month">Month</label><select id="rp-month">${monthOpts.join("")}</select></div><div></div>`:""}
+      ${r.type==="Quarterly"?`<div class="field"><label for="rp-q">Quarter</label><select id="rp-q">${["1","2","3","4"].map(q=>`<option value="${q}"${q===r.q?" selected":""}>Q${q}</option>`).join("")}</select></div><div class="field"><label for="rp-year">Year</label><select id="rp-year">${opts(yearOpts,r.year)}</select></div>`:""}
+      ${r.type==="Annual"?`<div class="field"><label for="rp-year">Year</label><select id="rp-year">${opts(yearOpts,r.year)}</select></div><div></div>`:""}
+      ${r.type==="Custom"?`<div class="field"><label for="rp-from">From</label><input type="date" id="rp-from" value="${r.from}"></div><div class="field"><label for="rp-to">To</label><input type="date" id="rp-to" value="${r.to}"></div>`:""}
+      <div class="field"><label for="rp-cat">Category</label><select id="rp-cat">${opts(["All",...CATS], r.cat)}</select></div>
+      <div class="actions"><button class="btn primary" data-act="generate">Generate</button></div>
+    </div>
+    <div class="panel-h" style="border-top:1px solid var(--line);border-bottom:0">
+      <div class="actions"><button class="btn sm" data-export="PDF">Export PDF</button><button class="btn sm" data-export="Excel">Export Excel</button><button class="btn sm" data-export="Print">Print</button></div>
+      <div class="actions" style="margin-left:auto">
+        ${ym ? (isClosed?`<span class="closed">Month closed · locked for editing</span>`:`<span class="closed" style="background:var(--ok-soft);color:var(--ok)">Month open</span>`) : ""}
+        ${ym && u.role==="Admin" ? `<button class="btn sm" data-act="toggleClose">${isClosed?"Reopen month":"Close month"}</button>`:""}
+        ${ym && u.role==="Admin" ? (isClosed?`<span class="hint">Reopen to delete this month</span>`:`<button class="btn sm danger" data-act="askDelMonth">Delete month report</button>`):""}
+      </div>
+    </div>
+    ${state.mdel && ym && !isClosed ? `<div class="panel-b" style="background:var(--bad-soft);border-top:1px solid var(--line)"><div class="actions"><label for="delReason"><b>Move all ${state.visits.filter(v=>!v.voided&&ymOf(v.ts)===ym).length} visits of ${esc(label)} to Trash?</b> Reason (required):</label><input type="text" id="delReason" style="max-width:320px" placeholder="e.g. Test data, wrong month uploaded"><button class="btn danger sm" data-act="confirmDelMonth">Move to Trash</button><button class="btn sm" data-act="cancelDelMonth">Cancel</button><span class="err" id="delErr"></span></div><p class="hint" style="margin:8px 0 0">The whole month can be restored from Trash in one click.</p></div>`:""}
+  </section>
+
+  ${snap?`<div class="snap">Saved copy, taken when ${esc(label)} was closed on ${fmtDT(snap.takenAt)}. Later changes to lists or records don't affect it.</div>`:""}
+  <article class="sheet">
+    <header class="sheet-h">
+      <div class="org">[Hospital Name] · Admission / Administrative Office</div>
+      <h2>${r.type==="Custom"?"Patient Census Report":`${r.type} Patient Census Report`}</h2>
+      <div class="per">${esc(label)}${r.cat!=="All"?` · ${r.cat} only`:""}</div>
+    </header>
+    ${r.cat==="All"?`<div class="totals"><div><b>${gp}</b><span>Total patients (all categories)</span></div><div><b>${gv}</b><span>Total visits</span></div>${sections.map(s=>`<div><b>${s.t.patients}</b><span>${s.c} patients</span></div>`).join("")}</div>`:""}
+    ${sections.map(({c,t})=>`
+    <section class="cat">
+      <h3>${catChip(c)} ${c}</h3>
+      <div class="totals"><div><b>${t.patients}</b><span>Patients</span></div><div><b>${t.visits}</b><span>Visits</span></div></div>
+      ${t.patients? `<div class="rgrid">
+        <div class="rbox"><h4>Sex</h4><table><tbody>${Object.entries(t.sex).map(([k,n])=>`<tr><td>${k}</td><td class="n">${n}</td></tr>`).join("")}<tr><td><b>Total</b></td><td class="n"><b>${t.patients}</b></td></tr></tbody></table></div>
+        <div class="rbox"><h4>Age range</h4><table><tbody>${t.ageLabels.map((l,i)=>`<tr><td>${l}</td><td class="n">${t.age[i]}</td></tr>`).join("")}${t.noBr?`<tr><td>No bracket</td><td class="n">${t.noBr}</td></tr>`:""}</tbody></table></div>
+        <div class="rbox"><h4>Diagnosis (Top 10)</h4><table><tbody>${t.diag.map(([d,n])=>`<tr><td>${esc(d)}</td><td class="n">${n}</td></tr>`).join("")}</tbody></table></div>
+        <div class="rbox wide"><h4>Branch of service and rank</h4><div class="tablewrap"><table><thead><tr><th>Branch / Rank</th><th class="n">Patients</th></tr></thead><tbody>
+          ${BRANCHES.filter(x=>t.br[x]).map(x=>`<tr class="br"><td>${x}</td><td class="n">${t.br[x].total}</td></tr>${(RANKS[x].filter(k=>k!=="Other (specify)").concat(Object.keys(t.br[x].ranks).filter(k=>!RANKS[x].includes(k)))).filter(k=>t.br[x].ranks[k]).map(k=>`<tr class="rk"><td>${esc(k)}</td><td class="n">${t.br[x].ranks[k]}</td></tr>`).join("")}`).join("")}
+        </tbody></table></div></div>
+      </div>` : `<p class="hint">No ${c} patients in this period.</p>`}
+    </section>`).join("")}
+    <div class="sign"><div><b>${esc(VIEW_AS.admin.name)}</b>Prepared by · Admission / Admin Office</div><div><b>&nbsp;</b>Noted by · Commanding Officer</div></div>
+    <p class="hint" style="margin-top:18px">${snap?`Saved copy from ${fmtDT(snap.takenAt)}`:`Generated ${fmtDT(TODAY)}`} · Sample data</p>
+  </article>`;
+}
+
+function makeSnap(ym){
+  const [y,m]=ym.split("-").map(Number), a=new Date(y,m-1,1), b=new Date(y,m,1);
+  return {takenAt:new Date(TODAY.getTime()+(Date.now()%3600e3)), sections:CATS.map(c=>({c,t:tally(c,a,b)})),
+    gp:new Set(state.visits.filter(v=>!v.voided&&v.ts>=a&&v.ts<b).map(v=>v.pid)).size};
+}
+
+/* ----- Dropdown list editor ----- */
+function listRows(kind, branch){
+  const le = state.le;
+  let items;
+  if(kind==="diag") items = DIAGNOSES.map((d,i)=>({i, label:d, off:OFF.diag.has(d), fixed:d==="Other (specify)"}));
+  if(kind==="br") items = BRACKETS.map((b,i)=>({i, label:bracketLabel(b), off:OFF.br.has(brKey(b)), b}));
+  if(kind==="rank") items = RANKS[branch].map((x,i)=>({i, label:x, off:OFF.rank[branch].has(x), fixed:x==="Other (specify)"}));
+  items = items.filter(it=>!it.off);
+  return `<ul class="lrows">${items.map(it=>{
+    const id = `${kind}|${it.i}`;
+    if(le && le.kind===kind && le.i===it.i && (kind!=="rank"||le.branch===branch)){
+      const inputs = kind==="br"
+        ? `<input type="number" id="le-a" min="0" max="120" value="${it.b[0]}" aria-label="From age"><span>to</span><input type="number" id="le-b" min="0" max="120" value="${it.b[1]>=200?"":it.b[1]}" placeholder="and above" aria-label="To age">`
+        : `<input type="text" id="le-a" value="${esc(it.label)}" aria-label="Name" style="flex:1">`;
+      return `<li>${inputs}<button class="btn sm primary" data-le-save="${id}">Save</button><button class="btn sm" data-le-cancel="1">Cancel</button></li><li style="min-height:0;padding:0 10px;border:0"><span class="err" id="leErr"></span></li>`;
+    }
+    return `<li><span class="nm${kind==="br"?" num":""}">${esc(it.label)}</span>
+      ${it.fixed?`<span class="hint">Fixed</span>`:it.off?`<button class="btn link sm" data-le-on="${id}">Restore</button>`:`<button class="btn link sm" data-le-edit="${id}">Edit</button><button class="btn link sm" style="color:var(--bad)" data-sdel="${kind==="br"?"bracket":kind}|${it.i}">Delete</button>`}</li>${delRow(kind==="br"?"bracket":kind, it.i)}`;
+  }).join("")}</ul>`;
+}
+function overlap(f,to,skip){ return BRACKETS.find((x,i)=>i!==skip && !OFF.br.has(brKey(x)) && f<=x[1] && to>=x[0]); }
+
+/* ----- Settings ----- */
+function settingsView(){
+  const isSys = me().role==="System Admin";
+  if(isSys) state.setTab="users";
+  const t = state.setTab;
+  const tab = (k,l)=>`<button role="tab" data-tab="${k}" aria-selected="${t===k}">${l}</button>`;
+  let body = "";
+  if(t==="users") body = `<section class="panel"><div class="panel-h"><h2>User accounts</h2><span class="hint">Only one Admin account is allowed. Accounts lock after ${MAX_TRIES} wrong passwords.</span><button class="btn sm primary" style="margin-left:auto" data-export="Add user">Add user</button></div>
+    <div class="tablewrap"><table><thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Office</th><th>Status</th><th></th></tr></thead><tbody>
+    ${USERS.filter(u=>!u.deleted).map(u=>`<tr><td>${esc(u.name)}</td><td class="mono">${u.u}</td><td>${u.role}</td><td>${u.office}</td><td>${u.locked?`<span class="chip er">Locked</span> <span class="hint">${MAX_TRIES} wrong passwords</span>`:u.active?`<span class="chip opd">Active</span>`:`<span class="chip">Off</span> <span class="hint">${esc(u.note||"")}</span>`}</td><td><div class="actions" style="gap:4px;flex-wrap:nowrap">${u.locked?`<button class="btn link sm" data-unlock="${u.u}">Unlock</button>`:""}<button class="btn link sm" data-export="Reset password">Reset password</button><button class="btn link sm" data-export="Deactivate">${u.active?"Deactivate":"Activate"}</button>${u.u===me().u||u.role==="Admin"?"":`<button class="btn link sm" style="color:var(--bad)" data-sdel="user|${u.u}">Delete</button>`}</div></td></tr>${delRow("user",u.u,6)}`).join("")}
+    </tbody></table></div></section>`;
+  if(t==="lists") body = `<p class="hint" style="margin:0 0 12px">Deleted items move to Trash. They disappear from encoding but past visits and reports keep them. Restore them from Trash.</p>
+    <div class="lists">
+    <section class="panel"><div class="panel-h"><h2>Diagnosis list</h2><span class="chip">${actDiag().length-1} active + Other</span></div><div class="panel-b">
+      ${listRows("diag")}
+      <div class="addrow"><input type="text" id="newDiag" placeholder="Add a diagnosis"><button class="btn sm" data-act="addDiag">Add</button></div>
+      <span class="err" id="diagErr"></span></div></section>
+    <section class="panel"><div class="panel-h"><h2>Age brackets</h2><span class="chip">${actBrackets().length} active</span></div><div class="panel-b">
+      ${listRows("br")}
+      <p class="hint">Sample brackets. Replace with the hospital's official ranges. To change ranges, edit or remove a bracket first so they don't overlap.</p>
+      <div class="addrow"><input type="number" id="newBrFrom" min="0" max="120" placeholder="From age" aria-label="From age"><input type="number" id="newBrTo" min="0" max="120" placeholder="To age (blank = and above)" aria-label="To age"><button class="btn sm" data-act="addBracket">Add</button></div>
+      <span class="err" id="brErr"></span></div></section>
+    <section class="panel" style="grid-column:1/-1"><div class="panel-h"><h2>Ranks by branch</h2><span class="hint">Draft from AFP standard ranks. Verify before go-live.</span></div><div class="panel-b">
+      <div class="rbtabs" role="group" aria-label="Branch">${BRANCHES.map(b=>`<button data-rb="${b}" aria-pressed="${state.rankBranch===b}">${b==="Others"?"Others (patient types)":b} · ${actRanks(b).length}</button>`).join("")}</div>
+      ${listRows("rank", state.rankBranch)}
+      <div class="addrow"><input type="text" id="newRank" placeholder="Add to ${esc(state.rankBranch)}, e.g. CPO" aria-label="Rank"><button class="btn sm" data-act="addRank">Add to ${esc(state.rankBranch)}</button></div>
+      <span class="err" id="rankErr"></span>
+    </div></section></div>`;
+  if(t==="audit") body = `<section class="panel"><div class="panel-h"><h2>Audit log</h2><span class="hint">Read-only. Encode, edit or void something to see it appear.</span></div>
+    ${state.audit.length?`<div class="tablewrap"><table><thead><tr><th>When</th><th>User</th><th>Action</th></tr></thead><tbody>${state.audit.map(x=>`<tr><td class="mono">${fmtDT(x.ts)}</td><td class="mono">${x.who}</td><td>${esc(x.what)}</td></tr>`).join("")}</tbody></table></div>`:`<p class="empty">No actions yet in this session.</p>`}</section>`;
+  return isSys ? `<div class="pagehead"><h1>User Accounts</h1><p>System Admin manages accounts only. No access to patient data or reports.</p></div>${body}`
+    : `<div class="pagehead"><h1>Admin Settings</h1></div><div class="tabs" role="tablist">${tab("users","Users")}${tab("lists","Dropdown lists")}${tab("audit","Audit log")}</div>${body}`;
+}
+
+function softDelete(){
+  const d=state.del, reason=document.getElementById("delReason").value.trim(), er=document.getElementById("delErr");
+  if(!reason){ er.textContent="Enter a reason before moving this to Trash."; return; }
+  let label="";
+  if(d.type==="visit"){ const v=state.visits.find(x=>x.id===d.key); v.voided=true; v.voidReason=reason; trashAdd("visit", v.id, reason); label=v.id; }
+  if(d.type==="patient"){ const n=state.visits.filter(v=>v.pid===d.key&&!v.voided).length; if(n){ er.textContent=`This patient still has ${n} visit${n>1?"s":""}. Move those visits to Trash first.`; return; } P(d.key).deleted=true; trashAdd("patient", d.key, reason); label=d.key; }
+  if(d.type==="diag"){ const x=DIAGNOSES[+d.key]; OFF.diag.add(x); trashAdd("diag", x, reason); label=`"${x}"`; }
+  if(d.type==="rank"){ const b=d.branch, x=RANKS[b][+d.key]; OFF.rank[b].add(x); trashAdd("rank", x, reason, {branch:b}); label=`"${x}" (${b})`; }
+  if(d.type==="bracket"){ const b=BRACKETS[+d.key]; OFF.br.add(brKey(b)); trashAdd("bracket", brKey(b), reason); label=`age bracket ${bracketLabel(b)}`; }
+  if(d.type==="user"){ const u=USERS.find(x=>x.u===d.key); u.deleted=true; trashAdd("user", u.u, reason); label=`user ${u.u}`; }
+  log(`Moved ${label} to Trash: ${reason}`); toast(`Moved ${label} to Trash`); state.del=null; render();
+}
+function restoreItem(tid){
+  const e=state.trash.find(x=>String(x.tid)===String(tid)); if(!e) return;
+  if(e.type==="visit"){ const v=state.visits.find(x=>x.id===e.ref); if(P(v.pid).deleted){ toast(`Restore patient ${v.pid} first.`); return; } v.voided=false; v.voidReason=""; }
+  if(e.type==="patient") P(e.ref).deleted=false;
+  if(e.type==="month"){ const vs=state.visits.filter(v=>v.batch===e.tid); const blocked=vs.find(v=>P(v.pid).deleted); if(blocked){ toast(`Restore patient ${blocked.pid} first.`); return; } vs.forEach(v=>{v.voided=false; v.voidReason=""; delete v.batch;}); }
+  if(e.type==="diag") OFF.diag.delete(e.ref);
+  if(e.type==="rank") OFF.rank[e.branch].delete(e.ref);
+  if(e.type==="bracket"){ const [a,b]=e.ref.split("-").map(Number), i=BRACKETS.findIndex(x=>brKey(x)===e.ref), c=overlap(a,b,i); if(c){ toast(`Can't restore ${bracketLabel([a,b])}: it overlaps ${bracketLabel(c)}. Edit or delete that one first.`); return; } OFF.br.delete(e.ref); }
+  if(e.type==="user") USERS.find(x=>x.u===e.ref).deleted=false;
+  state.trash=state.trash.filter(x=>x!==e); log(`Restored ${TYPE_LABEL[e.type].toLowerCase()} ${trashLabel(e)} from Trash`); toast(`Restored ${trashLabel(e)}`); state.purge=null; render();
+}
+function purgeOne(e){
+  const lbl=trashLabel(e);
+  if(e.type==="visit") state.visits=state.visits.filter(x=>x.id!==e.ref);
+  if(e.type==="month"){ state.visits=state.visits.filter(x=>x.batch!==e.tid); delete state.snaps[e.ref]; }
+  if(e.type==="patient") state.patients=state.patients.filter(x=>x.id!==e.ref);
+  if(e.type==="diag"){ DIAGNOSES.splice(DIAGNOSES.indexOf(e.ref),1); OFF.diag.delete(e.ref); }
+  if(e.type==="rank"){ RANKS[e.branch].splice(RANKS[e.branch].indexOf(e.ref),1); OFF.rank[e.branch].delete(e.ref); }
+  if(e.type==="bracket"){ BRACKETS=BRACKETS.filter(x=>brKey(x)!==e.ref); OFF.br.delete(e.ref); }
+  if(e.type==="user") USERS.splice(USERS.findIndex(x=>x.u===e.ref),1);
+  state.trash=state.trash.filter(x=>x!==e); log(`Permanently deleted ${TYPE_LABEL[e.type].toLowerCase()} ${lbl} (reason: ${e.reason})`);
+}
+function purge(){
+  const txt=document.getElementById("purgeTxt").value.trim(), er=document.getElementById("purgeErr");
+  if(state.purge==="ALL"){
+    if(txt!=="EMPTY TRASH"){ er.textContent='Type EMPTY TRASH exactly to confirm.'; return; }
+    // purge visits first so patients and list items they used can follow
+    const order=["month","visit","patient","diag","rank","bracket","user"]; let done=0;
+    order.forEach(t=>state.trash.filter(e=>e.type===t).forEach(e=>{ if(!canPurge(e)){ purgeOne(e); done++; } }));
+    const kept=state.trash.length; state.purge=null; render();
+    toast(`${done} permanently deleted.${kept?` ${kept} kept: still in use or in a closed month.`:""}`); return;
+  }
+  const e=state.trash.find(x=>String(x.tid)===state.purge);
+  if(txt!==e.ref){ er.textContent=`Type ${e.ref} exactly to confirm.`; return; }
+  const why=canPurge(e); if(why){ er.textContent=why; return; }
+  const lbl=trashLabel(e); purgeOne(e); state.purge=null; render(); toast(`${lbl} permanently deleted`);
+}
+
+/* ---------- Events ---------- */
+document.addEventListener("submit", ev=>{
+  if(ev.target.id==="loginForm"){ ev.preventDefault();
+    if(state.tries>=MAX_TRIES){ return; }
+    if(document.getElementById("lg-p").value!=="password"){
+      state.tries++; const left=MAX_TRIES-state.tries;
+      state.loginMsg = left>0 ? `Wrong username or password. ${left} attempt${left>1?"s":""} left before the account locks.` : "Account locked after 5 wrong passwords. Ask the Admin or System Admin to unlock it.";
+      render(); return; }
+    state.tries=0; state.loginMsg="";
+    state.viewAs=document.getElementById("lg-as").value; state.screen="app"; state.view=NAV[state.viewAs][0][0]; render(); }
+});
+document.addEventListener("change", ev=>{
+  const id = ev.target.id;
+  if(id==="viewAs"){ state.viewAs=ev.target.value; state.enc={sel:null,editing:null,errors:{},q:""}; render(); }
+  const rmap = {"r-from":"from","r-to":"to","r-cat":"cat","r-branch":"branch"};
+  if(rmap[id]){ state.rec[rmap[id]]=ev.target.value; state.del=null; render(); }
+  if(id==="rp-type"){ state.rep.type = ev.target.value==="Custom range"?"Custom":ev.target.value; render(); }
+  const pmap = {"rp-month":"month","rp-q":"q","rp-year":"year","rp-from":"from","rp-to":"to","rp-cat":"cat"};
+  if(pmap[id]){ state.rep[pmap[id]]=ev.target.value; state.mdel=false; }
+});
+document.addEventListener("input", ev=>{
+  if(ev.target.id==="r-q"){ state.rec.q=ev.target.value; const pos=ev.target.selectionStart; render(); const el=document.getElementById("r-q"); el.focus(); el.setSelectionRange(pos,pos); }
+});
+document.addEventListener("click", ev=>{
+  const t = ev.target.closest("button"); if(!t) { const r=document.getElementById("pResults"); if(r && !ev.target.closest(".search-wrap")) r.hidden=true; return; }
+  if(t.dataset.nav){ state.view=t.dataset.nav; state.del=null; state.purge=null; state.mdel=false; render(); return; }
+  if(t.dataset.rb){ state.rankBranch=t.dataset.rb; state.le=null; render(); return; }
+  if(t.dataset.leEdit){ const [kind,i]=t.dataset.leEdit.split("|"); state.le={kind,i:+i,branch:state.rankBranch}; render(); document.getElementById("le-a")?.focus(); return; }
+  if(t.dataset.leCancel){ state.le=null; render(); return; }
+  if(t.dataset.leOff || t.dataset.leOn){
+    const on=!!t.dataset.leOn, [kind,is]=(t.dataset.leOff||t.dataset.leOn).split("|"), i=+is;
+    if(kind==="diag"){ const d=DIAGNOSES[i]; on?OFF.diag.delete(d):OFF.diag.add(d); log(`${on?"Restored":"Removed"} diagnosis "${d}"`); toast(`${on?"Restored":"Removed"} "${d}"`); }
+    if(kind==="rank"){ const b=state.rankBranch, x=RANKS[b][i]; on?OFF.rank[b].delete(x):OFF.rank[b].add(x); log(`${on?"Restored":"Removed"} "${x}" in ${b}`); toast(`${on?"Restored":"Removed"} "${x}"`); }
+    if(kind==="br"){ const b=BRACKETS[i];
+      if(on){ const c=overlap(b[0],b[1],i); if(c){ toast(`Can't restore ${bracketLabel(b)}: it overlaps ${bracketLabel(c)}. Edit or remove that one first.`); return; } OFF.br.delete(brKey(b)); }
+      else OFF.br.add(brKey(b));
+      log(`${on?"Restored":"Removed"} age bracket ${bracketLabel(b)}`); toast(`${on?"Restored":"Removed"} ${bracketLabel(b)}`); }
+    state.le=null; render(); return;
+  }
+  if(t.dataset.leSave){
+    const [kind,is]=t.dataset.leSave.split("|"), i=+is, er=document.getElementById("leErr"), v=document.getElementById("le-a").value.trim();
+    if(kind==="br"){
+      const bv=document.getElementById("le-b").value.trim(), f=+v, to=bv===""?200:+bv;
+      if(v===""||isNaN(f)||f<0||f>120){ er.textContent="Enter a starting age from 0 to 120."; return; }
+      if(bv!==""&&(isNaN(to)||to<f||to>120)){ er.textContent="The ending age must be the same as or higher than the starting age."; return; }
+      const c=overlap(f,to,i); if(c){ er.textContent=`Overlaps ${bracketLabel(c)}. Adjust the ages.`; return; }
+      const old=bracketLabel(BRACKETS[i]); BRACKETS[i]=[f,to]; BRACKETS.sort((x,y)=>x[0]-y[0]);
+      log(`Changed age bracket ${old} to ${bracketLabel([f,to])}`); toast(`Saved ${bracketLabel([f,to])}`);
+    } else {
+      const list = kind==="diag"?DIAGNOSES:RANKS[state.le.branch], old=list[i];
+      if(!v){ er.textContent="The name can't be empty."; return; }
+      if(list.some((x,j)=>j!==i&&x.toLowerCase()===v.toLowerCase())){ er.textContent=`${v} is already in the list.`; return; }
+      list[i]=v;
+      if(kind==="diag"){ if(OFF.diag.delete(old)) OFF.diag.add(v); state.visits.forEach(x=>{if(x.diag===old)x.diag=v}); }
+      else { const b=state.le.branch; if(OFF.rank[b].delete(old)) OFF.rank[b].add(v); state.visits.forEach(x=>{if(x.branch===b&&x.rank===old)x.rank=v}); state.patients.forEach(p=>{if(p.branch===b&&p.rank===old)p.rank=v}); }
+      log(`Renamed "${old}" to "${v}"`); toast(`Renamed to "${v}"`);
+    }
+    state.le=null; render(); return;
+  }
+  if(t.dataset.unlock){ const u=USERS.find(x=>x.u===t.dataset.unlock); u.locked=false; log(`Unlocked account ${u.u}`); toast(`${u.name} unlocked`); render(); return; }
+  if(t.dataset.tab){ state.setTab=t.dataset.tab; render(); return; }
+  if(t.dataset.pick){ state.enc={sel:t.dataset.pick, editing:null, errors:{}, q:""}; render(); document.getElementById("f-diag").focus(); return; }
+  if(t.dataset.edit){ state.enc={sel:null, editing:t.dataset.edit, errors:{}, q:""}; render(); return; }
+  if(t.dataset.aedit){ state.view="encode"; state.enc={sel:null, editing:t.dataset.aedit, errors:{}, q:""}; render(); return; }
+  if(t.dataset.rtab){ state.rec.tab=t.dataset.rtab; state.del=null; render(); return; }
+  if(t.dataset.sdel){ const [type,key]=t.dataset.sdel.split("|"); state.del={type,key, branch:state.rankBranch}; render(); document.getElementById("delReason")?.focus(); return; }
+  if(t.dataset.restore){ restoreItem(t.dataset.restore); return; }
+  if(t.dataset.purge){ state.purge=t.dataset.purge; render(); document.getElementById("purgeTxt")?.focus(); return; }
+  if(t.dataset.export){ toast(`${t.dataset.export}: placeholder in the prototype. Built in Phase 6.`); return; }
+  const a = t.dataset.act;
+  if(a==="logout"){ state.screen="login"; state.tries=0; state.loginMsg=""; render(); }
+  if(a==="save") saveEncode();
+  if(a==="clearForm"||a==="cancelEdit"||a==="clearSel"){ state.enc={sel:null,editing:null,errors:{},q:""}; render(); }
+  if(a==="cancelDel"){ state.del=null; render(); }
+  if(a==="askDelMonth"){ state.mdel=true; render(); document.getElementById("delReason")?.focus(); }
+  if(a==="cancelDelMonth"){ state.mdel=false; render(); }
+  if(a==="confirmDelMonth"){
+    const ym=state.rep.month, reason=document.getElementById("delReason").value.trim(), er=document.getElementById("delErr");
+    if(!reason){ er.textContent="Enter a reason before moving this month to Trash."; return; }
+    const vs=state.visits.filter(v=>!v.voided&&ymOf(v.ts)===ym);
+    if(!vs.length){ er.textContent="This month has no visits to delete."; return; }
+    const tid=Date.now()+Math.random();
+    vs.forEach(v=>{v.voided=true; v.voidReason=reason; v.batch=tid;});
+    state.trash.unshift({tid, type:"month", ref:ym, ids:vs.map(v=>v.id), reason, by:me().u, at:new Date(TODAY.getTime()+(Date.now()%3600e3))});
+    log(`Moved month report ${ym} (${vs.length} visits) to Trash: ${reason}`); toast(`${vs.length} visits of ${ym} moved to Trash`); state.mdel=false; render();
+  }
+  if(a==="confirmDel") softDelete();
+  if(a==="emptyTrash"){ state.purge="ALL"; render(); document.getElementById("purgeTxt")?.focus(); }
+  if(a==="cancelPurge"){ state.purge=null; render(); }
+  if(a==="confirmPurge") purge();
+  if(a==="generate"){ render(); toast("Report generated"); }
+  if(a==="toggleClose"){ const k=state.rep.month; if(state.closed.has(k)){state.closed.delete(k);delete state.snaps[k];log(`Reopened ${k}; saved report copy discarded`);toast("Month reopened. The saved copy is replaced when you close it again.")} else {state.closed.add(k);state.snaps[k]=makeSnap(k);log(`Closed ${k}; report copy saved`);toast("Month closed. Report copy saved.")} render(); }
+  if(a==="addBracket"){
+    const fv=document.getElementById("newBrFrom").value.trim(), tv=document.getElementById("newBrTo").value.trim(), er=document.getElementById("brErr");
+    const f=+fv, to=tv===""?200:+tv;
+    if(fv===""||isNaN(f)||f<0||f>120){ er.textContent="Enter a starting age from 0 to 120."; return; }
+    if(tv!==""&&(isNaN(to)||to<f||to>120)){ er.textContent="The ending age must be the same as or higher than the starting age."; return; }
+    const clash=overlap(f,to,-1);
+    if(clash){ er.textContent=`Overlaps the existing bracket ${bracketLabel(clash)}. Adjust the ages.`; return; }
+    BRACKETS.push([f,to]); BRACKETS.sort((x,y)=>x[0]-y[0]); log(`Added age bracket ${bracketLabel([f,to])}`); render(); toast(`Added age bracket ${bracketLabel([f,to])}`); return;
+  }
+  if(a==="addRank"){
+    const br=state.rankBranch, v=document.getElementById("newRank").value.trim(), er=document.getElementById("rankErr");
+    if(!v){ er.textContent="Type the rank or patient type to add."; return; }
+    const dup=RANKS[br].find(x=>x.toLowerCase()===v.toLowerCase());
+    if(dup){ er.textContent= OFF.rank[br].has(dup) ? `${dup} is in Trash. Restore it from Trash.` : `${dup} is already in the ${br} list.`; return; }
+    if(br==="Others") RANKS[br].splice(RANKS[br].length-1,0,v); else RANKS[br].push(v);
+    log(`Added "${v}" to ${br} ranks`); render(); toast(`Added "${v}" to ${br}`); return;
+  }
+  if(a==="addDiag"){ const el=document.getElementById("newDiag"), er=document.getElementById("diagErr"); const v=el.value.trim();
+    if(!v){ er.textContent="Type the diagnosis to add."; return; }
+    const dup=DIAGNOSES.find(x=>x.toLowerCase()===v.toLowerCase());
+    if(dup){ er.textContent= OFF.diag.has(dup) ? `${dup} is in Trash. Restore it from Trash.` : `${dup} is already in the list.`; return; }
+    DIAGNOSES.splice(DIAGNOSES.length-1,0,v); log(`Added diagnosis "${v}"`); render(); toast(`Added "${v}"`); }
+});
+
+state.snaps["2026-08"]=makeSnap("2026-08"); state.snaps["2026-08"].takenAt=new Date(2026,8,3,9,15);
+render();
+</script>
+</body>
+</html>

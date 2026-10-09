@@ -1,0 +1,184 @@
+@import 'tailwindcss';
+
+@import 'tw-animate-css';
+
+@source '../views';
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+    --font-sans:
+        'IBM Plex Sans', 'Segoe UI', ui-sans-serif, system-ui, sans-serif,
+        'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
+        'Noto Color Emoji';
+    --font-mono:
+        'IBM Plex Mono', Consolas, 'Courier New', ui-monospace, monospace;
+
+    --radius-lg: var(--radius);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-sm: calc(var(--radius) - 4px);
+
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+
+    --color-destructive: var(--destructive);
+    --color-destructive-foreground: var(--destructive-foreground);
+
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+
+    --color-chart-1: var(--chart-1);
+    --color-chart-2: var(--chart-2);
+    --color-chart-3: var(--chart-3);
+    --color-chart-4: var(--chart-4);
+    --color-chart-5: var(--chart-5);
+
+    --color-sidebar: var(--sidebar);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-ring: var(--sidebar-ring);
+
+    --color-page: var(--page);
+    --color-navy: var(--navy);
+    --color-navy-foreground: var(--navy-foreground);
+    --color-navy-soft: var(--navy-soft);
+    --color-ok: var(--ok);
+    --color-ok-soft: var(--ok-soft);
+    --color-warn: var(--warn);
+    --color-warn-soft: var(--warn-soft);
+    --color-bad: var(--bad);
+    --color-bad-soft: var(--bad-soft);
+}
+
+/*
+ * Colors follow prototype/prototype.html: white surfaces, a light grey-blue
+ * page, navy accent. The starter kit's components read the shadcn names
+ * (--primary, --muted…); the extra names (--navy, --ok, --warn, --bad,
+ * --page) are for our own shared components.
+ */
+:root {
+    --page: #f3f5f8;
+    --background: #ffffff;
+    --foreground: #16202e;
+    --card: #ffffff;
+    --card-foreground: #16202e;
+    --popover: #ffffff;
+    --popover-foreground: #16202e;
+    --primary: #1b3a6b;
+    --primary-foreground: #ffffff;
+    --secondary: #eef1f6;
+    --secondary-foreground: #16202e;
+    --muted: #eef1f6;
+    --muted-foreground: #5b6678;
+    --accent: #e3eaf6;
+    --accent-foreground: #1b3a6b;
+    --destructive: #b3261e;
+    --destructive-foreground: #b3261e;
+    --border: #d6dce6;
+    --input: #d6dce6;
+    --ring: #3b6fd1;
+    --chart-1: oklch(0.646 0.222 41.116);
+    --chart-2: oklch(0.6 0.118 184.704);
+    --chart-3: oklch(0.398 0.07 227.392);
+    --chart-4: oklch(0.828 0.189 84.429);
+    --chart-5: oklch(0.769 0.188 70.08);
+    --radius: 0.5rem;
+    --sidebar: #ffffff;
+    --sidebar-foreground: #16202e;
+    --sidebar-primary: #1b3a6b;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #e3eaf6;
+    --sidebar-accent-foreground: #1b3a6b;
+    --sidebar-border: #d6dce6;
+    --sidebar-ring: #3b6fd1;
+
+    --navy: #1b3a6b;
+    --navy-foreground: #ffffff;
+    --navy-soft: #e3eaf6;
+    --ok: #1f7a4d;
+    --ok-soft: #e1f2e9;
+    --warn: #9a5b00;
+    --warn-soft: #fbefd9;
+    --bad: #b3261e;
+    --bad-soft: #fbe4e2;
+}
+
+.dark {
+    --page: #0f141c;
+    --background: #161d28;
+    --foreground: #e5eaf2;
+    --card: #161d28;
+    --card-foreground: #e5eaf2;
+    --popover: #161d28;
+    --popover-foreground: #e5eaf2;
+    --primary: #7fa6e6;
+    --primary-foreground: #0f141c;
+    --secondary: #1d2633;
+    --secondary-foreground: #e5eaf2;
+    --muted: #1d2633;
+    --muted-foreground: #9aa6b8;
+    --accent: #1f2c44;
+    --accent-foreground: #7fa6e6;
+    --destructive: #f08079;
+    --destructive-foreground: #f08079;
+    --border: #2c3746;
+    --input: #2c3746;
+    --ring: #8fb3f0;
+    --chart-1: oklch(0.488 0.243 264.376);
+    --chart-2: oklch(0.696 0.17 162.48);
+    --chart-3: oklch(0.769 0.188 70.08);
+    --chart-4: oklch(0.627 0.265 303.9);
+    --chart-5: oklch(0.645 0.246 16.439);
+    --sidebar: #161d28;
+    --sidebar-foreground: #e5eaf2;
+    --sidebar-primary: #7fa6e6;
+    --sidebar-primary-foreground: #0f141c;
+    --sidebar-accent: #1f2c44;
+    --sidebar-accent-foreground: #7fa6e6;
+    --sidebar-border: #2c3746;
+    --sidebar-ring: #8fb3f0;
+
+    --navy: #7fa6e6;
+    --navy-foreground: #0f141c;
+    --navy-soft: #1f2c44;
+    --ok: #5cc28f;
+    --ok-soft: #173326;
+    --warn: #e2a94a;
+    --warn-soft: #352a14;
+    --bad: #f08079;
+    --bad-soft: #3a1d1b;
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+
+    body {
+        @apply bg-background text-foreground;
+    }
+}
