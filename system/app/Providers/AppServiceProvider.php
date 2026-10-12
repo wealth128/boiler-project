@@ -16,6 +16,7 @@ use App\Models\ReportSnapshot;
 use App\Models\Setting;
 use App\Models\User;
 use App\Models\Visit;
+use App\Observers\AuditObserver;
 use App\Policies\TrashPolicy;
 use App\Policies\UserPolicy;
 use App\Policies\VisitPolicy;
@@ -67,6 +68,8 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(User::class, UserPolicy::class);
 
         // Trash covers several models, so its checks are named Gates.
+        Gate::define('move-to-trash', [TrashPolicy::class, 'moveToTrash']);
+        Gate::define('delete-month-report', [TrashPolicy::class, 'deleteMonthReport']);
         Gate::define('restore-from-trash', [TrashPolicy::class, 'restore']);
         Gate::define('delete-permanently', [TrashPolicy::class, 'forceDelete']);
     }
@@ -77,6 +80,11 @@ class AppServiceProvider extends ServiceProvider
      */
     protected function configureAuditEvents(): void
     {
+        // Create, update, Trash, restore and permanent delete of these.
+        foreach ([Visit::class, Patient::class, User::class, Diagnosis::class, Rank::class, AgeBracket::class, MonthClosure::class] as $model) {
+            $model::observe(AuditObserver::class);
+        }
+
         // Login time, for the daily sign-out (EndSessionAtDailyCutoff).
         Event::listen(function (Login $event): void {
             if (request()->hasSession()) {

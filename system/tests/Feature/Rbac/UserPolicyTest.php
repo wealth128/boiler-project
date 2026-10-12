@@ -6,8 +6,9 @@ use Inertia\Testing\AssertableInertia as Assert;
 
 /*
  * UserPolicy (planning/rbac.md): nobody deletes their own account or the
- * Admin account; only one active Admin; Admin and System Admin otherwise
- * have the same rights over accounts.
+ * Admin account; nobody changes their own role; the System Admin can't
+ * edit, deactivate, re-role or reset the Admin (unlock is allowed); only
+ * one active Admin.
  */
 
 function assertUserActionDenied($response, string $message): void
@@ -75,21 +76,80 @@ it('allows a new Admin once the old one is deactivated', function () {
 });
 
 it('refuses to activate a second Admin account', function () {
-    userWithRole('admin');
+    $admin = userWithRole('admin');
     $oldAdmin = userWithRole('admin', ['is_active' => false]);
 
     assertUserActionDenied(
-        $this->actingAs(userWithRole('system_admin'))->post("/users/{$oldAdmin->id}/toggle-active"),
+        $this->actingAs($admin)->post("/users/{$oldAdmin->id}/toggle-active"),
         'There is already an active Admin account. Only one is allowed.',
     );
 });
 
-it('lets the System Admin deactivate the Admin, so a new Admin can take over', function () {
+// --- Admin account protected from the System Admin (rbac.md) -----------
+
+it("doesn't let the System Admin edit or deactivate the Admin", function () {
+    $admin = userWithRole('admin');
+    $this->actingAs(userWithRole('system_admin'));
+
+    assertUserActionDenied($this->put("/users/{$admin->id}"), "The System Admin can't change the Admin account.");
+    assertUserActionDenied($this->post("/users/{$admin->id}/toggle-active"), "The System Admin can't change the Admin account.");
+
+    expect($admin->fresh()->is_active)->toBeTrue();
+});
+
+it("doesn't let the System Admin reset the Admin's password", function () {
     $admin = userWithRole('admin');
 
+    assertUserActionDenied(
+        $this->actingAs(userWithRole('system_admin'))->post("/users/{$admin->id}/reset-password"),
+        "The System Admin can't reset the Admin's password. If the Admin forgot it, IT resets it on the server.",
+    );
+});
+
+it("doesn't let the System Admin change the Admin's role", function () {
+    $admin = userWithRole('admin');
+
+    $result = Gate::forUser(userWithRole('system_admin'))->inspect('changeRole', $admin);
+
+    expect($result->denied())->toBeTrue()
+        ->and($result->message())->toBe("The System Admin can't change the Admin account.");
+});
+
+it('still lets the System Admin unlock a locked-out Admin', function () {
+    $admin = userWithRole('admin', ['failed_attempts' => 5, 'locked_at' => now()]);
+
     $this->actingAs(userWithRole('system_admin'))->from('/users')
-        ->post("/users/{$admin->id}/toggle-active")
+        ->post("/users/{$admin->id}/unlock")
         ->assertRedirect('/users');
+});
+
+it('lets the System Admin manage every other account', function () {
+    $encoder = userWithRole('encoder');
+    $sysadmin = userWithRole('system_admin');
+    $gate = Gate::forUser($sysadmin);
+
+    foreach (['update', 'changeRole', 'resetPassword', 'toggleActive', 'delete', 'unlock'] as $ability) {
+        expect($gate->allows($ability, $encoder))->toBeTrue($ability);
+    }
+});
+
+it("doesn't let anyone change their own role", function (string $role) {
+    $actor = userWithRole($role);
+
+    $result = Gate::forUser($actor)->inspect('changeRole', $actor);
+
+    expect($result->denied())->toBeTrue()
+        ->and($result->message())->toBe("You can't change your own role.");
+})->with(['admin', 'system_admin']);
+
+it('lets the Admin edit their own account and change other roles', function () {
+    $admin = userWithRole('admin');
+    $encoder = userWithRole('encoder');
+    $gate = Gate::forUser($admin);
+
+    expect($gate->allows('update', $admin))->toBeTrue()
+        ->and($gate->allows('changeRole', $encoder))->toBeTrue()
+        ->and($gate->allows('changeRole', userWithRole('system_admin')))->toBeTrue();
 });
 
 // --- Other account actions ---------------------------------------------
@@ -112,20 +172,12 @@ it('sends users to Settings to change their own password', function () {
     );
 });
 
-it("lets the System Admin unlock the Admin and reset the Admin's password", function () {
-    $admin = userWithRole('admin');
-    $this->actingAs(userWithRole('system_admin'))->from('/users');
-
-    $this->post("/users/{$admin->id}/unlock")->assertRedirect('/users');
-    $this->post("/users/{$admin->id}/reset-password")->assertRedirect('/users');
-});
-
 it('gives encoders and viewers no account rights', function (string $role) {
     $actor = userWithRole($role);
     $other = userWithRole('encoder');
     $gate = Gate::forUser($actor);
 
-    foreach (['update', 'delete', 'unlock', 'resetPassword', 'toggleActive'] as $ability) {
+    foreach (['update', 'changeRole', 'delete', 'unlock', 'resetPassword', 'toggleActive'] as $ability) {
         expect($gate->allows($ability, $other))->toBeFalse("{$role} {$ability}");
     }
 

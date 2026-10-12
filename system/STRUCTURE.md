@@ -6,17 +6,18 @@ Features: `encode`, `records`, `reports`, `lists` (dropdown lists at /settings/l
 
 ## Backend (`app/`)
 
-| Folder                        | Global or feature | What goes there                                                                  |
-| ----------------------------- | ----------------- | -------------------------------------------------------------------------------- |
-| `Actions/Fortify/`            | Login             | `AuthenticateUser`: username login, 5-wrong-password lock, login audit entries   |
-| `Enums/`                      | Global            | Fixed value lists: Role, Office, Category, Sex, BackupStatus, Permission (Gates) |
-| `Models/`                     | Global            | One model per table. `Models/Concerns/MovesToTrash` holds the soft-delete logic. |
-| `Services/`                   | Global            | Shared logic: AuditLogger, ReportBuilder, TrashService, BackupService            |
-| `Policies/`                   | Global            | VisitPolicy, UserPolicy, TrashPolicy (PatientPolicy comes with Records)          |
-| `Observers/`                  | Global            | Write audit entries on create, update, delete and restore                        |
-| `Http/Middleware/`            | Global            | EnsureRole (`role:` route rule), HandleInertiaRequests (props every page gets)   |
-| `Http/Controllers/<Feature>/` | Feature           | Controllers for one feature, e.g. `Encode/VisitController.php`                   |
-| `Http/Requests/<Feature>/`    | Feature           | Form validation for one feature's forms                                          |
+| Folder                        | Global or feature | What goes there                                                                     |
+| ----------------------------- | ----------------- | ----------------------------------------------------------------------------------- |
+| `Actions/Fortify/`            | Login             | `AuthenticateUser`: username login, 5-wrong-password lock, login audit entries      |
+| `Enums/`                      | Global            | Fixed value lists: Role, Office, Category, Sex, BackupStatus, Permission (Gates)    |
+| `Models/`                     | Global            | One model per table. `Models/Concerns/MovesToTrash` holds the soft-delete logic.    |
+| `Services/`                   | Global            | Shared logic: AuditLogger, ReportBuilder, TrashService, MonthService, BackupService |
+| `Policies/`                   | Global            | VisitPolicy, UserPolicy, TrashPolicy (PatientPolicy comes with Records)             |
+| `Observers/`                  | Global            | `AuditObserver`: audit entries on create, update, Trash, restore, purge             |
+| `Console/Commands/`           | Global            | `backup:run` (daily 02:00, routes/console.php), `census:reset-admin-password`       |
+| `Http/Middleware/`            | Global            | EnsureRole (`role:` route rule), HandleInertiaRequests (props every page gets)      |
+| `Http/Controllers/<Feature>/` | Feature           | Controllers for one feature, e.g. `Encode/VisitController.php`                      |
+| `Http/Requests/<Feature>/`    | Feature           | Form validation for one feature's forms                                             |
 
 ## Frontend (`resources/js/`)
 

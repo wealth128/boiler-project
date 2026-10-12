@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Observers\AuditObserver;
 use Illuminate\Database\Seeder;
 
 /**
@@ -15,17 +16,20 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        $this->call([
-            AccountSeeder::class,
-            BranchAndRankSeeder::class,
-            DiagnosisSeeder::class,
-            AgeBracketSeeder::class,
-            SettingSeeder::class,
-        ]);
+        // Starting data is not a user action: no audit entries for it.
+        AuditObserver::muted(function (): void {
+            $this->call([
+                AccountSeeder::class,
+                BranchAndRankSeeder::class,
+                DiagnosisSeeder::class,
+                AgeBracketSeeder::class,
+                SettingSeeder::class,
+            ]);
 
-        // Test accounts for the Encoder and Viewer roles: dev PCs only.
-        if (app()->environment('local')) {
-            $this->call(DevUserSeeder::class);
-        }
+            // Test accounts for the Encoder and Viewer roles: dev PCs only.
+            if (app()->environment('local')) {
+                $this->call(DevUserSeeder::class);
+            }
+        });
     }
 }

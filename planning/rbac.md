@@ -1,6 +1,6 @@
 # RBAC: AFP Hospital Patient Encoding & Reporting System
 
-_Last updated: 2026-10-08 · Status: Confirmed by user_
+_Last updated: 2026-10-09 · Status: Confirmed by user_
 
 ## Roles
 | Role | Count | Purpose |
@@ -35,9 +35,12 @@ _Last updated: 2026-10-08 · Status: Confirmed by user_
 - **One Admin:** the system blocks creating a second active Admin account.
 - **Closed month:** no one can edit or delete its records until Admin reopens it.
 - **Deleted records:** go to Trash and are never counted in reports. Admin restores or permanently deletes them. Nobody can delete their own account or the Admin account.
+- **Own role:** nobody can change their own role.
+- **Admin account is protected:** the System Admin cannot edit the Admin account, change its role, deactivate it or reset its password. (The System Admin can still unlock it after 5 wrong passwords.)
+- **Admin forgot the password:** IT resets it on the server with `php artisan census:reset-admin-password`. It asks for the new password twice, clears a login lock, and writes `user.password_reset` to the audit log.
 - **Audit log:** every encode, edit, delete, restore, permanent delete, close/reopen, unlock and account change is recorded with the user and time.
 - **Passwords are never visible.** They are stored hashed (one-way), so no one can see any user's password, including Admin and System Admin. The system can only set a new one.
-- **Forgot password:** there is no self-service reset (no "Forgot password" link, no email). The user asks Admin or System Admin. Both follow the same rule: before setting a new password, they must re-enter **their own** password to confirm.
+- **Forgot password:** there is no self-service reset (no "Forgot password" link, no email). The user asks Admin or System Admin. Both follow the same rule: before setting a new password, they must re-enter **their own** password to confirm. The Admin's own password is the exception: see "Admin forgot the password".
 - **Initial password must be changed:** a password set by Admin or System Admin, for a new account or a reset, is temporary. Right after logging in with it, the user must choose their own new password before they can use the system. Admin and System Admin therefore never know a user's working password.
 
 ## Decisions

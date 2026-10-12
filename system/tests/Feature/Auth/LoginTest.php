@@ -16,6 +16,15 @@ use Inertia\Testing\AssertableInertia as Assert;
 
 const LOCKED_MESSAGE = 'This account is locked after 5 wrong passwords. Ask the Admin or System Admin to unlock it.';
 
+/**
+ * Login-related audit entries only. Creating test users writes
+ * "user.created" entries too (AuditObserver), which these tests ignore.
+ */
+function loginEntries()
+{
+    return AuditLog::query()->whereIn('action', ['user.login', 'user.login_failed', 'user.locked', 'user.logout']);
+}
+
 function login(string $username, string $password = 'password')
 {
     return test()->from(route('login'))->post(route('login.store'), [
@@ -74,7 +83,7 @@ it('writes user.login to the audit log on success', function () {
 
     login('er.cruz');
 
-    $entry = AuditLog::sole();
+    $entry = loginEntries()->sole();
     expect($entry->action)->toBe('user.login')
         ->and($entry->user_id)->toBe($user->id)
         ->and($entry->subject_type)->toBe('users')
@@ -109,7 +118,7 @@ it('writes user.login_failed to the audit log for a wrong password', function ()
     login('er.cruz', 'wrong-password');
     login('er.cruz', 'wrong-password');
 
-    $entries = AuditLog::orderBy('id')->get();
+    $entries = loginEntries()->orderBy('id')->get();
     expect($entries)->toHaveCount(2)
         ->and($entries->pluck('action')->unique()->all())->toBe(['user.login_failed'])
         ->and($entries->pluck('changes')->all())->toBe([['failed_attempts' => 1], ['failed_attempts' => 2]])
@@ -122,7 +131,7 @@ it('writes user.login_failed to the audit log for a wrong password', function ()
 it('writes nothing to the audit log for an unknown username', function () {
     login('nobody', 'wrong-password');
 
-    expect(AuditLog::count())->toBe(0);
+    expect(loginEntries()->count())->toBe(0);
 });
 
 it('gives an unknown username the same message without a count', function () {
@@ -189,7 +198,7 @@ it('refuses a locked user even with the correct password', function () {
     $this->assertGuest();
     expect($user->fresh()->failed_attempts)->toBe(5)
         ->and($user->fresh()->locked_at)->not->toBeNull()
-        ->and(AuditLog::count())->toBe(0);
+        ->and(loginEntries()->count())->toBe(0);
 });
 
 it('lets a user in again after the lock is cleared', function () {
@@ -209,7 +218,7 @@ it('refuses a deactivated user even with the correct password', function () {
     ]);
 
     $this->assertGuest();
-    expect(AuditLog::count())->toBe(0);
+    expect(loginEntries()->count())->toBe(0);
 });
 
 it('still counts wrong passwords on a deactivated account', function () {
@@ -231,7 +240,7 @@ it('refuses a deleted (in Trash) user even with the correct password', function 
 
     $this->assertGuest();
     expect(User::withTrashed()->find($user->id)->failed_attempts)->toBe(0)
-        ->and(AuditLog::count())->toBe(0);
+        ->and(loginEntries()->count())->toBe(0);
 });
 
 // --- No public sign-up or reset by email --------------------------------
@@ -267,7 +276,7 @@ it('logs out and writes user.logout to the audit log', function () {
 
     $this->assertGuest();
 
-    $entry = AuditLog::sole();
+    $entry = loginEntries()->sole();
     expect($entry->action)->toBe('user.logout')
         ->and($entry->user_id)->toBe($user->id)
         ->and($entry->subject_type)->toBe('users')
@@ -277,7 +286,7 @@ it('logs out and writes user.logout to the audit log', function () {
 it('writes nothing when a signed-out visitor posts to logout', function () {
     $this->post(route('logout'))->assertRedirect(route('login'));
 
-    expect(AuditLog::count())->toBe(0);
+    expect(loginEntries()->count())->toBe(0);
 });
 
 it('lets the 6th try through the throttle so the lock message shows', function () {

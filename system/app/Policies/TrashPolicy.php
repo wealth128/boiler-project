@@ -22,8 +22,10 @@ use InvalidArgumentException;
  * ranks, age brackets and "Delete month report" entries (MonthDeletion).
  *
  * Trash is not one model, so these checks are registered as Gates in
- * AppServiceProvider: "restore-from-trash" and "delete-permanently", e.g.
- * Gate::authorize('delete-permanently', $patient).
+ * AppServiceProvider: "move-to-trash", "delete-month-report",
+ * "restore-from-trash" and "delete-permanently", e.g.
+ * Gate::authorize('delete-permanently', $patient). App\Services\TrashService
+ * calls them, so every Trash action goes through these rules.
  *
  * Permanent delete is blocked when it would break history:
  * - Visit or month report: its month is closed (reopen first)
@@ -44,6 +46,60 @@ class TrashPolicy
         return self::manages($actor);
     }
 
+    /**
+     * Move one record to Trash. Visits and users follow their own Policy
+     * (closed month; can't delete yourself or the Admin). Patients and
+     * dropdown items: Admin only. The fixed "Other (specify)" entries
+     * can't be removed (planning/database-schema.md, section 5).
+     */
+    public function moveToTrash(User $actor, Model $item): Response
+    {
+        self::ensureTrashable($item);
+
+        if ($item instanceof MonthDeletion) {
+            throw new InvalidArgumentException('Use "Delete month report" for a whole month.');
+        }
+
+        if ($item->trashed()) {
+            return Response::deny('This item is already in Trash.');
+        }
+
+        if ($item instanceof Visit) {
+            return (new VisitPolicy)->delete($actor, $item);
+        }
+
+        if ($item instanceof User) {
+            return (new UserPolicy)->delete($actor, $item);
+        }
+
+        if (! self::manages($actor)) {
+            return Response::deny();
+        }
+
+        if (($item instanceof Diagnosis || $item instanceof Rank) && $item->is_other) {
+            return Response::deny('"Other (specify)" is a fixed entry and can\'t be removed.');
+        }
+
+        return Response::allow();
+    }
+
+    /**
+     * "Delete month report": all visits of an open month go to Trash as one
+     * entry. Admin only.
+     */
+    public function deleteMonthReport(User $actor, string $period): Response
+    {
+        if (! self::manages($actor)) {
+            return Response::deny();
+        }
+
+        if (MonthClosure::isClosed($period)) {
+            return Response::deny(MonthClosure::closedMessage($period));
+        }
+
+        return Response::allow();
+    }
+
     public function restore(User $actor, Model $item): Response
     {
         self::ensureTrashable($item);
@@ -54,6 +110,10 @@ class TrashPolicy
 
         if (! self::inTrash($item)) {
             return Response::deny('This item is not in Trash.');
+        }
+
+        if ($partOfMonth = self::partOfMonthReport($item)) {
+            return $partOfMonth;
         }
 
         if ($closed = self::closedMonth($item)) {
@@ -77,6 +137,10 @@ class TrashPolicy
 
         if (! self::inTrash($item)) {
             return Response::deny('Only items in Trash can be deleted permanently.');
+        }
+
+        if ($partOfMonth = self::partOfMonthReport($item)) {
+            return $partOfMonth;
         }
 
         if ($closed = self::closedMonth($item)) {
@@ -103,6 +167,19 @@ class TrashPolicy
     private static function inTrash(Model $item): bool
     {
         return $item instanceof MonthDeletion || $item->trashed();
+    }
+
+    /**
+     * A visit that went to Trash with "Delete month report" comes back or
+     * goes away only with its whole month report.
+     */
+    private static function partOfMonthReport(Model $item): ?Response
+    {
+        if ($item instanceof Visit && $item->month_deletion_id !== null) {
+            return Response::deny('This visit is part of a deleted month report. Restore or delete the whole month report instead.');
+        }
+
+        return null;
     }
 
     /**

@@ -117,7 +117,7 @@ it('blocks permanent delete of a user who has visits or audit entries', function
     expect(purge($this->admin, $withVisits)->allowed())->toBeFalse()
         ->and(purge($this->admin, $withAudit)->allowed())->toBeFalse()
         ->and(purge($this->admin, $clean)->allowed())->toBeTrue()
-        ->and(AuditLog::count())->toBe(1);
+        ->and(AuditLog::where('action', 'user.login')->count())->toBe(1);
 });
 
 it('always allows permanent delete of an age bracket in Trash', function () {

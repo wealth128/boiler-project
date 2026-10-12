@@ -33,7 +33,7 @@ it('signs out at 8:00 PM someone who logged in earlier that day', function () {
 
     $this->assertGuest();
 
-    $entry = AuditLog::sole();
+    $entry = AuditLog::where('action', 'user.session_ended')->sole();
     expect($entry->action)->toBe('user.session_ended')
         ->and($entry->user_id)->toBe($user->id)
         ->and($entry->changes)->toBe(['cutoff' => '20:00']);

@@ -18,6 +18,16 @@ return [
     // See App\Http\Middleware\EndSessionAtDailyCutoff.
     'session_cutoff' => env('SESSION_DAILY_CUTOFF', '20:00'),
 
+    // Daily database backup (php artisan backup:run, scheduled at 02:00).
+    // On the hospital server, BACKUP_PATH is the shared folder on the second
+    // PC, e.g. //BACKUP-PC/census-backups (planning/architecture.md). In .env,
+    // write Windows paths with forward slashes, or in single quotes.
+    'backup' => [
+        'mysqldump_path' => env('MYSQLDUMP_PATH') ?: 'mysqldump',
+        'path' => env('BACKUP_PATH') ?: storage_path('app/backups'),
+        'keep_days' => 30,
+    ],
+
     // Passwords for the first Admin and System Admin accounts. Only the
     // seeder reads them. There is no fallback: seeding stops if they are empty.
     'seed' => [
