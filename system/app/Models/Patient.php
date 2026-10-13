@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 
 /**
@@ -61,6 +62,17 @@ class Patient extends Model
     public function visits(): HasMany
     {
         return $this->hasMany(Visit::class);
+    }
+
+    /**
+     * The most recent visit not in Trash. The encoding form copies its
+     * branch and rank when this patient returns.
+     *
+     * @return HasOne<Visit, $this>
+     */
+    public function latestVisit(): HasOne
+    {
+        return $this->hasOne(Visit::class)->ofMany(['visited_at' => 'max', 'id' => 'max']);
     }
 
     /**

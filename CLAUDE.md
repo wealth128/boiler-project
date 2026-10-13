@@ -18,6 +18,7 @@ A centralized system that replaces Google Sheets and manual tallying. Offices **
 ## Stack
 Laravel (latest) + official **React starter kit** (Inertia, TypeScript, Tailwind) + **MySQL** (`patient_census`). Monolith: no separate API and no Sanctum. Timezone `Asia/Manila`. Testing with Pest.
 Packages allowed: `maatwebsite/excel`, `barryvdh/laravel-dompdf`. **Don't add other packages** (no Spatie) without asking.
+When updating vite-plus, update the vite alias in package.json to the same version, or the build fails.
 
 ## Rules That Must Not Be Broken
 - **Login is by username.** There's **no public sign-up**; Admin or System Admin creates accounts. An account locks after **5 wrong passwords** until unlocked. No idle timeout. Everyone is signed out daily at 8:00 PM Asia/Manila and logs in again on their next click. Temporary passwords must be changed at first login. Only one active Admin and one active System Admin.
@@ -36,8 +37,9 @@ Code used by **2+ features** goes in global folders. Code used by one feature st
 - Feature backend: `app/Http/Controllers/<Feature>/`, `app/Http/Requests/<Feature>/`
 
 ## How to Work
-- Build in this order: **1. Database/config → 2. File structure + global components → 3. Login → 4. RBAC → 5. Features, one screen per step: Users (done) → Encode → Records → Lists → Reports → Trash → Audit log → Backup → Settings.**
+- Build in this order: **1. Database/config → 2. File structure + global components → 3. Login → 4. RBAC → 5. Features, one screen per step: Users (done) → Encode (done) → Records → Lists → Reports → Trash → Audit log → Backup → Settings.**
 - **Stop after each step.** Summarize in plain language what was built and how to check it, then wait for approval.
 - Run `php artisan test` and `npm run build` (or `npm run types`) before saying a step is done. Fix errors first.
+- Every keyboard shortcut you add goes into docs/keyboard-shortcuts.md in the same step.
 - Never put real passwords in committed files. Use `.env`.
 - **Tests run ONLY on `patient_census_test`.** Never run `php artisan test` against `patient_census`: RefreshDatabase wipes every table. If the test database is unreachable, stop and tell me instead of switching databases.

@@ -89,7 +89,7 @@ it('shows the placeholder page on every planned screen', function (string $uri) 
         ->assertOk()
         ->assertInertia(fn ($page) => $page->component('placeholder')->has('title'));
 })->with([
-    '/encode', '/records/visits', '/records/patients', '/reports', '/reports/export/pdf',
+    '/records/visits', '/records/patients', '/reports', '/reports/export/pdf',
     '/reports/export/excel', '/settings/lists', '/audit-log', '/trash', '/backups',
 ]);
 
@@ -108,8 +108,6 @@ it('answers stub form actions with a "not built yet" toast', function () {
     $this->actingAs($user)->from('/encode');
 
     foreach ([
-        ['post', '/visits'],
-        ['put', "/visits/{$visit->id}"],
         ['delete', "/visits/{$visit->id}"],
         ['delete', "/patients/{$patient->id}"],
         ['post', '/months/2026-09/close'],

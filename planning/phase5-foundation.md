@@ -19,4 +19,4 @@ _Last updated: 2026-10-07 · Stack: Laravel + Inertia React + MySQL · Status: P
 | 10 | Backup | `php artisan backup:run`: `mysqldump` to the second-PC folder, recorded in `backup_runs`, keeps 30 days, scheduled daily at 2:00 AM. Last backup status shown to Admin. |
 | 11 | Tests | Automated tests (Pest) for: login lock, role access per page, closed-month lock, permanent-delete rules, audit entries written |
 
-**Not in Phase 5** (comes in Phase 6): the encoding form, records, reports and exports, and the final Claude Design screens.
+**Not in Phase 5** (comes in Phase 6): the encoding form, records, reports and exports.

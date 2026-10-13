@@ -14,4 +14,4 @@ Run php artisan test (patient_census_test only), npm run types:check and npm run
 ```
 
 ---
-**After Prompt 5:** Phase 5 is done. Next is designing the final screens in Claude Design (Phase 2), then building the features (Phase 6).
+**After Prompt 5:** Phase 5 is done. Next is designing the final screens in Claude Design (Dropped 2026-10-13: screens are built by Claude Code to match prototype/prototype.html.) (Phase 2), then building the features (Phase 6).

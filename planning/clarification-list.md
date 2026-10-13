@@ -100,4 +100,4 @@ Anwser: The goal of this system is only to automate the encodeing and reporting 
 | I1 ⚠️ | Is this going to be **actually used** by the hospital, or a portfolio/practice build? | Actual use, so built with real security and backups | |
 | I2 | Target date? | _Need a date_ | |
 | I3 | Programming language/tools you're comfortable with? | I propose a simple stack after this list is answered | |
-| I4 | Claude Design's role? | Design all screens in Claude Design first, then build the code from them | |
+| I4 | Claude Design's role? (Dropped 2026-10-13: screens are built by Claude Code to match prototype/prototype.html.) | Design all screens in Claude Design (Dropped 2026-10-13: screens are built by Claude Code to match prototype/prototype.html.) first, then build the code from them | |

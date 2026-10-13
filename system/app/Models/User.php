@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\Category;
 use App\Enums\Office;
 use App\Enums\Role;
 use App\Models\Concerns\MovesToTrash;
@@ -92,6 +93,27 @@ class User extends Authenticatable
     public function hasRole(Role ...$roles): bool
     {
         return in_array($this->role, $roles, true);
+    }
+
+    /**
+     * Visit category this user encodes by default: their office's category
+     * (OPD / ER / Admission). Admin's office has none, so ER, like the
+     * prototype.
+     */
+    public function defaultCategory(): Category
+    {
+        return $this->office->defaultCategory() ?? Category::ER;
+    }
+
+    /**
+     * May this user pick any visit category? ER encoders and Admin can
+     * (planning/mvp-scope.md section 2). Other encoders are locked to their
+     * office's category.
+     */
+    public function canChooseCategory(): bool
+    {
+        return $this->hasRole(Role::Admin)
+            || ($this->hasRole(Role::Encoder) && $this->office === Office::ER);
     }
 
     /**

@@ -1,6 +1,8 @@
 # Screen Brief (Phase 2): AFP Hospital Patient Encoding & Reporting System
 
-_Last updated: 2026-10-07 · For review before designing in Claude Design_
+> Claude Design is no longer used. prototype/prototype.html is the final screen reference.
+
+_Last updated: 2026-10-07_
 
 ## Design direction
 - **Desktop-first** at 1366×768, the common size for office/hospital PCs

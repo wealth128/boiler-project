@@ -23,7 +23,7 @@ The Admission/Admin office tallies patient data by hand every month. ER encodes 
 - **Reports:** Monthly, quarterly and annual. The user chooses the format: on-screen, PDF, Excel or print.
 - **Hosting:** Runs locally on the hospital network, not on the internet.
 - **Historical data:** No import of old Google Sheets.
-- **Frontend:** Designed with Claude Design.
+- **Frontend:** Designed with Claude Design. (Dropped 2026-10-13: screens are built by Claude Code to match prototype/prototype.html.)
 
 ## 4. Report counts (per OPD / ER / Admission)
 - Total patients

@@ -7,7 +7,7 @@ _Last updated: 2026-10-07 · Status: Draft for review_
 |---|---|
 | Structure | **Monolith**: one Laravel app with React pages through **Inertia.js** (Laravel's official React starter kit) |
 | Backend | Laravel (PHP), MVC |
-| Frontend | React + Tailwind. Screens are built from the Claude Design output. |
+| Frontend | React + Tailwind. Screens are built by Claude Code to match prototype/prototype.html. |
 | Database | MySQL |
 | Login | Laravel session login from the starter kit. Public sign-up is turned off: Admin or System Admin creates accounts. Sanctum is not needed. |
 | Roles / RBAC | A `role` column on `users` plus Laravel **Gates, Policies and route middleware** (no extra package) |
