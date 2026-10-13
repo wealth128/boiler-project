@@ -20,7 +20,7 @@ Laravel (latest) + official **React starter kit** (Inertia, TypeScript, Tailwind
 Packages allowed: `maatwebsite/excel`, `barryvdh/laravel-dompdf`. **Don't add other packages** (no Spatie) without asking.
 
 ## Rules That Must Not Be Broken
-- **Login is by username.** There's **no public sign-up**; Admin or System Admin creates accounts. An account locks after **5 wrong passwords** until unlocked. There's no idle auto-logout.
+- **Login is by username.** There's **no public sign-up**; Admin or System Admin creates accounts. An account locks after **5 wrong passwords** until unlocked. No idle timeout. Everyone is signed out daily at 8:00 PM Asia/Manila and logs in again on their next click. Temporary passwords must be changed at first login. Only one active Admin and one active System Admin.
 - **Roles:** `encoder`, `admin` (only ONE active), `system_admin` (user accounts only, no patient data), `viewer` (CO: reports only).
 - **Soft delete** (`SoftDeletes` + `deleted_by` + `delete_reason`) on visits, patients, users, diagnoses, ranks, age_brackets. **Hard delete only from Trash, by Admin**, after typing the ID to confirm. Hard delete is blocked when: the visit's month is closed; a patient still has visits; a diagnosis or rank is used by a visit; a user has visits or audit entries.
 - **Closed month:** no edits or deletes until reopened. Closing saves a report snapshot.
@@ -36,7 +36,7 @@ Code used by **2+ features** goes in global folders. Code used by one feature st
 - Feature backend: `app/Http/Controllers/<Feature>/`, `app/Http/Requests/<Feature>/`
 
 ## How to Work
-- Build in this order: **1. Database/config → 2. File structure + global components → 3. Login → 4. RBAC → 5. Features (later).**
+- Build in this order: **1. Database/config → 2. File structure + global components → 3. Login → 4. RBAC → 5. Features, one screen per step: Users (done) → Encode → Records → Lists → Reports → Trash → Audit log → Backup → Settings.**
 - **Stop after each step.** Summarize in plain language what was built and how to check it, then wait for approval.
 - Run `php artisan test` and `npm run build` (or `npm run types`) before saying a step is done. Fix errors first.
 - Never put real passwords in committed files. Use `.env`.
