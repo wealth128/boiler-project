@@ -127,14 +127,9 @@ class AppServiceProvider extends ServiceProvider
             app()->isProduction(),
         );
 
-        Password::defaults(fn (): ?Password => app()->isProduction()
-            ? Password::min(12)
-                ->mixedCase()
-                ->letters()
-                ->numbers()
-                ->symbols()
-                ->uncompromised()
-            : null,
-        );
+        // Same rule in every environment: at least 8 characters, with letters
+        // and numbers. No uncompromised() check: the hospital network has
+        // no internet.
+        Password::defaults(fn (): Password => Password::min(8)->letters()->numbers());
     }
 }

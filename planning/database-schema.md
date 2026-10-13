@@ -1,6 +1,6 @@
 # Database Schema (Phase 4): AFP Hospital Patient Encoding & Reporting System
 
-_Last updated: 2026-10-07 · MySQL · Status: Draft for review_
+_Last updated: 2026-10-13 · MySQL · Status: Draft for review_
 
 Laravel's standard tables (`sessions`, `cache`, `jobs`, `migrations`) are created by the framework and not listed here.
 
@@ -26,11 +26,12 @@ Laravel's standard tables (`sessions`, `cache`, `jobs`, `migrations`) are create
 | name | varchar(100) | |
 | username | varchar(50) | Unique |
 | password | varchar(255) | Hashed |
-| role | enum('encoder','admin','system_admin','viewer') | Only one active `admin`, checked by the app |
+| role | enum('encoder','admin','system_admin','viewer') | Only one active `admin` and one active `system_admin`, checked by the app |
 | office | enum('ER','OPD','Admission','Admin','IT','Command') | Decides the default category for encoders |
 | is_active | boolean | Deactivated users can't log in (temporary, separate from delete) |
 | failed_attempts | tinyint, default 0 | Resets to 0 on a successful login |
 | locked_at | timestamp, null | Set when failed_attempts reaches 5. Cleared on unlock. |
+| must_change_password | boolean, default false | Set when Admin, System Admin or IT sets the password (new account or reset). The user must choose their own right after logging in, which clears it. |
 | deleted_at | timestamp, null | Soft delete (Laravel `SoftDeletes`). Set = in Trash. |
 | deleted_by | FK → users, null | |
 | delete_reason | varchar(255), null | Required when moved to Trash |
@@ -144,7 +145,7 @@ On reopen, the copy is discarded. Closing again saves a fresh copy. Both actions
 |---|---|---|
 | id | bigint PK | |
 | user_id | FK → users | |
-| action | varchar(40) | e.g. `visit.created`, `visit.deleted`, `visit.restored`, `visit.purged`, `month.closed`, `user.unlocked`, `list.added` |
+| action | varchar(40) | e.g. `visit.created`, `visit.deleted`, `visit.restored`, `visit.purged`, `month.closed`, `user.unlocked`, `user.password_reset`, `user.password_changed`, `user.session_ended`, `list.added` |
 | subject_type / subject_id | varchar / bigint | What was changed (e.g. visits / 1532) |
 | changes | JSON, null | Old and new values for edits |
 | ip_address | varchar(45) | Which PC did it |
@@ -205,6 +206,7 @@ GROUP BY p.sex;
   - Diagnosis / rank: used by any visit
   - User: has any visits or audit log entries (accounts created by mistake can be deleted)
   - Age brackets can always be hard-deleted (not linked to visits)
+- **Patients and their visits move together:** a patient goes to Trash only after all their visits are in Trash ("Move this patient's visits to Trash first."). A visit, or a deleted month report, comes back only after its patient is restored ("Restore the patient first.").
 - **Every delete, restore and permanent delete is written to `audit_logs`.** Permanently deleted data still exists in backups until they rotate out (30 days).
 - **Patient name, sex and birthdate** live on `patients`, so correcting them fixes all of that patient's visits.
 - **Branch, rank, age and diagnosis** live on `visits`, because they describe that visit.

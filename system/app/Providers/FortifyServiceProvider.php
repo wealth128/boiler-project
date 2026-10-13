@@ -26,7 +26,8 @@ class FortifyServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // After login, go to the role's landing page (Role::landingRoute()).
+        // After login, go to the role's landing page (Role::landingRoute()),
+        // or to "Choose your new password" after a temporary password.
         // A page asked for before login is not reopened: on a shared PC it
         // may belong to the previous user's role.
         $this->app->instance(LoginResponse::class, new class implements LoginResponse
@@ -36,9 +37,12 @@ class FortifyServiceProvider extends ServiceProvider
                 /** @var User $user */
                 $user = $request->user();
 
-                return $request->wantsJson()
-                    ? new JsonResponse(['two_factor' => false])
-                    : redirect()->route($user->role->landingRoute());
+                if ($request->wantsJson()) {
+                    return new JsonResponse(['two_factor' => false]);
+                }
+
+                // A temporary password must be replaced first (RequirePasswordChange).
+                return redirect()->route($user->must_change_password ? 'password.choose' : $user->role->landingRoute());
             }
         });
     }

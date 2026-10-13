@@ -185,3 +185,50 @@ it('gives encoders and viewers no account rights', function (string $role) {
         ->and($gate->allows('create', User::class))->toBeFalse()
         ->and($gate->allows('makeAdmin', [User::class]))->toBeFalse();
 })->with(['encoder', 'viewer']);
+
+// --- One active System Admin ----------------------------------------------
+
+it('refuses a second active System Admin', function () {
+    $sysadmin = userWithRole('system_admin');
+    $encoder = userWithRole('encoder');
+    $admin = userWithRole('admin');
+
+    $newAccount = Gate::forUser($admin)->inspect('makeSystemAdmin', [User::class]);
+    $promote = Gate::forUser($admin)->inspect('makeSystemAdmin', [User::class, $encoder]);
+
+    expect($newAccount->denied())->toBeTrue()
+        ->and($newAccount->message())->toBe('There is already an active System Admin account. Only one is allowed.')
+        ->and($promote->denied())->toBeTrue()
+        // The System Admin account itself keeps its role when edited.
+        ->and(Gate::forUser($admin)->allows('makeSystemAdmin', [User::class, $sysadmin]))->toBeTrue();
+});
+
+it('allows a new System Admin once the old one is deactivated', function () {
+    userWithRole('system_admin', ['is_active' => false]);
+
+    expect(Gate::forUser(userWithRole('admin'))->allows('makeSystemAdmin', [User::class]))->toBeTrue();
+});
+
+it('refuses to activate a second System Admin account', function () {
+    userWithRole('system_admin');
+    $old = userWithRole('system_admin', ['is_active' => false]);
+
+    assertUserActionDenied(
+        $this->actingAs(userWithRole('admin'))->post("/users/{$old->id}/toggle-active"),
+        'There is already an active System Admin account. Only one is allowed.',
+    );
+});
+
+it('refuses to restore a System Admin account from Trash while another is active', function () {
+    $admin = userWithRole('admin');
+    $old = userWithRole('system_admin');
+    $old->moveToTrash($admin, 'Replaced');
+    userWithRole('system_admin');
+
+    expect(Gate::forUser($admin)->inspect('restore-from-trash', User::onlyTrashed()->find($old->id))->message())
+        ->toBe('There is already an active System Admin account. Only one is allowed.');
+});
+
+it('gives encoders and viewers no right to make a System Admin', function (string $role) {
+    expect(Gate::forUser(userWithRole($role))->allows('makeSystemAdmin', [User::class]))->toBeFalse();
+})->with(['encoder', 'viewer']);

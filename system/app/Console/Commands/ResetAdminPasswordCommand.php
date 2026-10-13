@@ -19,7 +19,8 @@ use Illuminate\Validation\Rules\Password;
  *
  * Asks for the new password twice (it is never shown or saved anywhere
  * else), also clears a login lock, and writes "user.password_reset" to the
- * audit log. Nobody is signed in on the server, so the entry has no user;
+ * audit log. The new password is temporary (must_change_password): the
+ * Admin chooses their own right after logging in with it. Nobody is signed in on the server, so the entry has no user;
  * "via" says it came from this command.
  */
 class ResetAdminPasswordCommand extends Command
@@ -68,19 +69,21 @@ class ResetAdminPasswordCommand extends Command
 
         DB::transaction(function () use ($admin, $password, $wasLocked, $audit): void {
             // One clear entry instead of a generic "user.updated".
+            // Temporary: the Admin chooses their own at the next login.
             AuditObserver::muted(fn () => $admin->forceFill([
-                'password' => $password, // hashed by the model cast
                 'failed_attempts' => 0,
                 'locked_at' => null,
-            ])->save());
+            ])->setTemporaryPassword($password));
 
             $audit->log('user.password_reset', $admin, [
                 'via' => 'census:reset-admin-password',
                 'unlocked' => $wasLocked,
+                'temporary' => true,
             ]);
         });
 
         $this->info('Password changed'.($wasLocked ? ' and account unlocked' : '').'. Give the new password to the Admin privately.');
+        $this->line('It is temporary: the Admin must choose a new password right after logging in.');
 
         return self::SUCCESS;
     }

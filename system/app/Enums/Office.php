@@ -41,6 +41,27 @@ enum Office: string
         };
     }
 
+    /**
+     * Offices an encoder account can belong to.
+     *
+     * @return list<self>
+     */
+    public static function forEncoders(): array
+    {
+        return [self::ER, self::OPD, self::Admission];
+    }
+
+    /**
+     * Can new encoder accounts be made for this office now? OPD and
+     * Admission encoders are built in but switched off in v1.0
+     * (planning/rbac.md): all encoding is done by ER. To switch them on,
+     * return true for them here.
+     */
+    public function encodingOn(): bool
+    {
+        return $this === self::ER;
+    }
+
     /** @return list<string> */
     public static function values(): array
     {

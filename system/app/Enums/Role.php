@@ -4,7 +4,8 @@ namespace App\Enums;
 
 /**
  * User roles (planning/rbac.md).
- * Only ONE active `admin` may exist; the app enforces that rule.
+ * Only ONE active `admin` and ONE active `system_admin` may exist; the app
+ * enforces that rule (UserPolicy, TrashPolicy).
  */
 enum Role: string
 {
@@ -20,6 +21,28 @@ enum Role: string
             self::Admin => 'Admin',
             self::SystemAdmin => 'System Admin',
             self::Viewer => 'Viewer (CO)',
+        };
+    }
+
+    /**
+     * Only one active account may have this role.
+     */
+    public function isSingleHolder(): bool
+    {
+        return $this === self::Admin || $this === self::SystemAdmin;
+    }
+
+    /**
+     * The office an account with this role belongs to. Encoders pick their
+     * office (Office::forEncoders()); the other roles have a fixed one.
+     */
+    public function fixedOffice(): ?Office
+    {
+        return match ($this) {
+            self::Encoder => null,
+            self::Admin => Office::Admin,
+            self::SystemAdmin => Office::IT,
+            self::Viewer => Office::Command,
         };
     }
 

@@ -33,18 +33,23 @@ it("resets the Admin's password, clears a lock and writes user.password_reset", 
     $entry = AuditLog::where('action', 'user.password_reset')->sole();
     expect($entry->subject_id)->toBe($admin->id)
         ->and($entry->user_id)->toBeNull()
-        ->and($entry->changes)->toEqual(['via' => 'census:reset-admin-password', 'unlocked' => true])
+        ->and($entry->changes)->toEqual(['via' => 'census:reset-admin-password', 'unlocked' => true, 'temporary' => true])
+        ->and($admin->must_change_password)->toBeTrue()
         ->and(AuditLog::where('action', 'user.updated')->exists())->toBeFalse()
         ->and(AuditLog::all()->map(fn ($e) => json_encode($e->changes))->implode(' '))->not->toContain('New-Admin-Pass-2026');
 });
 
-it('lets the Admin log in with the new password', function () {
+it('lets the Admin log in with the new password, then choose their own', function () {
     userWithRole('admin', ['username' => 'admin']);
 
-    resetAdminPassword('New-Admin-Pass-2026')->assertSuccessful();
+    resetAdminPassword('New-Admin-Pass-2026')
+        ->expectsOutputToContain('It is temporary')
+        ->assertSuccessful();
 
     $this->post(route('login.store'), ['username' => 'admin', 'password' => 'New-Admin-Pass-2026'])
-        ->assertRedirect('/encode');
+        ->assertRedirect('/choose-password');
+
+    $this->get('/encode')->assertRedirect('/choose-password');
 });
 
 it('changes nothing when the two passwords differ', function () {

@@ -44,9 +44,9 @@ class AccountSeeder extends Seeder
             return;
         }
 
-        // Only one active Admin may exist.
-        if ($role === Role::Admin && User::where('role', Role::Admin)->where('is_active', true)->exists()) {
-            $this->command->warn('An active Admin account already exists; "admin" was not created.');
+        // Only one active Admin and one active System Admin may exist.
+        if ($role->isSingleHolder() && User::activeHolderExists($role)) {
+            $this->command->warn("An active {$role->label()} account already exists; \"{$username}\" was not created.");
 
             return;
         }

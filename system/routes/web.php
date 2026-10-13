@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Audit\AuditLogController;
+use App\Http\Controllers\Auth\ChoosePasswordController;
 use App\Http\Controllers\Auth\LandingController;
 use App\Http\Controllers\Backup\BackupController;
 use App\Http\Controllers\Encode\EncodeController;
@@ -41,6 +42,13 @@ Route::pattern('period', '\d{4}-(0[1-9]|1[0-2])'); // e.g. 2026-09
 Route::pattern('id', '[0-9]+');
 
 Route::middleware('auth')->group(function () {
+    // --- Choose your new password -------------------------------- Everyone
+    // After logging in with a temporary password (RequirePasswordChange).
+    Route::get('choose-password', [ChoosePasswordController::class, 'edit'])->name('password.choose');
+    Route::put('choose-password', [ChoosePasswordController::class, 'update'])
+        ->middleware('throttle:6,1')
+        ->name('password.choose.update');
+
     // --- Encode ------------------------------------------------- Encoder, Admin
     Route::middleware('role:encoder,admin')->group(function () {
         Route::get('encode', [EncodeController::class, 'index'])->name('encode.index');

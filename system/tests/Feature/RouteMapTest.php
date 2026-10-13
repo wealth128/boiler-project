@@ -59,10 +59,11 @@ it('registers every planned route behind auth and a role rule', function (string
 
 it('puts a role rule on every signed-in route except the own-account pages', function () {
     // Open to every signed-in role: own profile, password, appearance,
-    // password confirmation and logout.
+    // password confirmation, "Choose your new password" and logout.
     $everyone = [
         'settings', 'settings/profile', 'settings/security', 'settings/password',
         'settings/appearance', 'user/confirm-password', 'user/confirmed-password-status', 'logout',
+        'choose-password',
     ];
 
     $missing = collect(Route::getRoutes()->getRoutes())
@@ -89,7 +90,7 @@ it('shows the placeholder page on every planned screen', function (string $uri) 
         ->assertInertia(fn ($page) => $page->component('placeholder')->has('title'));
 })->with([
     '/encode', '/records/visits', '/records/patients', '/reports', '/reports/export/pdf',
-    '/reports/export/excel', '/settings/lists', '/users', '/audit-log', '/trash', '/backups',
+    '/reports/export/excel', '/settings/lists', '/audit-log', '/trash', '/backups',
 ]);
 
 it('answers the patient search with JSON', function () {
@@ -101,7 +102,6 @@ it('answers the patient search with JSON', function () {
 
 it('answers stub form actions with a "not built yet" toast', function () {
     $user = User::factory()->admin()->create();
-    $encoder = User::factory()->encoder()->create();
     $visit = Visit::factory()->create();
     $patient = Patient::factory()->create();
 
@@ -115,7 +115,6 @@ it('answers stub form actions with a "not built yet" toast', function () {
         ['post', '/months/2026-09/close'],
         ['post', '/settings/diagnoses'],
         ['put', '/settings/age-brackets/1'],
-        ['post', "/users/{$encoder->id}/unlock"],
         ['post', '/trash/visits/1/restore'],
         ['delete', '/trash'],
         ['post', '/backups/run'],

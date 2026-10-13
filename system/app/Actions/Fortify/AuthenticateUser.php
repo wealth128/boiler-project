@@ -32,6 +32,12 @@ class AuthenticateUser
 {
     public const MAX_ATTEMPTS = 5;
 
+    /**
+     * Also shown when a signed-in user is deactivated (the session ends:
+     * Http/Middleware/EndSessionWhenAccessRemoved).
+     */
+    public const DEACTIVATED_MESSAGE = 'This account is deactivated. Ask the Admin or System Admin.';
+
     public function __construct(private AuditLogger $audit) {}
 
     public function __invoke(Request $request): User
@@ -55,7 +61,7 @@ class AuthenticateUser
         }
 
         if (! $user->is_active) {
-            $this->fail('This account is deactivated. Ask the Admin or System Admin.');
+            $this->fail(self::DEACTIVATED_MESSAGE);
         }
 
         if ($user->failed_attempts > 0) {

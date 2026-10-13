@@ -52,7 +52,7 @@ class EndSessionAtDailyCutoff
             return $next($request);
         }
 
-        $this->audit->log('user.session_ended', $user, ['cutoff' => $cutoff->format('H:i')], by: $user);
+        $this->audit->log('user.session_ended', $user, ['reason' => 'daily_cutoff', 'cutoff' => $cutoff->format('H:i')], by: $user);
 
         // Not logout(): that would also write "user.logout", which means the
         // user clicked Log out.

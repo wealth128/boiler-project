@@ -124,12 +124,14 @@ it('restores a record and clears the delete details', function () {
 it('deletes permanently when allowed, and refuses when history depends on it', function () {
     $visit = Visit::factory()->create();
     $patient = $visit->patient;
+    // Visits go to Trash before their patient.
+    $this->trash->moveToTrash($visit, $this->admin, 'Test');
     $this->trash->moveToTrash($patient, $this->admin, 'Test');
 
+    // The visit is in Trash, but it still points at the patient.
     expect(fn () => $this->trash->forceDelete($patient, $this->admin))
         ->toThrow(AuthorizationException::class, 'still has visits');
 
-    $this->trash->moveToTrash($visit, $this->admin, 'Test');
     $this->trash->forceDelete($visit, $this->admin);
     $this->trash->forceDelete($patient, $this->admin);
 
@@ -243,4 +245,62 @@ it('deletes a whole month report permanently, unless the month is closed', funct
     expect(Visit::withTrashed()->whereIn('id', $visits->pluck('id'))->exists())->toBeFalse()
         ->and(MonthDeletion::count())->toBe(0)
         ->and(AuditLog::where('action', 'month.report_purged')->sole()->changes)->toEqual(['period' => '2026-09', 'visit_count' => 2]);
+});
+
+// --- Patients and their visits (prototype/prototype.html) ---------------
+
+it("moves a patient to Trash only after all the patient's visits are in Trash", function () {
+    $patient = Patient::factory()->create();
+    $visits = Visit::factory()->count(2)->create(['patient_id' => $patient->id, 'visited_at' => '2026-10-05 08:00']);
+
+    expect(fn () => $this->trash->moveToTrash($patient, $this->admin, 'Duplicate'))
+        ->toThrow(AuthorizationException::class, "Move this patient's visits to Trash first.");
+
+    $this->trash->moveToTrash($visits[0], $this->admin, 'Duplicate');
+
+    expect(fn () => $this->trash->moveToTrash($patient->fresh(), $this->admin, 'Duplicate'))
+        ->toThrow(AuthorizationException::class, "Move this patient's visits to Trash first.");
+
+    $this->trash->moveToTrash($visits[1], $this->admin, 'Duplicate');
+    $this->trash->moveToTrash($patient->fresh(), $this->admin, 'Duplicate');
+
+    expect(Patient::onlyTrashed()->whereKey($patient->id)->exists())->toBeTrue();
+});
+
+it('moves a patient with no visits to Trash', function () {
+    $patient = Patient::factory()->create();
+
+    $this->trash->moveToTrash($patient, $this->admin, 'Entered by mistake');
+
+    expect($patient->fresh()->trashed())->toBeTrue();
+});
+
+it('restores a visit only after its patient is restored', function () {
+    $patient = Patient::factory()->create();
+    $visit = Visit::factory()->create(['patient_id' => $patient->id, 'visited_at' => '2026-10-05 08:00']);
+    $this->trash->moveToTrash($visit, $this->admin, 'Duplicate');
+    $this->trash->moveToTrash($patient->fresh(), $this->admin, 'Duplicate');
+
+    expect(fn () => $this->trash->restore($this->trash->find('visits', $visit->id), $this->admin))
+        ->toThrow(AuthorizationException::class, 'Restore the patient first.');
+
+    $this->trash->restore($this->trash->find('patients', $patient->id), $this->admin);
+    $this->trash->restore($this->trash->find('visits', $visit->id), $this->admin);
+
+    expect($visit->fresh()->trashed())->toBeFalse();
+});
+
+it('restores a month report only after the patients in Trash are restored', function () {
+    $patient = Patient::factory()->create();
+    Visit::factory()->create(['patient_id' => $patient->id, 'visited_at' => '2026-09-15 08:00']);
+    $entry = $this->trash->deleteMonthReport('2026-09', $this->admin, 'Test');
+    $this->trash->moveToTrash($patient->fresh(), $this->admin, 'Duplicate');
+
+    expect(fn () => $this->trash->restore($this->trash->find('months', $entry->id), $this->admin))
+        ->toThrow(AuthorizationException::class, "Restore patient {$patient->fresh()->patient_no} first.");
+
+    $this->trash->restore($this->trash->find('patients', $patient->id), $this->admin);
+    $this->trash->restore($this->trash->find('months', $entry->id), $this->admin);
+
+    expect(MonthDeletion::count())->toBe(0);
 });

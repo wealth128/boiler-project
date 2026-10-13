@@ -29,6 +29,7 @@ use Illuminate\Support\Carbon;
  * @property bool $is_active
  * @property int $failed_attempts
  * @property Carbon|null $locked_at
+ * @property bool $must_change_password
  * @property string|null $remember_token
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -54,7 +55,22 @@ class User extends Authenticatable
             'is_active' => 'boolean',
             'failed_attempts' => 'integer',
             'locked_at' => 'datetime',
+            'must_change_password' => 'boolean',
         ];
+    }
+
+    /**
+     * Set a password chosen by Admin, System Admin or IT (new account or
+     * reset) and save. It is temporary: after logging in with it, the user
+     * must choose their own before using the system (planning/rbac.md).
+     * must_change_password is not fillable, so no form can switch it off.
+     */
+    public function setTemporaryPassword(string $password): bool
+    {
+        return $this->forceFill([
+            'password' => $password, // hashed by the cast
+            'must_change_password' => true,
+        ])->save();
     }
 
     /**
@@ -84,8 +100,18 @@ class User extends Authenticatable
      */
     public static function activeAdminExists(?User $except = null): bool
     {
+        return static::activeHolderExists(Role::Admin, $except);
+    }
+
+    /**
+     * Is there an active account (not in Trash) with this role, other than
+     * $except? Used for the roles only one account may hold: Admin and
+     * System Admin (Role::isSingleHolder()).
+     */
+    public static function activeHolderExists(Role $role, ?User $except = null): bool
+    {
         return static::query()
-            ->where('role', Role::Admin)
+            ->where('role', $role)
             ->where('is_active', true)
             ->when($except, fn ($query) => $query->whereKeyNot($except->getKey()))
             ->exists();

@@ -1,6 +1,6 @@
 # RBAC: AFP Hospital Patient Encoding & Reporting System
 
-_Last updated: 2026-10-09 · Status: Confirmed by user_
+_Last updated: 2026-10-13 · Status: Confirmed by user_
 
 ## Roles
 | Role | Count | Purpose |
@@ -8,7 +8,7 @@ _Last updated: 2026-10-09 · Status: Confirmed by user_
 | ER Encoder | Many | Encodes patients for any category (OPD / ER / Admission) |
 | OPD / Admission Encoder | Many | Encodes for own category only. **Switched off in v1.0.** |
 | Admin | **One only** | Owns the data and reports. Also encodes. |
-| System Admin | One | Manages user accounts as a backup to Admin |
+| System Admin | **One only** | Manages user accounts as a backup to Admin |
 | Viewer (Commanding Officer) | Few | Reports only |
 
 ## Permission Matrix
@@ -31,17 +31,20 @@ _Last updated: 2026-10-09 · Status: Confirmed by user_
 
 ## Rules for Everyone
 - **Login lock:** an account locks after **5 wrong passwords**. Admin or System Admin unlocks it.
-- **No idle auto-logout.**
+- **Daily sign-out at 8:00 PM:** there is no idle timeout. Every day at **8:00 PM (Asia/Manila)**, everyone who logged in before 8:00 PM must log in again on their next click. ER night shift simply logs in again. Otherwise a session ends only when the user clicks Log out.
+- **Removing access works right away:** if a signed-in user is deactivated, locked or moved to Trash, their session ends on their next click. They go to the login page with the same message the login form shows. This is written to the audit log (`user.session_ended`, with the reason).
+- **Password rule:** at least **8 characters, with letters and numbers**. No symbol is required. The same rule applies everywhere, and it works without internet.
 - **One Admin:** the system blocks creating a second active Admin account.
+- **One System Admin:** the system blocks creating a second active System Admin account, the same way as for the Admin.
 - **Closed month:** no one can edit or delete its records until Admin reopens it.
 - **Deleted records:** go to Trash and are never counted in reports. Admin restores or permanently deletes them. Nobody can delete their own account or the Admin account.
 - **Own role:** nobody can change their own role.
 - **Admin account is protected:** the System Admin cannot edit the Admin account, change its role, deactivate it or reset its password. (The System Admin can still unlock it after 5 wrong passwords.)
-- **Admin forgot the password:** IT resets it on the server with `php artisan census:reset-admin-password`. It asks for the new password twice, clears a login lock, and writes `user.password_reset` to the audit log.
+- **Admin forgot the password:** IT resets it on the server with `php artisan census:reset-admin-password`. It asks for the new password twice, clears a login lock, and writes `user.password_reset` to the audit log. The new password is temporary: the Admin chooses their own right after logging in.
 - **Audit log:** every encode, edit, delete, restore, permanent delete, close/reopen, unlock and account change is recorded with the user and time.
 - **Passwords are never visible.** They are stored hashed (one-way), so no one can see any user's password, including Admin and System Admin. The system can only set a new one.
 - **Forgot password:** there is no self-service reset (no "Forgot password" link, no email). The user asks Admin or System Admin. Both follow the same rule: before setting a new password, they must re-enter **their own** password to confirm. The Admin's own password is the exception: see "Admin forgot the password".
-- **Initial password must be changed:** a password set by Admin or System Admin, for a new account or a reset, is temporary. Right after logging in with it, the user must choose their own new password before they can use the system. Admin and System Admin therefore never know a user's working password.
+- **Initial password must be changed:** a password set by Admin or System Admin, for a new account or a reset, is temporary. Right after logging in with it, the user must choose their own new password before they can use the system. Until then, they can only open the "Choose your new password" page or Log out. The new password can't be the same as the temporary one. This is written to the audit log (`user.password_changed`). A password set by IT with `census:reset-admin-password` is temporary too. Admin and System Admin therefore never know a user's working password.
 
 ## Decisions
 - **System Admin and patient data** (confirmed 2026-10-08): **no access** to patient records, reports or the audit log. User accounts only.

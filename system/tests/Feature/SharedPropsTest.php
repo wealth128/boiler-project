@@ -35,7 +35,9 @@ it('shares the hospital name on the login page too', function () {
 });
 
 it('shares only id, name, username, role and office of the signed-in user', function () {
-    $admin = User::factory()->admin()->locked()->create(['name' => 'Ana Reyes', 'username' => 'areyes']);
+    // A locked account is signed out (EndSessionWhenAccessRemoved), so the
+    // hidden fields are shown with a wrong-password count instead.
+    $admin = User::factory()->admin()->create(['name' => 'Ana Reyes', 'username' => 'areyes', 'failed_attempts' => 3]);
 
     $this->actingAs($admin)
         ->get('/encode')

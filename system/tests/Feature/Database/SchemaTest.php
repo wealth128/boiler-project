@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Schema;
  */
 
 dataset('tables', [
-    'users' => ['users', ['id', 'name', 'username', 'password', 'role', 'office', 'is_active', 'failed_attempts', 'locked_at', 'remember_token', 'created_at', 'updated_at', 'deleted_at', 'deleted_by', 'delete_reason']],
+    'users' => ['users', ['id', 'name', 'username', 'password', 'role', 'office', 'is_active', 'failed_attempts', 'locked_at', 'must_change_password', 'remember_token', 'created_at', 'updated_at', 'deleted_at', 'deleted_by', 'delete_reason']],
     'patients' => ['patients', ['id', 'patient_no', 'last_name', 'first_name', 'middle_initial', 'sex', 'birthdate', 'created_at', 'updated_at', 'deleted_at', 'deleted_by', 'delete_reason']],
     'visits' => ['visits', ['id', 'visit_no', 'patient_id', 'visited_at', 'age', 'branch_id', 'rank_id', 'rank_other', 'diagnosis_id', 'diagnosis_other', 'category', 'remarks', 'encoded_by', 'updated_by', 'created_at', 'updated_at', 'deleted_at', 'deleted_by', 'delete_reason', 'month_deletion_id']],
     'branches' => ['branches', ['id', 'name', 'is_afp', 'sort_order', 'is_active']],

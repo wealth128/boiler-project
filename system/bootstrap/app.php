@@ -1,9 +1,12 @@
 <?php
 
 use App\Http\Middleware\EndSessionAtDailyCutoff;
+use App\Http\Middleware\EndSessionWhenAccessRemoved;
 use App\Http\Middleware\EnsureRole;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\RequirePasswordChange;
+use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -25,11 +28,21 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => EnsureRole::class,
         ]);
 
+        // Before "auth": a user moved to Trash no longer loads, and "auth"
+        // would send them to login without saying why.
+        $middleware->prependToPriorityList(AuthenticatesRequests::class, EndSessionWhenAccessRemoved::class);
+
         $middleware->web(append: [
             HandleAppearance::class,
             HandleInertiaRequests::class,
-            // After Inertia, so its redirect to /login works on form submits.
+            // Deactivated / locked / in Trash. Moved before "auth" by the
+            // priority list below.
+            EndSessionWhenAccessRemoved::class,
+            // After Inertia, so their redirects to /login work on form submits:
+            // the 8:00 PM cutoff, then a temporary password (only "Choose your
+            // new password" opens).
             EndSessionAtDailyCutoff::class,
+            RequirePasswordChange::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);
     })

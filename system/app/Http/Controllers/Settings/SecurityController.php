@@ -4,7 +4,11 @@ namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\PasswordUpdateRequest;
+use App\Models\User;
+use App\Observers\AuditObserver;
+use App\Services\AuditLogger;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -28,11 +32,19 @@ class SecurityController extends Controller
     /**
      * Update the user's password.
      */
-    public function update(PasswordUpdateRequest $request): RedirectResponse
+    public function update(PasswordUpdateRequest $request, AuditLogger $audit): RedirectResponse
     {
-        $request->user()->update([
-            'password' => $request->password,
-        ]);
+        /** @var User $user */
+        $user = $request->user();
+
+        DB::transaction(function () use ($user, $request, $audit): void {
+            // One clear entry instead of a generic "user.updated".
+            AuditObserver::muted(fn () => $user->update([
+                'password' => $request->password,
+            ]));
+
+            $audit->log('user.password_changed', $user, ['was_temporary' => false], by: $user);
+        });
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Password updated.')]);
 

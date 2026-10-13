@@ -17,8 +17,9 @@ use Illuminate\Auth\Access\Response;
  *   change, no deactivate, no password reset. (Unlock is allowed.) If the
  *   Admin forgets the password, IT runs `php artisan
  *   census:reset-admin-password` on the server.
- * - Only one active Admin: making an account Admin, or activating an Admin
- *   account, is refused while another active Admin exists.
+ * - Only one active Admin and one active System Admin: giving an account
+ *   that role, or activating such an account, is refused while another
+ *   active one exists (makeAdmin, makeSystemAdmin, toggleActive).
  * - Nobody can deactivate their own account (it would lock them out).
  * - Nobody resets their own password here; they use Settings > Password.
  *
@@ -121,9 +122,10 @@ class UserPolicy
             return $protected;
         }
 
-        // Activating a deactivated Admin would make a second active Admin.
-        if (! $target->is_active && $target->hasRole(Role::Admin) && User::activeAdminExists(except: $target)) {
-            return self::oneAdminOnly();
+        // Activating a deactivated Admin (or System Admin) would make a
+        // second active one.
+        if (! $target->is_active && $target->role->isSingleHolder() && User::activeHolderExists($target->role, except: $target)) {
+            return self::oneOnly($target->role);
         }
 
         return Response::allow();
@@ -146,9 +148,39 @@ class UserPolicy
         return Response::allow();
     }
 
+    /**
+     * Give an account the System Admin role: a new account ($target null)
+     * or an existing one. Same rule as makeAdmin(): only one active.
+     */
+    public function makeSystemAdmin(User $actor, ?User $target = null): Response
+    {
+        if (! self::manages($actor)) {
+            return Response::deny();
+        }
+
+        if (User::activeHolderExists(Role::SystemAdmin, except: $target)) {
+            return self::oneSystemAdminOnly();
+        }
+
+        return Response::allow();
+    }
+
     public static function oneAdminOnly(): Response
     {
         return Response::deny('There is already an active Admin account. Only one is allowed.');
+    }
+
+    public static function oneSystemAdminOnly(): Response
+    {
+        return Response::deny('There is already an active System Admin account. Only one is allowed.');
+    }
+
+    /**
+     * The "only one active" refusal for Admin or System Admin.
+     */
+    public static function oneOnly(Role $role): Response
+    {
+        return $role === Role::SystemAdmin ? self::oneSystemAdminOnly() : self::oneAdminOnly();
     }
 
     /**

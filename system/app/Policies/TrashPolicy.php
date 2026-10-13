@@ -3,7 +3,6 @@
 namespace App\Policies;
 
 use App\Enums\Permission;
-use App\Enums\Role;
 use App\Models\AgeBracket;
 use App\Models\Diagnosis;
 use App\Models\MonthClosure;
@@ -33,6 +32,10 @@ use InvalidArgumentException;
  * - Diagnosis or rank: used by any visit
  * - User: has visits or audit log entries
  * - Age brackets: never blocked (not linked to visits)
+ *
+ * Patients and their visits (prototype/prototype.html): a patient goes to
+ * Trash only after all their visits are in Trash, and a visit comes back
+ * only after its patient is restored.
  */
 class TrashPolicy
 {
@@ -80,6 +83,11 @@ class TrashPolicy
             return Response::deny('"Other (specify)" is a fixed entry and can\'t be removed.');
         }
 
+        // Visits first, then the patient (prototype/prototype.html).
+        if ($item instanceof Patient && $item->visits()->exists()) {
+            return Response::deny("Move this patient's visits to Trash first.");
+        }
+
         return Response::allow();
     }
 
@@ -120,8 +128,26 @@ class TrashPolicy
             return $closed;
         }
 
-        if ($item instanceof User && $item->is_active && $item->hasRole(Role::Admin) && User::activeAdminExists(except: $item)) {
-            return UserPolicy::oneAdminOnly();
+        if ($item instanceof User && $item->is_active && $item->role->isSingleHolder() && User::activeHolderExists($item->role, except: $item)) {
+            return UserPolicy::oneOnly($item->role);
+        }
+
+        // A visit can't come back without its patient.
+        if ($item instanceof Visit && Patient::onlyTrashed()->whereKey($item->patient_id)->exists()) {
+            return Response::deny('Restore the patient first.');
+        }
+
+        // Same for a month report: name the first patient to restore
+        // (prototype/prototype.html).
+        if ($item instanceof MonthDeletion) {
+            $patientNo = Patient::onlyTrashed()
+                ->whereIn('id', $item->visits()->onlyTrashed()->select('patient_id'))
+                ->orderBy('id')
+                ->value('patient_no');
+
+            if ($patientNo !== null) {
+                return Response::deny("Restore patient {$patientNo} first.");
+            }
         }
 
         return Response::allow();
