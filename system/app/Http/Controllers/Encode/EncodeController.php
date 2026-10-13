@@ -20,7 +20,8 @@ use Inertia\Response;
  * encoding form and "My entries today".
  *
  * /encode?edit={visit} loads that visit into the same form ("Editing
- * V-…"). VisitPolicy decides who may edit it.
+ * V-…"). VisitPolicy decides who may edit it. From Patient Records the link
+ * also carries &return={records URL} (ReturnToRecords).
  */
 class EncodeController extends Controller
 {
@@ -40,6 +41,8 @@ class EncodeController extends Controller
             'nextPatientNo' => Patient::formatNumber(((int) Patient::withTrashed()->max('id')) + 1),
             'todayEntries' => $this->todayEntries($user),
             'editing' => $editing ? $this->editingProps($editing) : null,
+            // Opened from Patient Records: where Save changes and Cancel edit go.
+            'returnTo' => $editing ? ReturnToRecords::from($request->query('return'), $user) : null,
         ]);
     }
 

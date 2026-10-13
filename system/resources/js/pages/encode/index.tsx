@@ -14,7 +14,9 @@ type Props = VisitFormProps & {
 /**
  * Encode Patient (prototype/prototype.html, "Encode Patient"): the encoding
  * form and "My entries today". /encode?edit={visit} opens a visit in the
- * same form. Rules: planning/mvp-scope.md section 2; the server checks
+ * same form; opened from Patient Records, it also carries &return= so Save
+ * changes and Cancel edit go back there. Rules: planning/mvp-scope.md
+ * section 2; the server checks
  * everything again (StoreVisitRequest, UpdateVisitRequest, VisitPolicy).
  */
 export default function EncodeIndex({ office, todayEntries, ...form }: Props) {

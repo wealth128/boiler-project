@@ -21,6 +21,7 @@ You can do everything on these screens without the mouse.
 - **(Specify)** appears only when "Other (specify)" is chosen.
 - **Category** is skipped when it is set by your office.
 - When editing a visit, **Cancel edit** comes first instead of the search box.
+- A visit opened with **Edit** on Patient Records goes back to Patient Records after **Save changes** or **Cancel edit**, with the same filters and page.
 
 ### Save
 | Key | What it does |
@@ -65,3 +66,60 @@ After picking a patient, the cursor jumps to the first empty field, usually **Di
 | Key | What it does |
 |---|---|
 | **Tab** to an **Edit** link, then **Enter** | Open that visit in the form |
+
+---
+
+## Patient Records (Admin)
+
+### Move around
+| Key | What it does |
+|---|---|
+| **Tab** | Go to the next tab, filter, link or button |
+| **Shift + Tab** | Go back |
+| **Enter** on **Visits** or **Patients** | Switch tabs (each tab keeps its own filters) |
+
+**Order (Tab), Visits tab:** Visits → Patients → From → To → Category → Branch → Search → each row's **Edit** and **Delete** → page numbers
+**Order (Tab), Patients tab:** Visits → Patients → Search → each row's **Delete** → page numbers
+
+### Filters
+| Field | Key | What it does |
+|---|---|---|
+| From, To | Type the numbers | Fill month, day and year; **← / →** move between them. The list updates by itself. |
+| Category, Branch | Type the first letters, or **↑ / ↓** | Choose; the list updates right away |
+| Search | Type | The list updates after a short pause. Search by name, Patient ID (e.g. `P-000012` or `12`) or Visit ID (e.g. `V-000045`). |
+| Search | **Esc** | Clear the search box |
+
+The filters stay in the address, so **F5 (Refresh)** and **Alt + ← (Back)** keep them.
+
+### Rows
+| Key | What it does |
+|---|---|
+| **Tab** to **Edit**, then **Enter** | Open the visit on the Encode screen |
+| **Tab** to **Delete**, then **Enter** | Open the "Move to Trash?" row under it; the cursor goes to the Reason list |
+
+Visits in a closed month show "Month closed" instead of Edit and Delete.
+
+### "Move to Trash?" row
+| Key | What it does |
+|---|---|
+| Type the first letters, or **↑ / ↓** | Choose a reason from the list, e.g. `D` for Duplicate entry |
+| **Alt + ↓** | Open the Reason list |
+| **Enter** in the Reason list | Move to Trash (a reason is required) |
+| Choose **Other (specify)** | The cursor moves to the text box. Type 10 to 200 characters, then **Enter**. |
+| **Esc** | Cancel; the cursor goes back to that row's **Delete** |
+
+---
+
+## User Accounts: Move to Trash
+
+| Key | What it does |
+|---|---|
+| Type the first letters, or **↑ / ↓** | Choose a reason from the list |
+| Choose **Other (specify)** | The cursor moves to the text box. Type 10 to 200 characters. |
+| **Tab** to **Move to Trash**, then **Enter** | Move the account to Trash |
+| **Esc** | Close without moving anything |
+
+### Pages
+| Key | What it does |
+|---|---|
+| **Tab** to **Previous**, a page number or **Next**, then **Enter** | Go to that page (50 rows per page) |

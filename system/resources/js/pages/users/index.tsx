@@ -6,7 +6,12 @@ import { Chip } from '@/components/shared/chip';
 import { DataTable } from '@/components/shared/data-table';
 import type { DataTableColumn } from '@/components/shared/data-table';
 import { PageHeader } from '@/components/shared/page-header';
+import type {
+    DeleteReasonOption,
+    DeleteReasonValue,
+} from '@/components/shared/delete-reason-field';
 import { ReasonConfirm } from '@/components/shared/reason-confirm';
+import type { ReasonConfirmErrors } from '@/components/shared/reason-confirm';
 import { Button } from '@/components/ui/button';
 import { DeactivateDialog } from '@/features/users/deactivate-dialog';
 import { ResetPasswordDialog } from '@/features/users/reset-password-dialog';
@@ -20,6 +25,8 @@ type Props = {
     encoderOffices: OfficeOption[];
     maxAttempts: number;
     passwordRules: string;
+    /** UserDeleteReason choices. */
+    deleteReasons: DeleteReasonOption[];
 };
 
 const actionClass = 'h-auto px-1.5 py-0.5 text-xs';
@@ -36,6 +43,7 @@ export default function UsersIndex({
     encoderOffices,
     maxAttempts,
     passwordRules,
+    deleteReasons,
 }: Props) {
     const { is } = usePermissions();
 
@@ -45,7 +53,7 @@ export default function UsersIndex({
     const [deactivating, setDeactivating] = useState<UserRow | null>(null);
     const [trashing, setTrashing] = useState<UserRow | null>(null);
     const [processing, setProcessing] = useState(false);
-    const [trashError, setTrashError] = useState<string>();
+    const [trashErrors, setTrashErrors] = useState<ReasonConfirmErrors>({});
 
     const roleLabel = (value: UserRow['role']) =>
         roles.find((role) => role.value === value)?.label ?? value;
@@ -72,18 +80,18 @@ export default function UsersIndex({
         post(UserAccountController.toggleActive.url(user.id));
     }
 
-    function moveToTrash(reason: string) {
+    function moveToTrash(reason: DeleteReasonValue) {
         if (!trashing) {
             return;
         }
 
         router.delete(UserController.destroy.url(trashing.id), {
-            data: { reason },
+            data: reason,
             preserveScroll: true,
             onStart: () => setProcessing(true),
             onFinish: () => setProcessing(false),
             onSuccess: () => setTrashing(null),
-            onError: (errors) => setTrashError(errors.reason),
+            onError: (errors) => setTrashErrors(errors),
         });
     }
 
@@ -188,7 +196,7 @@ export default function UsersIndex({
                             size="sm"
                             className={`${actionClass} text-bad`}
                             onClick={() => {
-                                setTrashError(undefined);
+                                setTrashErrors({});
                                 setTrashing(user);
                             }}
                         >
@@ -277,9 +285,10 @@ export default function UsersIndex({
                         ? `${trashing.name} (${trashing.username}). The account can't log in while it is in Trash. Admin can restore it from Trash.`
                         : undefined
                 }
+                reasons={deleteReasons}
                 onConfirm={moveToTrash}
                 processing={processing}
-                error={trashError}
+                errors={trashErrors}
             />
         </>
     );

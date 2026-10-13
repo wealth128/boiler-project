@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Users;
 use App\Actions\Fortify\AuthenticateUser;
 use App\Enums\Office;
 use App\Enums\Role;
+use App\Enums\UserDeleteReason;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Users\StoreUserRequest;
 use App\Http\Requests\Users\UpdateUserRequest;
@@ -73,6 +74,7 @@ class UserController extends Controller
             ], Office::forEncoders()),
             'maxAttempts' => AuthenticateUser::MAX_ATTEMPTS,
             'passwordRules' => Password::defaults()->toPasswordRulesString(),
+            'deleteReasons' => UserDeleteReason::options(),
         ]);
     }
 
@@ -100,7 +102,7 @@ class UserController extends Controller
     }
 
     /**
-     * Move a user account to Trash (reason required). Restore and permanent
+     * Move a user account to Trash with a reason from UserDeleteReason. Restore and permanent
      * delete are on the Trash screen.
      */
     public function destroy(Request $request, User $user, TrashService $trash): RedirectResponse
@@ -109,7 +111,7 @@ class UserController extends Controller
 
         /** @var User $actor */
         $actor = $request->user();
-        $trash->moveToTrash($user, $actor, $request->string('reason')->value());
+        $trash->moveToTrash($user, $actor, $request->input('reason'), $request->input('reason_other'));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => "Account {$user->username} moved to Trash."]);
 

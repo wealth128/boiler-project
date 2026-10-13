@@ -2,6 +2,12 @@
 
 namespace App\Services;
 
+use App\Enums\DeleteReason;
+use App\Enums\ListItemDeleteReason;
+use App\Enums\MonthReportDeleteReason;
+use App\Enums\PatientDeleteReason;
+use App\Enums\UserDeleteReason;
+use App\Enums\VisitDeleteReason;
 use App\Models\AgeBracket;
 use App\Models\Diagnosis;
 use App\Models\MonthDeletion;
@@ -9,11 +15,13 @@ use App\Models\Patient;
 use App\Models\Rank;
 use App\Models\User;
 use App\Models\Visit;
+use BackedEnum;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
+use InvalidArgumentException;
 
 /**
  * Everything that goes into or out of Trash (planning/database-schema.md,
@@ -21,6 +29,11 @@ use Illuminate\Validation\ValidationException;
  *
  * Every action checks the TrashPolicy Gates first (who may, closed month,
  * "can't delete permanently" rules), so callers can't skip them.
+ *
+ * Reasons: moving something to Trash needs a reason picked from that
+ * record type's list (App\Enums\DeleteReason, see reasonsFor()). Anything
+ * else is refused with "Choose a reason from the list." "Other (specify)"
+ * needs 10 to 200 typed characters and is saved as "Other: <text>".
  *
  * Audit log: single records are logged by AuditObserver ("visit.deleted",
  * "patient.restored", "rank.purged"...). A month report is logged as one
@@ -44,6 +57,12 @@ class TrashService
         'months' => MonthDeletion::class,
     ];
 
+    /** A reason missing or not on the record type's list. */
+    public const NOT_IN_LIST = 'Choose a reason from the list.';
+
+    /** "Other (specify)" with too little or too much text. */
+    public const OTHER_LENGTH = 'Describe the reason in 10 to 200 characters.';
+
     public function __construct(private AuditLogger $audit) {}
 
     /**
@@ -59,11 +78,32 @@ class TrashService
     }
 
     /**
-     * Move one record to Trash with a reason.
+     * The dropdown reasons for a record type (App\Enums\DeleteReason).
+     *
+     * @param  Model|'month'  $item  A record, or "month" for "Delete month report"
+     * @return class-string<DeleteReason&BackedEnum>
      */
-    public function moveToTrash(Model $item, User $by, ?string $reason): void
+    public static function reasonsFor(Model|string $item): string
     {
-        $reason = self::reason($reason);
+        return match (true) {
+            $item === 'month', $item instanceof MonthDeletion => MonthReportDeleteReason::class,
+            $item instanceof Visit => VisitDeleteReason::class,
+            $item instanceof Patient => PatientDeleteReason::class,
+            $item instanceof User => UserDeleteReason::class,
+            $item instanceof Diagnosis, $item instanceof Rank, $item instanceof AgeBracket => ListItemDeleteReason::class,
+            default => throw new InvalidArgumentException('No delete reasons for '.(is_string($item) ? $item : $item::class).'.'),
+        };
+    }
+
+    /**
+     * Move one record to Trash with a reason from its list.
+     *
+     * @param  mixed  $reason  The chosen reason, e.g. "Duplicate entry"
+     * @param  mixed  $otherText  What was typed when the reason is "Other (specify)"
+     */
+    public function moveToTrash(Model $item, User $by, mixed $reason, mixed $otherText = null): void
+    {
+        $reason = self::reason(self::reasonsFor($item), $reason, $otherText);
 
         Gate::forUser($by)->authorize('move-to-trash', $item);
 
@@ -73,10 +113,13 @@ class TrashService
     /**
      * "Delete month report": every visit of an open month that is not
      * already in Trash goes to Trash together, as one MonthDeletion entry.
+     *
+     * @param  mixed  $reason  The chosen reason, e.g. "Encoded in the wrong month"
+     * @param  mixed  $otherText  What was typed when the reason is "Other (specify)"
      */
-    public function deleteMonthReport(string $period, User $by, ?string $reason): MonthDeletion
+    public function deleteMonthReport(string $period, User $by, mixed $reason, mixed $otherText = null): MonthDeletion
     {
-        $reason = self::reason($reason);
+        $reason = self::reason(self::reasonsFor('month'), $reason, $otherText);
         [$from, $to] = ReportBuilder::monthRange($period);
 
         Gate::forUser($by)->authorize('delete-month-report', $period);
@@ -234,18 +277,32 @@ class TrashService
         }
     }
 
-    private static function reason(?string $reason): string
+    /**
+     * The text saved in delete_reason: the chosen reason as is, or
+     * "Other: <typed text>" for "Other (specify)".
+     *
+     * @param  class-string<DeleteReason&BackedEnum>  $reasons
+     */
+    private static function reason(string $reasons, mixed $choice, mixed $otherText): string
     {
-        $reason = trim((string) $reason);
+        /** @var (DeleteReason&BackedEnum)|null $picked */
+        $picked = is_string($choice) ? $reasons::tryFrom($choice) : null;
 
-        if ($reason === '') {
-            throw ValidationException::withMessages(['reason' => 'Give a reason for moving this to Trash.']);
+        if ($picked === null) {
+            throw ValidationException::withMessages(['reason' => self::NOT_IN_LIST]);
         }
 
-        if (mb_strlen($reason) > 255) {
-            throw ValidationException::withMessages(['reason' => 'The reason can be at most 255 characters.']);
+        if (! $picked->isOther()) {
+            return (string) $picked->value;
         }
 
-        return $reason;
+        $text = is_string($otherText) ? trim((string) preg_replace('/\s+/u', ' ', $otherText)) : '';
+        $length = mb_strlen($text);
+
+        if ($length < DeleteReason::OTHER_MIN || $length > DeleteReason::OTHER_MAX) {
+            throw ValidationException::withMessages(['reason_other' => self::OTHER_LENGTH]);
+        }
+
+        return "Other: {$text}";
     }
 }

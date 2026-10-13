@@ -1,5 +1,16 @@
 import { useId, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
+import {
+    checkDeleteReason,
+    DeleteReasonField,
+    deleteReasonPayload,
+    emptyDeleteReason,
+} from '@/components/shared/delete-reason-field';
+import type {
+    DeleteReasonErrors,
+    DeleteReasonOption,
+    DeleteReasonValue,
+} from '@/components/shared/delete-reason-field';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -9,26 +20,26 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 
-/** Same limit as the delete_reason column. */
-const REASON_MAX_LENGTH = 255;
+/** Errors the server may send back: the reason, or a refusal. */
+export type ReasonConfirmErrors = DeleteReasonErrors & { item?: string };
 
 type ReasonFormProps = {
-    /** Called with the trimmed reason. Never called with an empty one. */
-    onConfirm: (reason: string) => void;
+    /** The reasons for this record type (DeleteReason::options()). */
+    reasons: DeleteReasonOption[];
+    /** Called with a reason that passed the browser check. */
+    onConfirm: (value: DeleteReasonValue) => void;
     title?: string;
     /** Which item this is about, e.g. "V-000123 · Santos, Juan M. · ER". */
     description?: ReactNode;
     confirmLabel?: string;
     reasonLabel?: string;
-    placeholder?: string;
     /** True while the request is running: buttons are disabled. */
     processing?: boolean;
-    /** Error from the server, e.g. form.errors.reason. */
-    error?: string;
+    /** Errors from the server, e.g. the onError value of router.delete. */
+    errors?: ReasonConfirmErrors;
 };
 
 type ReasonConfirmProps = ReasonFormProps & {
@@ -37,9 +48,8 @@ type ReasonConfirmProps = ReasonFormProps & {
 };
 
 /**
- * Confirm dialog that requires a reason, e.g. "Move to Trash?".
- * The defaults are worded for moving an item to Trash; pass other labels
- * for other actions that need a reason.
+ * Confirm dialog that requires a reason picked from a list, e.g.
+ * "Move to Trash?". "Other (specify)" asks for the reason in words.
  */
 export function ReasonConfirm({
     open,
@@ -64,33 +74,39 @@ export function ReasonConfirm({
 }
 
 function ReasonForm({
+    reasons,
     onConfirm,
     onCancel,
     title = 'Move to Trash?',
     description,
     confirmLabel = 'Move to Trash',
     reasonLabel = 'Reason',
-    placeholder = 'e.g. Duplicate entry, encoded by mistake',
     processing = false,
-    error,
+    errors: serverErrors = {},
 }: ReasonFormProps & { onCancel: () => void }) {
     const id = useId();
-    const [reason, setReason] = useState('');
-    const [missing, setMissing] = useState(false);
-    const message = missing ? 'Enter a reason.' : error;
+    const [value, setValue] = useState<DeleteReasonValue>(emptyDeleteReason);
+    const [errors, setErrors] = useState<ReasonConfirmErrors | null>(null);
+    const shown = errors ?? serverErrors;
+    const message = shown.reason ?? shown.reason_other ?? shown.item;
 
     function submit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
 
-        const trimmed = reason.trim();
+        if (processing) {
+            return;
+        }
 
-        if (trimmed === '') {
-            setMissing(true);
+        const found = checkDeleteReason(value, reasons);
+
+        if (Object.keys(found).length > 0) {
+            setErrors(found);
 
             return;
         }
 
-        onConfirm(trimmed);
+        setErrors(null);
+        onConfirm(deleteReasonPayload(value, reasons));
     }
 
     return (
@@ -106,18 +122,16 @@ function ReasonForm({
                 <Label htmlFor={id}>
                     {reasonLabel} <span className="text-bad">(required)</span>
                 </Label>
-                <Input
+                <DeleteReasonField
                     id={id}
-                    value={reason}
-                    onChange={(event) => {
-                        setReason(event.target.value);
-                        setMissing(false);
+                    options={reasons}
+                    value={value}
+                    onChange={(next) => {
+                        setValue(next);
+                        setErrors({});
                     }}
-                    maxLength={REASON_MAX_LENGTH}
-                    placeholder={placeholder}
-                    autoComplete="off"
-                    aria-invalid={message ? true : undefined}
-                    aria-describedby={message ? `${id}-error` : undefined}
+                    errors={shown}
+                    errorId={`${id}-error`}
                 />
                 {message && (
                     <p id={`${id}-error`} className="text-sm text-bad">

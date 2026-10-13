@@ -290,23 +290,56 @@ it('moves an account to Trash with a reason', function () {
     $encoder = userWithRole('encoder');
 
     $this->actingAs($admin)
-        ->delete("/users/{$encoder->id}", ['reason' => 'Left the hospital'])
+        ->delete("/users/{$encoder->id}", ['reason' => 'Resigned / separated'])
         ->assertRedirect('/users');
 
     $trashed = User::onlyTrashed()->find($encoder->id);
     expect($trashed)->not->toBeNull()
-        ->and($trashed->delete_reason)->toBe('Left the hospital')
+        ->and($trashed->delete_reason)->toBe('Resigned / separated')
         ->and($trashed->deleted_by)->toBe($admin->id)
         ->and(AuditLog::where('action', 'user.deleted')->exists())->toBeTrue();
 });
 
-it('requires a reason to move an account to Trash', function () {
+it('requires a reason from the user list to move an account to Trash', function (string $reason) {
     $encoder = userWithRole('encoder');
 
     $this->actingAs(userWithRole('admin'))
         ->from('/users')
-        ->delete("/users/{$encoder->id}", ['reason' => '  '])
-        ->assertSessionHasErrors('reason');
+        ->delete("/users/{$encoder->id}", ['reason' => $reason])
+        ->assertSessionHasErrors(['reason' => 'Choose a reason from the list.']);
 
     expect($encoder->fresh()->trashed())->toBeFalse();
+})->with(['empty' => ['  '], 'free text' => ['Left the hospital'], 'from the visit list' => ['Duplicate entry']]);
+
+it('needs at least 10 characters for "Other (specify)" on an account', function () {
+    $encoder = userWithRole('encoder');
+
+    $this->actingAs(userWithRole('admin'))
+        ->from('/users')
+        ->delete("/users/{$encoder->id}", ['reason' => 'Other (specify)', 'reason_other' => 'On leave'])
+        ->assertSessionHasErrors(['reason_other' => 'Describe the reason in 10 to 200 characters.']);
+
+    expect($encoder->fresh()->trashed())->toBeFalse();
+});
+
+it('saves "Other (specify)" on an account as "Other: <text>"', function () {
+    $encoder = userWithRole('encoder');
+
+    $this->actingAs(userWithRole('system_admin'))
+        ->delete("/users/{$encoder->id}", ['reason' => 'Other (specify)', 'reason_other' => 'Retired from service'])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect('/users');
+
+    expect(User::onlyTrashed()->findOrFail($encoder->id)->delete_reason)->toBe('Other: Retired from service');
+});
+
+it('offers the user account reasons', function () {
+    $this->actingAs(userWithRole('admin'))
+        ->get('/users')
+        ->assertInertia(fn (Assert $page) => $page->where('deleteReasons', [
+            ['value' => 'Resigned / separated', 'other' => false],
+            ['value' => 'Transferred out', 'other' => false],
+            ['value' => 'Created by mistake', 'other' => false],
+            ['value' => 'Other (specify)', 'other' => true],
+        ]));
 });

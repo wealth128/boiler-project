@@ -34,7 +34,7 @@ Laravel's standard tables (`sessions`, `cache`, `jobs`, `migrations`) are create
 | must_change_password | boolean, default false | Set when Admin, System Admin or IT sets the password (new account or reset). The user must choose their own right after logging in, which clears it. |
 | deleted_at | timestamp, null | Soft delete (Laravel `SoftDeletes`). Set = in Trash. |
 | deleted_by | FK → users, null | |
-| delete_reason | varchar(255), null | Required when moved to Trash |
+| delete_reason | varchar(255), null | Required when moved to Trash. Picked from a list (section 5, "Delete reasons") |
 | remember_token, created_at, updated_at | | Laravel standard |
 
 ### patients
@@ -49,7 +49,7 @@ Laravel's standard tables (`sessions`, `cache`, `jobs`, `migrations`) are create
 | birthdate | date | |
 | deleted_at | timestamp, null | Soft delete (Laravel `SoftDeletes`). Set = in Trash. |
 | deleted_by | FK → users, null | |
-| delete_reason | varchar(255), null | Required when moved to Trash |
+| delete_reason | varchar(255), null | Required when moved to Trash. Picked from a list (section 5, "Delete reasons") |
 | created_at, updated_at | | |
 
 ### visits
@@ -71,7 +71,7 @@ Laravel's standard tables (`sessions`, `cache`, `jobs`, `migrations`) are create
 | updated_by | FK → users, null | Last editor |
 | deleted_at | timestamp, null | Soft delete (Laravel `SoftDeletes`). Set = in Trash. |
 | deleted_by | FK → users, null | |
-| delete_reason | varchar(255), null | Required when moved to Trash |
+| delete_reason | varchar(255), null | Required when moved to Trash. Picked from a list (section 5, "Delete reasons") |
 | created_at, updated_at | | |
 
 **Indexes:** (category, visited_at, deleted_at) for reports · (patient_id, visited_at) for repeat checks · (encoded_by, visited_at) for "My entries today"
@@ -95,7 +95,7 @@ Laravel's standard tables (`sessions`, `cache`, `jobs`, `migrations`) are create
 | sort_order | smallint | Order shown in the dropdown and report |
 | deleted_at | timestamp, null | Soft delete (Laravel `SoftDeletes`). Set = in Trash. |
 | deleted_by | FK → users, null | |
-| delete_reason | varchar(255), null | Required when moved to Trash |
+| delete_reason | varchar(255), null | Required when moved to Trash. Picked from a list (section 5, "Delete reasons") |
 
 ### diagnoses
 | Column | Type | Notes |
@@ -106,7 +106,7 @@ Laravel's standard tables (`sessions`, `cache`, `jobs`, `migrations`) are create
 | sort_order | smallint | |
 | deleted_at | timestamp, null | Soft delete (Laravel `SoftDeletes`). Set = in Trash. |
 | deleted_by | FK → users, null | |
-| delete_reason | varchar(255), null | Required when moved to Trash |
+| delete_reason | varchar(255), null | Required when moved to Trash. Picked from a list (section 5, "Delete reasons") |
 
 ### age_brackets
 | Column | Type | Notes |
@@ -117,7 +117,7 @@ Laravel's standard tables (`sessions`, `cache`, `jobs`, `migrations`) are create
 | sort_order | smallint | |
 | deleted_at | timestamp, null | Soft delete (Laravel `SoftDeletes`). Set = in Trash. |
 | deleted_by | FK → users, null | |
-| delete_reason | varchar(255), null | Required when moved to Trash |
+| delete_reason | varchar(255), null | Required when moved to Trash. Picked from a list (section 5, "Delete reasons") |
 
 ### month_closures
 | Column | Type | Notes |
@@ -207,6 +207,16 @@ GROUP BY p.sex;
   - User: has any visits or audit log entries (accounts created by mistake can be deleted)
   - Age brackets can always be hard-deleted (not linked to visits)
 - **Patients and their visits move together:** a patient goes to Trash only after all their visits are in Trash ("Move this patient's visits to Trash first."). A visit, or a deleted month report, comes back only after its patient is restored ("Restore the patient first.").
+- **Delete reasons:** moving anything to Trash needs a reason picked from a fixed list for that record type. There is no free-text box, except for "Other (specify)":
+  | Record type | Reasons |
+  |---|---|
+  | Visit | Duplicate entry · Wrong patient selected · Encoded by mistake · Test / training entry · Other (specify) |
+  | Patient | Duplicate patient record · Encoded by mistake · Test / training entry · Other (specify) |
+  | User | Resigned / separated · Transferred out · Created by mistake · Other (specify) |
+  | List item (diagnosis, rank, age bracket) | Duplicate item · Misspelled, replaced with a corrected one · No longer used · Other (specify) |
+  | Month report | Encoded in the wrong month · Test / training data · Other (specify) |
+
+  "Other (specify)" shows a text box that needs 10 to 200 characters and is saved as `Other: <text>`. `delete_reason` stores the chosen text, so Trash and the audit log show it as is. The server accepts only a reason from that record type's list ("Choose a reason from the list."). The lists live in one place in the code: one enum per record type in `app/Enums`.
 - **Every delete, restore and permanent delete is written to `audit_logs`.** Permanently deleted data still exists in backups until they rotate out (30 days).
 - **Patient name, sex and birthdate** live on `patients`, so correcting them fixes all of that patient's visits.
 - **Branch, rank, age and diagnosis** live on `visits`, because they describe that visit.

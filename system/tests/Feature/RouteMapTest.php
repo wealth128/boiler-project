@@ -89,8 +89,7 @@ it('shows the placeholder page on every planned screen', function (string $uri) 
         ->assertOk()
         ->assertInertia(fn ($page) => $page->component('placeholder')->has('title'));
 })->with([
-    '/records/visits', '/records/patients', '/reports', '/reports/export/pdf',
-    '/reports/export/excel', '/settings/lists', '/audit-log', '/trash', '/backups',
+    '/reports', '/reports/export/pdf', '/reports/export/excel', '/settings/lists', '/audit-log', '/trash', '/backups',
 ]);
 
 it('answers the patient search with JSON', function () {

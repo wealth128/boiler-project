@@ -82,6 +82,9 @@ class VisitController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => "Changes saved to {$visit->visit_no}"]);
 
-        return to_route('encode.index');
+        // Opened from Patient Records: back to the same filters and page.
+        $returnTo = ReturnToRecords::from($request->input('return_to'), $user);
+
+        return $returnTo !== null ? redirect($returnTo) : to_route('encode.index');
     }
 }

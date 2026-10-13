@@ -40,6 +40,11 @@ export type VisitFormProps = {
     nextPatientNo: string;
     /** The visit to edit. Leave out to encode a new one. */
     editing: EditingVisit | null;
+    /**
+     * Opened from Patient Records: the Records URL (with its filters and
+     * page) that Save changes and Cancel edit go back to.
+     */
+    returnTo?: string | null;
 };
 
 /** Element id that gets focus when a field has an error. */
@@ -115,6 +120,7 @@ export function VisitForm({
     canChooseCategory,
     nextPatientNo,
     editing,
+    returnTo = null,
 }: VisitFormProps) {
     const form = useForm<VisitFormData>(
         editing ? formFromVisit(editing) : blankForm(defaultCategory),
@@ -256,6 +262,7 @@ export function VisitForm({
             ...values,
             middle_initial: normalizeMiddleInitial(values.middle_initial),
             ...(confirmNewPatient ? { confirm_new_patient: true } : {}),
+            ...(editing && returnTo ? { return_to: returnTo } : {}),
         }));
 
         if (editing) {
@@ -352,7 +359,7 @@ export function VisitForm({
                 <div className="flex flex-wrap items-center gap-2.5 rounded-md bg-warn-soft px-3 py-2 font-medium text-warn">
                     Editing {editing.visit_no} · {patientName(editing.patient)}
                     <Button asChild variant="outline" size="sm">
-                        <Link href={EncodeController.index.url()}>
+                        <Link href={returnTo ?? EncodeController.index.url()}>
                             Cancel edit
                         </Link>
                     </Button>

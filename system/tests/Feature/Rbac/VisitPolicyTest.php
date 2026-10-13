@@ -114,10 +114,13 @@ it('blocks Admin from deleting a visit in a closed month', function () {
     closeMonth('2026-09');
     $visit = Visit::factory()->create(['visited_at' => '2026-09-15 10:00']);
 
-    assertDeniedWith(
-        $this->actingAs(userWithRole('admin'))->delete("/visits/{$visit->id}"),
-        'September 2026 is closed. The Admin must reopen it first.',
-    );
+    // Patient Records shows this refusal in the "Move to Trash?" row.
+    $this->actingAs(userWithRole('admin'))->from('/records/visits')
+        ->delete("/visits/{$visit->id}", ['reason' => 'Duplicate entry'])
+        ->assertRedirect('/records/visits')
+        ->assertSessionHasErrors(['item' => 'September 2026 is closed. The Admin must reopen it first.']);
+
+    expect($visit->fresh()->trashed())->toBeFalse();
 });
 
 it('blocks an encoder from editing their own same-day visit once the month is closed', function () {

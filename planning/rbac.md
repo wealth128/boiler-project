@@ -38,6 +38,7 @@ _Last updated: 2026-10-13 · Status: Confirmed by user_
 - **One System Admin:** the system blocks creating a second active System Admin account, the same way as for the Admin.
 - **Closed month:** no one can edit or delete its records until Admin reopens it.
 - **Deleted records:** go to Trash and are never counted in reports. Admin restores or permanently deletes them. Nobody can delete their own account or the Admin account.
+- **Delete reason:** moving anything to Trash (visit, patient, user account, list item, month report) needs a reason picked from a dropdown with a fixed list for that record type. Choosing "Other (specify)" asks for the reason in 10 to 200 characters. The server refuses any reason not on the list. The lists are in planning/database-schema.md, section 5.
 - **Own role:** nobody can change their own role.
 - **Admin account is protected:** the System Admin cannot edit the Admin account, change its role, deactivate it or reset its password. (The System Admin can still unlock it after 5 wrong passwords.)
 - **Admin forgot the password:** IT resets it on the server with `php artisan census:reset-admin-password`. It asks for the new password twice, clears a login lock, and writes `user.password_reset` to the audit log. The new password is temporary: the Admin chooses their own right after logging in.

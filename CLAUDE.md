@@ -28,6 +28,7 @@ When updating vite-plus, update the vite alias in package.json to the same versi
 - **Every** create, update, delete, restore, permanent delete, close/reopen, unlock and list change writes to `audit_logs`.
 - Reports count **each patient once per category per period**. Deleted visits are excluded.
 - Patient fields: auto Patient ID, last/first name, M.I., sex (Male/Female), **birthdate**, **age (auto from birthdate, editable)**, branch, rank (filtered by branch), diagnosis (+ Other: specify), category, remarks. **No AFP serial number.**
+- Follow planning/security.md section 2 in every step.
 
 ## File Structure Rule
 Code used by **2+ features** goes in global folders. Code used by one feature stays in that feature's folder.
@@ -37,7 +38,7 @@ Code used by **2+ features** goes in global folders. Code used by one feature st
 - Feature backend: `app/Http/Controllers/<Feature>/`, `app/Http/Requests/<Feature>/`
 
 ## How to Work
-- Build in this order: **1. Database/config → 2. File structure + global components → 3. Login → 4. RBAC → 5. Features, one screen per step: Users (done) → Encode (done) → Records → Lists → Reports → Trash → Audit log → Backup → Settings.**
+- Build in this order: **1. Database/config → 2. File structure + global components → 3. Login → 4. RBAC → 5. Features, one screen per step: Users (done) → Encode (done) → Records → Lists → Reports → Trash → Audit log → Backup → Settings → Security review (planning/security.md section 3).**
 - **Stop after each step.** Summarize in plain language what was built and how to check it, then wait for approval.
 - Run `php artisan test` and `npm run build` (or `npm run types`) before saying a step is done. Fix errors first.
 - Every keyboard shortcut you add goes into docs/keyboard-shortcuts.md in the same step.
