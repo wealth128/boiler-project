@@ -1,15 +1,15 @@
-import type { ReactNode } from 'react';
-import { CategoryChip } from '@/components/shared/category-chip';
+import type { ReactNode } from "react";
+import { CategoryChip } from "@/components/shared/category-chip";
 import type {
     CategoryReport,
     CountLine,
     Report,
     Sheet,
     Snapshot,
-} from '@/features/reports/types';
-import { formatDate, formatDateTime } from '@/lib/dates';
-import { formatCount } from '@/lib/format';
-import type { Category } from '@/types';
+} from "@/features/reports/types";
+import { formatDate, formatDateTime } from "@/lib/dates";
+import { formatCount } from "@/lib/format";
+import type { Category } from "@/types";
 
 type ReportSheetProps = {
     sheet: Sheet;
@@ -18,7 +18,7 @@ type ReportSheetProps = {
 };
 
 const boxTitle =
-    'mb-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase';
+    "mb-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase print:break-after-avoid";
 
 /**
  * The report as it prints (prototype "Reports"): header, grand totals when
@@ -39,7 +39,7 @@ export function ReportSheet({ sheet, report, snapshot }: ReportSheetProps) {
                     role="note"
                     className="mb-3.5 rounded-md bg-navy-soft px-3 py-2 text-sm font-medium text-navy"
                 >
-                    Saved copy, taken when {snapshot.month_label} was closed on{' '}
+                    Saved copy, taken when {snapshot.month_label} was closed on{" "}
                     {formatDateTime(snapshot.taken_at)}. Later changes to lists
                     or records don’t affect it.
                 </div>
@@ -47,7 +47,9 @@ export function ReportSheet({ sheet, report, snapshot }: ReportSheetProps) {
 
             <article
                 aria-label={`${sheet.title}, ${sheet.period_label}`}
-                className="max-w-[980px] rounded-lg border bg-card px-4 pt-5 pb-8 sm:px-7 sm:pt-7"
+                // Print: the whole page width, no frame, and no table row split
+                // across two pages.
+                className="max-w-[980px] rounded-lg border bg-card px-4 pt-5 pb-8 sm:px-7 sm:pt-7 print:max-w-none print:rounded-none print:border-0 print:p-0 print:[&_tr]:break-inside-avoid"
             >
                 <header className="mb-4 border-b-2 border-foreground pb-3 text-center">
                     <div className="text-xs tracking-[0.12em] text-muted-foreground uppercase">
@@ -58,7 +60,7 @@ export function ReportSheet({ sheet, report, snapshot }: ReportSheetProps) {
                     </h2>
                     <div className="font-mono text-sm">
                         {sheet.period_label}
-                        {sheet.category ? ` · ${sheet.category} only` : ''}
+                        {sheet.category ? ` · ${sheet.category} only` : ""}
                     </div>
                 </header>
 
@@ -67,11 +69,11 @@ export function ReportSheet({ sheet, report, snapshot }: ReportSheetProps) {
                         tiles={[
                             {
                                 value: report.totals.patients,
-                                label: 'Total patients (all categories)',
+                                label: "Total patients (all categories)",
                             },
                             {
                                 value: report.totals.visits,
-                                label: 'Total visits',
+                                label: "Total visits",
                             },
                             ...categories.map(([name, data]) => ({
                                 value: data.patients,
@@ -85,7 +87,7 @@ export function ReportSheet({ sheet, report, snapshot }: ReportSheetProps) {
                     <CategorySection key={name} name={name} data={data} />
                 ))}
 
-                <div className="mt-9 grid gap-10 sm:grid-cols-2">
+                <div className="mt-9 grid gap-10 break-inside-avoid sm:grid-cols-2">
                     <Signature
                         name={sheet.prepared_by}
                         caption={`Prepared by · ${sheet.prepared_by_title}`}
@@ -96,11 +98,11 @@ export function ReportSheet({ sheet, report, snapshot }: ReportSheetProps) {
                     />
                 </div>
 
-                <p className="mt-4 text-xs text-muted-foreground">
+                <p className="mt-4 text-xs text-muted-foreground print:break-inside-avoid">
                     {snapshot
                         ? `Saved copy from ${formatDateTime(snapshot.taken_at)}`
                         : `Generated ${formatDateTime(report.generated_at)}`}
-                    {' · '}
+                    {" · "}
                     {formatDate(report.from)} to {formatDate(report.to)}
                 </p>
             </article>
@@ -134,14 +136,14 @@ function CategorySection({
 }) {
     return (
         <section className="mt-6" aria-label={`${name} report`}>
-            <h3 className="mb-2.5 flex items-center gap-2.5 border-b pb-1.5 text-base font-semibold">
+            <h3 className="mb-2.5 flex items-center gap-2.5 border-b pb-1.5 text-base font-semibold print:break-after-avoid">
                 <CategoryChip category={name} /> {name}
             </h3>
 
             <Totals
                 tiles={[
-                    { value: data.patients, label: 'Patients' },
-                    { value: data.visits, label: 'Visits' },
+                    { value: data.patients, label: "Patients" },
+                    { value: data.visits, label: "Visits" },
                 ]}
             />
 
@@ -150,7 +152,7 @@ function CategorySection({
                     No {name} patients in this period.
                 </p>
             ) : (
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 print:grid-cols-2">
                     <Box title="Sex">
                         <Lines lines={data.sex} />
                         <TotalLine count={data.patients} />
@@ -158,7 +160,11 @@ function CategorySection({
                     <Box title="Age range">
                         <Lines lines={data.age} />
                     </Box>
-                    <Box title="Diagnosis (per visit)" scroll>
+                    <Box
+                        title="Diagnosis (per visit)"
+                        scroll
+                        className="print:col-span-2"
+                    >
                         <Lines lines={data.diagnoses} />
                         <TotalLine count={data.visits} sticky />
                     </Box>
@@ -204,30 +210,35 @@ function CategorySection({
 /**
  * A small table with a title. With `scroll`, it shows at most 10 rows plus
  * the Total line (every row is 2rem high, so 11 rows = 22rem). A longer list
- * scrolls inside the box and the Total line stays at the bottom.
+ * scrolls inside the box and the Total line stays at the bottom. On paper the
+ * box shows the whole list.
  */
 function Box({
     title,
     children,
     scroll = false,
+    className,
 }: {
     title: string;
     children: ReactNode;
     scroll?: boolean;
+    className?: string;
 }) {
     return (
-        <div>
+        <div className={className}>
             <h4 className={boxTitle}>{title}</h4>
             <div
                 className={
-                    scroll ? 'max-h-[22rem] overflow-y-auto' : undefined
+                    scroll
+                        ? "max-h-[22rem] overflow-y-auto print:max-h-none print:overflow-visible"
+                        : undefined
                 }
                 // A scrolling box must be reachable with the keyboard.
                 {...(scroll
                     ? {
-                          role: 'region',
+                          role: "region",
                           tabIndex: 0,
-                          'aria-label': `${title}, scrollable list`,
+                          "aria-label": `${title}, scrollable list`,
                       }
                     : {})}
             >
@@ -266,8 +277,8 @@ function TotalLine({
         <tr
             className={
                 sticky
-                    ? 'h-8 [&>td]:sticky [&>td]:bottom-0 [&>td]:bg-card [&>td]:shadow-[inset_0_1px_0_var(--color-border)]'
-                    : 'h-8'
+                    ? "h-8 [&>td]:sticky [&>td]:bottom-0 [&>td]:bg-card [&>td]:shadow-[inset_0_1px_0_var(--color-border)]"
+                    : "h-8"
             }
         >
             <td className="px-2 py-1.5 font-bold">Total</td>

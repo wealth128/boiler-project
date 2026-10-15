@@ -182,3 +182,62 @@
         @apply bg-background text-foreground;
     }
 }
+
+/* Print: always the light colours, whatever the screen theme. Page size and
+ * margins are for every printed page (the Reports page is the main one). */
+@media print {
+    @page {
+        size: A4 portrait;
+        margin: 12mm;
+    }
+
+    :root.dark {
+        --page: #f3f5f8;
+        --background: #ffffff;
+        --foreground: #16202e;
+        --card: #ffffff;
+        --card-foreground: #16202e;
+        --popover: #ffffff;
+        --popover-foreground: #16202e;
+        --primary: #1b3a6b;
+        --primary-foreground: #ffffff;
+        --secondary: #eef1f6;
+        --secondary-foreground: #16202e;
+        --muted: #eef1f6;
+        --muted-foreground: #5b6678;
+        --accent: #e3eaf6;
+        --accent-foreground: #1b3a6b;
+        --destructive: #b3261e;
+        --destructive-foreground: #b3261e;
+        --border: #d6dce6;
+        --input: #d6dce6;
+        --ring: #3b6fd1;
+        --chart-1: oklch(0.646 0.222 41.116);
+        --chart-2: oklch(0.6 0.118 184.704);
+        --chart-3: oklch(0.398 0.07 227.392);
+        --chart-4: oklch(0.828 0.189 84.429);
+        --chart-5: oklch(0.769 0.188 70.08);
+        --radius: 0.5rem;
+        --sidebar: #ffffff;
+        --sidebar-foreground: #16202e;
+        --sidebar-primary: #1b3a6b;
+        --sidebar-primary-foreground: #ffffff;
+        --sidebar-accent: #e3eaf6;
+        --sidebar-accent-foreground: #1b3a6b;
+        --sidebar-border: #d6dce6;
+        --sidebar-ring: #3b6fd1;
+        --navy: #1b3a6b;
+        --navy-foreground: #ffffff;
+        --navy-soft: #e3eaf6;
+        --ok: #1f7a4d;
+        --ok-soft: #e1f2e9;
+        --warn: #9a5b00;
+        --warn-soft: #fbefd9;
+        --bad: #b3261e;
+        --bad-soft: #fbe4e2;
+    }
+
+    body {
+        background: #fff;
+    }
+}

@@ -1,9 +1,10 @@
-import { Head } from '@inertiajs/react';
-import type { DeleteReasonOption } from '@/components/shared/delete-reason-field';
-import { PageHeader } from '@/components/shared/page-header';
-import { MonthBar } from '@/features/reports/month-bar';
-import { ReportControls } from '@/features/reports/report-controls';
-import { ReportSheet } from '@/features/reports/report-sheet';
+import { Head } from "@inertiajs/react";
+import type { DeleteReasonOption } from "@/components/shared/delete-reason-field";
+import { PageHeader } from "@/components/shared/page-header";
+import { ExportButtons } from "@/features/reports/export-buttons";
+import { MonthBar } from "@/features/reports/month-bar";
+import { ReportControls } from "@/features/reports/report-controls";
+import { ReportSheet } from "@/features/reports/report-sheet";
 import type {
     MonthStatus,
     Report,
@@ -11,7 +12,7 @@ import type {
     ReportOptions,
     Sheet,
     Snapshot,
-} from '@/features/reports/types';
+} from "@/features/reports/types";
 
 type Props = {
     filters: ReportFilters;
@@ -47,24 +48,30 @@ export default function Reports({
             <Head title="Reports" />
 
             <PageHeader
+                className="print:hidden"
                 title="Reports"
                 description="Counts each patient once per category in the period. Deleted visits (in Trash) are excluded."
             />
 
-            <section className="mb-4 rounded-lg border bg-card">
+            <section className="mb-4 rounded-lg border bg-card print:hidden">
                 <ReportControls
                     key={controlsKey}
                     filters={filters}
                     options={options}
                 />
-                {month_status && (
+                {month_status ? (
                     <MonthBar
                         // Fresh state (no open questions) for another month.
                         key={month_status.period}
                         status={month_status}
                         monthLabel={sheet.period_label}
                         reasons={month_delete_reasons}
+                        leading={<ExportButtons filters={filters} />}
                     />
+                ) : (
+                    <div className="border-t px-4 py-2.5">
+                        <ExportButtons filters={filters} />
+                    </div>
                 )}
             </section>
 

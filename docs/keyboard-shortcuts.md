@@ -175,6 +175,15 @@ Nothing is counted until you press **Generate**. The choices are then kept in th
 | **Enter** | Generate, from any box |
 | Type in From / To | Dates go day, month, year in the order your browser shows. **↑ / ↓** change the part the cursor is in. |
 
+### Export PDF, Export Excel and Print (Admin and Viewer)
+They use the report on the screen, so press **Generate** first if you changed a choice.
+
+| Key | What it does |
+|---|---|
+| **Tab** | After Generate: Export PDF → Export Excel → Print |
+| **Enter** / **Space** | Press the focused button. The PDF or Excel file is saved by the browser. |
+| **Ctrl + P** | Print the report, the same as the Print button (the menu, controls and buttons are left out, and the whole Diagnosis list is shown) |
+
 ### Close month, Reopen month and Delete month report (Admin, Monthly reports)
 | Key | What it does |
 |---|---|

@@ -1,13 +1,13 @@
-import { Link, router } from '@inertiajs/react';
-import { Fragment } from 'react';
-import { useCurrentUrl } from '@/hooks/use-current-url';
-import { usePermissions } from '@/hooks/use-permissions';
-import { cn } from '@/lib/utils';
-import { logout } from '@/routes';
-import { APP_NAV_GROUPS, APP_NAV_ITEMS } from './nav-items';
+import { Link, router } from "@inertiajs/react";
+import { Fragment } from "react";
+import { useCurrentUrl } from "@/hooks/use-current-url";
+import { usePermissions } from "@/hooks/use-permissions";
+import { cn } from "@/lib/utils";
+import { logout } from "@/routes";
+import { APP_NAV_GROUPS, APP_NAV_ITEMS } from "./nav-items";
 
 const linkClass =
-    'rounded-md px-3 py-2 text-left text-sm font-medium whitespace-nowrap text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring';
+    "rounded-md px-3 py-2 text-left text-sm font-medium whitespace-nowrap text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring";
 
 /**
  * Left menu. Shows only what the user's role allows. On narrow screens it
@@ -29,7 +29,7 @@ export function AppSideNav() {
     return (
         <nav
             aria-label="Main"
-            className="flex shrink-0 gap-1 overflow-x-auto border-b bg-card p-2 md:w-52 md:flex-col md:gap-0.5 md:overflow-x-visible md:border-r md:border-b-0 md:py-3"
+            className="flex shrink-0 gap-1 print:hidden overflow-x-auto border-b bg-card p-2 md:w-52 md:flex-col md:gap-0.5 md:overflow-x-visible md:border-r md:border-b-0 md:py-3"
         >
             {groups.map((group) => (
                 <Fragment key={group.key}>
@@ -46,11 +46,11 @@ export function AppSideNav() {
                                 key={item.title}
                                 href={item.href}
                                 prefetch
-                                aria-current={active ? 'page' : undefined}
+                                aria-current={active ? "page" : undefined}
                                 className={cn(
                                     linkClass,
                                     active &&
-                                        'bg-navy-soft font-semibold text-navy hover:bg-navy-soft hover:text-navy',
+                                        "bg-navy-soft font-semibold text-navy hover:bg-navy-soft hover:text-navy",
                                 )}
                             >
                                 {item.title}
@@ -66,7 +66,7 @@ export function AppSideNav() {
                 onClick={() => router.flushAll()}
                 className={cn(
                     linkClass,
-                    'ml-auto cursor-pointer md:mt-auto md:ml-0',
+                    "ml-auto cursor-pointer md:mt-auto md:ml-0",
                 )}
                 data-test="logout-button"
             >
