@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Encode;
 
 use App\Enums\Permission;
+use App\Models\MonthClosure;
 use App\Models\Patient;
 use App\Models\Visit;
 use Illuminate\Support\Facades\Gate;
@@ -25,7 +26,19 @@ class StoreVisitRequest extends VisitRequest
 
     public function authorize(): bool
     {
-        return Gate::allows(Permission::EncodeVisits->value);
+        if (! Gate::allows(Permission::EncodeVisits->value)) {
+            return false;
+        }
+
+        // A new visit is dated now. If this month was closed anyway (the
+        // clock was moved, or it was closed early), it can't be added.
+        $period = now()->format('Y-m');
+
+        if (MonthClosure::isClosed($period)) {
+            abort(403, MonthClosure::closedMessage($period));
+        }
+
+        return true;
     }
 
     /**

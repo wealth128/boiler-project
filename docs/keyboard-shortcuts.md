@@ -175,6 +175,15 @@ Nothing is counted until you press **Generate**. The choices are then kept in th
 | **Enter** | Generate, from any box |
 | Type in From / To | Dates go day, month, year in the order your browser shows. **↑ / ↓** change the part the cursor is in. |
 
+### Close month, Reopen month and Delete month report (Admin, Monthly reports)
+| Key | What it does |
+|---|---|
+| **Tab** | After Generate and the export buttons: Close month (or Reopen month) → Delete month report |
+| **Enter** / **Space** | Press the focused button |
+| **Enter** | In the Close / Reopen question: confirm (the confirm button is selected first) |
+| **Esc** | Cancel the Close / Reopen question, or the Delete month report row |
+| **Alt + ↓**, then **↑ / ↓** and **Enter** | In the Delete month report row: choose the reason. **Enter** on the list confirms. |
+
 ### Diagnosis list (per visit)
 Shows 10 diagnoses at a time. A longer list scrolls inside its box, and the Total line stays at the bottom.
 

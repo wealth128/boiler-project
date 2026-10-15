@@ -1,9 +1,11 @@
 import { Head } from '@inertiajs/react';
-import { Chip } from '@/components/shared/chip';
+import type { DeleteReasonOption } from '@/components/shared/delete-reason-field';
 import { PageHeader } from '@/components/shared/page-header';
+import { MonthBar } from '@/features/reports/month-bar';
 import { ReportControls } from '@/features/reports/report-controls';
 import { ReportSheet } from '@/features/reports/report-sheet';
 import type {
+    MonthStatus,
     Report,
     ReportFilters,
     ReportOptions,
@@ -17,7 +19,9 @@ type Props = {
     sheet: Sheet;
     report: Report;
     /** Only for a monthly report. */
-    month_status: { closed: boolean } | null;
+    month_status: MonthStatus | null;
+    /** Admin only: reasons for Delete month report. */
+    month_delete_reasons: DeleteReasonOption[];
     /** Set when a closed month shows its saved copy. */
     snapshot: Snapshot | null;
 };
@@ -32,6 +36,7 @@ export default function Reports({
     sheet,
     report,
     month_status,
+    month_delete_reasons,
     snapshot,
 }: Props) {
     // A new key resets the controls whenever the URL gives new choices.
@@ -53,13 +58,13 @@ export default function Reports({
                     options={options}
                 />
                 {month_status && (
-                    <div className="flex justify-end border-t px-4 py-2.5">
-                        {month_status.closed ? (
-                            <Chip>Month closed · locked for editing</Chip>
-                        ) : (
-                            <Chip tone="ok">Month open</Chip>
-                        )}
-                    </div>
+                    <MonthBar
+                        // Fresh state (no open questions) for another month.
+                        key={month_status.period}
+                        status={month_status}
+                        monthLabel={sheet.period_label}
+                        reasons={month_delete_reasons}
+                    />
                 )}
             </section>
 
