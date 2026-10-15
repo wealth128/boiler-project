@@ -163,7 +163,9 @@ class TrashService
     }
 
     /**
-     * Take a record (or a whole month report) out of Trash.
+     * Take a record (or a whole month report) out of Trash. A diagnosis or
+     * rank whose name is now used by an active item, or an age bracket
+     * that overlaps an active one, stays in Trash with a message on `item`.
      */
     public function restore(Model $item, User $by): void
     {
@@ -187,6 +189,14 @@ class TrashService
             });
 
             return;
+        }
+
+        // A list item can't come back as a duplicate name or an overlapping
+        // age bracket (planning/mvp-scope.md, "Dropdown lists").
+        $conflict = ListItemRules::restoreConflict($item);
+
+        if ($conflict !== null) {
+            throw ValidationException::withMessages(['item' => $conflict]);
         }
 
         $item->restoreFromTrash();

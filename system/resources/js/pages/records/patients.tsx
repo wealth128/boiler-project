@@ -12,8 +12,8 @@ import { PageHeader } from '@/components/shared/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { MoveToTrashRow } from '@/features/records/move-to-trash-row';
-import type { MoveToTrashErrors } from '@/features/records/move-to-trash-row';
+import { MoveToTrashRow } from '@/components/shared/move-to-trash-row';
+import type { MoveToTrashErrors } from '@/components/shared/move-to-trash-row';
 import { Pagination } from '@/features/records/pagination';
 import { RecordsTabs } from '@/features/records/records-tabs';
 import type {

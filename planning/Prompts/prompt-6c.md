@@ -1,6 +1,6 @@
 # Prompt 6c for Claude Code: Lists screen
 
-_Paste the block below into Claude Code after Step 6b is merged and pushed._
+_Paste the block below into Claude Code after Step 6b is merged and pushed. The list rules in items 2, 3 and 5 were approved on 2026-10-14._
 
 ```
 Step 6c – Lists screen (Admin only). Create branch step-6c-lists. Match the "Dropdown lists" tab in prototype/prototype.html (layout, wording, messages). Rules: planning/rbac.md, planning/database-schema.md, planning/security.md section 2. Routes from planning/setup-and-structure.md: GET /settings/lists, POST /settings/{list}, PUT /settings/{list}/{id}, DELETE /settings/{list}/{id}.
@@ -14,5 +14,6 @@ Step 6c – Lists screen (Admin only). Create branch step-6c-lists. Match the "D
 8. Server: role:admin plus the manage-lists Gate, a Form Request for add and edit, and every check repeated there. Audit entries come from the existing observers.
 9. Add new keyboard shortcuts to docs/keyboard-shortcuts.md.
 10. Pest tests: Admin can open it, every other role gets 403; add / edit / delete for each list; duplicate name (including different case) rejected; name in Trash gives the restore message; rank name unique only within its branch; bracket overlap and From above To rejected; blank To saved as "and above"; Other (specify) can't be edited, deleted or moved; Move up / down changes the order Encode shows; deleted item gone from Encode but still shown on old visits in Records.
+11. Record these list rules in the planning docs so later steps follow them: in planning/mvp-scope.md (Users & Control or a new "Dropdown lists" section) and planning/database-schema.md (ranks need a sort_order column if they don't have one): no duplicate names (case-insensitive, ranks per branch); Edit is for spelling only and changes the name on all past visits; ranks keep a seniority order set with Move up / Move down, used in Encode and the Branch × Rank report table; diagnoses are listed alphabetically with "Other (specify)" last; age brackets can't overlap.
 Run php artisan test (patient_census_test only), npm run types:check and npm run build. Fix errors. Stop and summarize, with steps to test it in the browser. Don't commit until I say okay.
 ```

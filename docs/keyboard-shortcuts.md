@@ -110,6 +110,43 @@ Visits in a closed month show "Month closed" instead of Edit and Delete.
 
 ---
 
+## Dropdown Lists (Admin)
+
+### Move around
+| Key | What it does |
+|---|---|
+| **Tab** | Go to the next item button, box or branch |
+| **Shift + Tab** | Go back |
+
+**Order (Tab):** Diagnosis list (each item's **Edit** and **Delete**) → Add a diagnosis → **Add** → Age brackets (each **Edit** and **Delete**) → From age → To age → **Add** → branch buttons → each rank's **Move up**, **Move down**, **Edit** and **Delete** → Add to branch → **Add to** branch
+
+"Other (specify)" shows "Fixed" and has no buttons, so **Tab** skips it.
+
+### Add
+| Key | What it does |
+|---|---|
+| **Enter** in "Add a diagnosis" or "Add to (branch)" | Add it. The box clears and the cursor stays there for the next one. |
+| **Enter** in From age or To age | Add the age bracket. Leave To age blank for "and above". |
+| **↑ / ↓** in From age or To age | Add or subtract 1 |
+
+### Ranks by branch
+| Key | What it does |
+|---|---|
+| **Tab** to a branch, then **Enter** or **Space** | Show that branch's ranks |
+| **Tab** to **Move up** (↑) or **Move down** (↓), then **Enter** | Move the rank one place. The cursor stays on the same rank, so press **Enter** again to keep moving it. |
+
+### Edit row
+| Key | What it does |
+|---|---|
+| **Tab** to **Edit**, then **Enter** | Open the edit row. The cursor goes to the name (or From age) with the text selected. |
+| **Enter** | Save |
+| **Esc** | Cancel; the cursor goes back to that item's **Edit** |
+
+### "Move to Trash?" row
+Same keys as on Patient Records: choose a reason, **Enter** to move it to Trash, **Esc** to cancel.
+
+---
+
 ## User Accounts: Move to Trash
 
 | Key | What it does |

@@ -41,10 +41,14 @@ class Diagnosis extends Model
         return $this->hasMany(Visit::class);
     }
 
-    /** @param Builder<Diagnosis> $query */
+    /**
+     * Alphabetical, with "Other (specify)" last. sort_order is not used.
+     *
+     * @param  Builder<Diagnosis>  $query
+     */
     #[Scope]
     protected function ordered(Builder $query): void
     {
-        $query->orderBy('sort_order')->orderBy('name');
+        $query->orderBy('is_other')->orderBy('name');
     }
 }

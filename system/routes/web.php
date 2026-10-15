@@ -84,9 +84,11 @@ Route::middleware('auth')->group(function () {
         Route::get('settings/lists', [ListController::class, 'index'])->name('lists.index');
         Route::whereIn('list', ['diagnoses', 'ranks', 'age-brackets'])->group(function () {
             Route::post('settings/{list}', [ListController::class, 'store'])->name('lists.store');
-            Route::put('settings/{list}/{id}', [ListController::class, 'update'])->name('lists.update');
-            Route::delete('settings/{list}/{id}', [ListController::class, 'destroy'])->name('lists.destroy');
+            Route::put('settings/{list}/{id}', [ListController::class, 'update'])->whereNumber('id')->name('lists.update');
+            Route::delete('settings/{list}/{id}', [ListController::class, 'destroy'])->whereNumber('id')->name('lists.destroy');
         });
+        // Move up / Move down (rank seniority order).
+        Route::put('settings/ranks/{id}/move', [ListController::class, 'move'])->whereNumber('id')->name('lists.ranks.move');
     });
 
     // --- Users -------------------------------------------------- Admin, System Admin

@@ -1,6 +1,6 @@
 # Setup, Routes & File Structure (Phase 5, Steps 1–2)
 
-_Last updated: 2026-10-08 · Status: For review_
+_Last updated: 2026-10-15 · Status: For review_
 
 ## Build Order (as agreed)
 1. **Database setup / config** and the route map (how screens connect to the backend)
@@ -86,6 +86,7 @@ With Inertia there's no separate API. Each URL below is a Laravel route. **GET**
 | | DELETE | `/months/{period}` | Delete month report (to Trash) | Admin |
 | Lists | GET | `/settings/lists` | Diagnoses, ranks, age brackets | Admin |
 | | POST / PUT / DELETE | `/settings/{list}` · `/settings/{list}/{id}` | Add / edit / delete item | Admin |
+| | PUT | `/settings/ranks/{id}/move` | Move a rank up / down (seniority order) | Admin |
 | Users | GET / POST | `/users` | List / add account | Admin, System Admin |
 | | PUT · DELETE | `/users/{user}` | Edit / move to Trash | Admin, System Admin |
 | | POST | `/users/{user}/unlock` · `/reset-password` · `/toggle-active` | Account actions | Admin, System Admin |

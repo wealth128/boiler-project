@@ -84,7 +84,8 @@ class PatientRecordController extends Controller
         } catch (AuthorizationException $e) {
             // A refusal with a reason ("Move this patient's visits to Trash
             // first.") shows in the row. Anything else is a plain 403.
-            $message = $e->response()?->message();
+            // Gate refusals always carry their Response (Response::authorize()).
+            $message = $e->response()->message();
 
             if ($message === null) {
                 throw $e;

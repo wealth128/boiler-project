@@ -397,3 +397,73 @@ it('restores a month report only after the patients in Trash are restored', func
 
     expect(MonthDeletion::count())->toBe(0);
 });
+
+// --- Restoring dropdown list items (planning/mvp-scope.md, "Dropdown lists") --
+
+it('does not restore an age bracket that overlaps an active one', function () {
+    $old = AgeBracket::create(['min_age' => 18, 'max_age' => 25]);
+    $this->trash->moveToTrash($old, $this->admin, 'No longer used');
+    $active = AgeBracket::create(['min_age' => 20, 'max_age' => 30]);
+
+    expect(fn () => $this->trash->restore($this->trash->find('age-brackets', $old->id), $this->admin))
+        ->toThrow(ValidationException::class, "Can't restore 18–25: it overlaps 20–30. Edit or delete that one first.");
+
+    expect($old->fresh()->trashed())->toBeTrue();
+
+    // Once the other bracket no longer overlaps, it comes back.
+    $active->update(['min_age' => 26]);
+    $this->trash->restore($this->trash->find('age-brackets', $old->id), $this->admin);
+
+    expect($old->fresh()->trashed())->toBeFalse();
+});
+
+it('does not restore an "and above" bracket over an active one', function () {
+    $old = AgeBracket::create(['min_age' => 60, 'max_age' => null]);
+    $this->trash->moveToTrash($old, $this->admin, 'No longer used');
+    AgeBracket::create(['min_age' => 65, 'max_age' => 70]);
+
+    expect(fn () => $this->trash->restore($this->trash->find('age-brackets', $old->id), $this->admin))
+        ->toThrow(ValidationException::class, "Can't restore 60 & above: it overlaps 65–70.");
+});
+
+it('does not restore a diagnosis whose name an active one now uses', function () {
+    // Saved before the list rules (double space), so the database allowed both.
+    $old = Diagnosis::factory()->create(['name' => 'Acute  Gastroenteritis']);
+    $this->trash->moveToTrash($old, $this->admin, 'Duplicate item');
+    Diagnosis::factory()->create(['name' => 'acute gastroenteritis']);
+
+    expect(fn () => $this->trash->restore($this->trash->find('diagnoses', $old->id), $this->admin))
+        ->toThrow(ValidationException::class, "Can't restore “Acute  Gastroenteritis”: “acute gastroenteritis” is already in the list.");
+
+    expect($old->fresh()->trashed())->toBeTrue();
+});
+
+it('checks a restored rank name only within its branch', function () {
+    $old = Rank::factory()->create(['name' => 'S SGT']);
+    $this->trash->moveToTrash($old, $this->admin, 'Duplicate item');
+
+    // Same name in another branch: no conflict.
+    Rank::factory()->create(['name' => 'S  SGT']);
+    $this->trash->restore($this->trash->find('ranks', $old->id), $this->admin);
+    expect($old->fresh()->trashed())->toBeFalse();
+
+    // Same name in the same branch: refused.
+    $this->trash->moveToTrash($old->fresh(), $this->admin, 'Duplicate item');
+    Rank::factory()->for($old->branch)->create(['name' => 's  sgt']);
+
+    expect(fn () => $this->trash->restore($this->trash->find('ranks', $old->id), $this->admin))
+        ->toThrow(ValidationException::class, "is already in the {$old->branch->name} list.");
+});
+
+it('restores a list item with no conflict', function () {
+    $diagnosis = Diagnosis::factory()->create(['name' => 'Dengue Fever']);
+    $bracket = AgeBracket::create(['min_age' => 0, 'max_age' => 17]);
+    $this->trash->moveToTrash($diagnosis, $this->admin, 'No longer used');
+    $this->trash->moveToTrash($bracket, $this->admin, 'No longer used');
+
+    $this->trash->restore($this->trash->find('diagnoses', $diagnosis->id), $this->admin);
+    $this->trash->restore($this->trash->find('age-brackets', $bracket->id), $this->admin);
+
+    expect($diagnosis->fresh()->trashed())->toBeFalse()
+        ->and($bracket->fresh()->trashed())->toBeFalse();
+});

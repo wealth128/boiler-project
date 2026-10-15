@@ -13,6 +13,7 @@ import type {
 } from '@/components/shared/delete-reason-field';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
+import { cn } from '@/lib/utils';
 
 /** Errors the server may send back for a move to Trash. */
 export type MoveToTrashErrors = DeleteReasonErrors & {
@@ -29,12 +30,15 @@ type MoveToTrashRowProps = {
     /** True while the request is running: buttons are disabled. */
     processing?: boolean;
     errors?: MoveToTrashErrors;
+    /** Replaces the default spacing, which fits a table cell. */
+    className?: string;
 };
 
 /**
- * The inline "Move to Trash? Reason (required)" row under a table row
- * (prototype/prototype.html, delRow), with the reason picked from a list.
- * Enter confirms, Esc cancels.
+ * The inline "Move to Trash? Reason (required)" row under a table row or
+ * list item (prototype/prototype.html, delRow), with the reason picked from
+ * a list. Enter confirms, Esc cancels. Used by Patient Records and
+ * Dropdown Lists.
  */
 export function MoveToTrashRow({
     reasons,
@@ -42,6 +46,7 @@ export function MoveToTrashRow({
     onCancel,
     processing = false,
     errors: serverErrors = {},
+    className = '-mx-2.5 -my-2',
 }: MoveToTrashRowProps) {
     const id = useId();
     const [value, setValue] = useState<DeleteReasonValue>(emptyDeleteReason);
@@ -92,7 +97,10 @@ export function MoveToTrashRow({
             onSubmit={submit}
             onKeyDown={onKeyDown}
             noValidate
-            className="-mx-2.5 -my-2 flex flex-wrap items-center gap-2.5 bg-bad-soft px-2.5 py-2"
+            className={cn(
+                'flex flex-wrap items-center gap-2.5 bg-bad-soft px-2.5 py-2',
+                className,
+            )}
         >
             <label htmlFor={id} className="text-sm">
                 <b>Move to Trash?</b> Reason (required):

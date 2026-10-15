@@ -97,7 +97,8 @@ class VisitRecordController extends Controller
             // A refusal with a reason (the month was closed after the page
             // loaded) shows in the "Move to Trash?" row, like the patient
             // refusal. Anything else is a plain 403.
-            $message = $e->response()?->message();
+            // Gate refusals always carry their Response (Response::authorize()).
+            $message = $e->response()->message();
 
             if ($message === null) {
                 throw $e;

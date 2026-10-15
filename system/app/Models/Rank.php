@@ -49,10 +49,16 @@ class Rank extends Model
         return $this->hasMany(Visit::class);
     }
 
-    /** @param Builder<Rank> $query */
+    /**
+     * Seniority order, set by Admin with Move up / Move down on the Lists
+     * screen. Used by the Encode rank list and the report's Branch × Rank
+     * table. "Other (specify)" always comes last.
+     *
+     * @param  Builder<Rank>  $query
+     */
     #[Scope]
     protected function ordered(Builder $query): void
     {
-        $query->orderBy('sort_order')->orderBy('name');
+        $query->orderBy('is_other')->orderBy('sort_order')->orderBy('name');
     }
 }

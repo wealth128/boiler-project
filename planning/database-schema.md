@@ -1,6 +1,6 @@
 # Database Schema (Phase 4): AFP Hospital Patient Encoding & Reporting System
 
-_Last updated: 2026-10-13 · MySQL · Status: Draft for review_
+_Last updated: 2026-10-14 · MySQL · Status: Draft for review_
 
 Laravel's standard tables (`sessions`, `cache`, `jobs`, `migrations`) are created by the framework and not listed here.
 
@@ -90,9 +90,9 @@ Laravel's standard tables (`sessions`, `cache`, `jobs`, `migrations`) are create
 |---|---|---|
 | id | PK | |
 | branch_id | FK → branches | |
-| name | varchar(40) | Unique per branch. "Others" types (Dependent, Retiree…) live here too. |
-| is_other | boolean | Marks the "Other (specify)" entry |
-| sort_order | smallint | Order shown in the dropdown and report |
+| name | varchar(60) | Unique per branch, ignoring upper / lower case (checked by the app; the database index also blocks exact repeats). 2 to 60 characters. "Others" types (Dependent, Retiree…) live here too. |
+| is_other | boolean | Marks the "Other (specify)" entry. Always listed last. |
+| sort_order | smallint | Seniority order within the branch, set by Admin with Move up / Move down. Used by the Encode rank list and the report's Branch × Rank table. A new rank goes to the bottom. |
 | deleted_at | timestamp, null | Soft delete (Laravel `SoftDeletes`). Set = in Trash. |
 | deleted_by | FK → users, null | |
 | delete_reason | varchar(255), null | Required when moved to Trash. Picked from a list (section 5, "Delete reasons") |
@@ -101,9 +101,9 @@ Laravel's standard tables (`sessions`, `cache`, `jobs`, `migrations`) are create
 | Column | Type | Notes |
 |---|---|---|
 | id | PK | |
-| name | varchar(120) | Unique |
-| is_other | boolean | Marks "Other (specify)" |
-| sort_order | smallint | |
+| name | varchar(120) | Unique, ignoring upper / lower case. 2 to 120 characters. |
+| is_other | boolean | Marks "Other (specify)". Always listed last. |
+| sort_order | smallint | Not used: diagnoses are listed alphabetically. |
 | deleted_at | timestamp, null | Soft delete (Laravel `SoftDeletes`). Set = in Trash. |
 | deleted_by | FK → users, null | |
 | delete_reason | varchar(255), null | Required when moved to Trash. Picked from a list (section 5, "Delete reasons") |
@@ -113,8 +113,8 @@ Laravel's standard tables (`sessions`, `cache`, `jobs`, `migrations`) are create
 |---|---|---|
 | id | PK | |
 | min_age | tinyint unsigned | |
-| max_age | tinyint unsigned, null | null = "and above". The app blocks overlaps. |
-| sort_order | smallint | |
+| max_age | tinyint unsigned, null | null = "and above" (shown as "60 & above"). Ages 0 to 120; min_age can't be above max_age. The app blocks overlaps with other active brackets. |
+| sort_order | smallint | Not used: brackets are listed by min_age. |
 | deleted_at | timestamp, null | Soft delete (Laravel `SoftDeletes`). Set = in Trash. |
 | deleted_by | FK → users, null | |
 | delete_reason | varchar(255), null | Required when moved to Trash. Picked from a list (section 5, "Delete reasons") |
@@ -222,7 +222,14 @@ GROUP BY p.sex;
 - **Branch, rank, age and diagnosis** live on `visits`, because they describe that visit.
 
 - **Dropdown lists are fully dynamic:** Admin can add, edit (rename or change ages), delete and restore entries. Renaming updates past visits too, because they point to the same row; closed months are protected by `report_snapshots`.
-- **Fixed entries:** "Other (specify)" in diagnoses and in Others types can't be edited or removed.
+- **Fixed entries:** "Other (specify)" in diagnoses and in Others types can't be edited, removed or moved.
+- **List rules** (full list in planning/mvp-scope.md, section 5a):
+  - No duplicate names, ignoring upper / lower case. Ranks: within their branch. A name that is in Trash must be restored, not added again.
+  - Edit is for fixing spelling only. It changes the name on all past visits, because they store the item's id.
+  - Ranks keep a seniority order (`ranks.sort_order`, Move up / Move down), used in Encode and the Branch × Rank report table.
+  - Diagnoses are listed alphabetically, with "Other (specify)" last.
+  - Age brackets can't overlap.
+  - Restoring from Trash is refused when the name is now used by an active item, or the bracket overlaps an active one.
 - **Quarterly, annual and custom reports** are always counted live from the visits.
 
 ## 6. Decisions Log

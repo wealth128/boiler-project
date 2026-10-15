@@ -1,6 +1,6 @@
 # MVP Scope v1.0: AFP Hospital Patient Encoding & Reporting System
 
-_Last updated: 2026-10-07 · Status: Phase 1 complete (pending the inputs in section 7)_
+_Last updated: 2026-10-14 · Status: Phase 1 complete (pending the inputs in section 7)_
 
 ## 1. Objective
 Replace Google Sheets and manual tallying with **one centralized system**:
@@ -48,6 +48,16 @@ _AFP Serial No. removed (too personal)._
 - Delete moves records to **Trash** (reason required). Admin can restore or permanently delete them.
 - An audit log records who encoded or changed what
 - Admin closes a month after the report is final, which locks it
+
+## 5a. Dropdown Lists
+Admin keeps the diagnosis list, the ranks of each branch (including the "Others" patient types) and the age brackets on the Dropdown Lists screen. These rules apply wherever the lists are used:
+- **No duplicate names.** Upper and lower case don't count as different: "hypertension" is the same as "Hypertension". Ranks only need to be unique within their branch, so CPL can be in both Army and Marines. Names are saved without extra spaces, 2 to 120 characters (ranks 2 to 60). If the same name is in Trash, restore it from Trash instead of adding it again.
+- **Edit is for fixing spelling only.** Visits store which item was picked, so a new name shows on every past visit and in open-month reports. Closed months keep their saved report copy. To use a different item, add a new one.
+- **Ranks keep a seniority order**, set with Move up / Move down. The Encode rank list and the report's Branch × Rank table use this order.
+- **Diagnoses are listed alphabetically**, with "Other (specify)" last.
+- **Age brackets can't overlap.** Ages run from 0 to 120, From can't be above To, and a blank To means "and above" (e.g. "60 & above"). Brackets are shown by From age.
+- **"Other (specify)"** in diagnoses and in "Others" types is fixed: it can't be edited, deleted or moved.
+- **Deleted items** go to Trash with a reason. They disappear from Encode, but past visits and reports keep showing them. An item can't be restored if its name is now used by an active item, or if its ages overlap an active bracket.
 
 ## 6. Setup
 - Runs on the **hospital network** (one server PC, other PCs open it in a browser), not on the internet

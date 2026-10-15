@@ -30,6 +30,7 @@ dataset('route map', [
     ['POST', 'settings/{list}', 'lists.store'],
     ['PUT', 'settings/{list}/{id}', 'lists.update'],
     ['DELETE', 'settings/{list}/{id}', 'lists.destroy'],
+    ['PUT', 'settings/ranks/{id}/move', 'lists.ranks.move'],
     ['GET', 'users', 'users.index'],
     ['POST', 'users', 'users.store'],
     ['PUT', 'users/{user}', 'users.update'],
@@ -89,7 +90,7 @@ it('shows the placeholder page on every planned screen', function (string $uri) 
         ->assertOk()
         ->assertInertia(fn ($page) => $page->component('placeholder')->has('title'));
 })->with([
-    '/reports', '/reports/export/pdf', '/reports/export/excel', '/settings/lists', '/audit-log', '/trash', '/backups',
+    '/reports', '/reports/export/pdf', '/reports/export/excel', '/audit-log', '/trash', '/backups',
 ]);
 
 it('answers the patient search with JSON', function () {
@@ -110,8 +111,6 @@ it('answers stub form actions with a "not built yet" toast', function () {
         ['delete', "/visits/{$visit->id}"],
         ['delete', "/patients/{$patient->id}"],
         ['post', '/months/2026-09/close'],
-        ['post', '/settings/diagnoses'],
-        ['put', '/settings/age-brackets/1'],
         ['post', '/trash/visits/1/restore'],
         ['delete', '/trash'],
         ['post', '/backups/run'],
@@ -128,4 +127,6 @@ it('rejects bad periods, list names and Trash types', function () {
     $this->post('/settings/profile-x')->assertNotFound();
     $this->post('/trash/settings/1/restore')->assertNotFound();
     $this->delete('/trash/visits/abc')->assertNotFound();
+    $this->put('/settings/age-brackets/abc')->assertNotFound();
+    $this->put('/settings/age-brackets/9999')->assertNotFound();
 });

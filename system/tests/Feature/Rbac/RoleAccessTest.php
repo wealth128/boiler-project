@@ -1,6 +1,8 @@
 <?php
 
+use App\Models\AgeBracket;
 use App\Models\Patient;
+use App\Models\Rank;
 use App\Models\User;
 use App\Models\Visit;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -42,8 +44,9 @@ dataset('protected routes', [
     // Dropdown lists: Admin
     'lists page' => ['GET', '/settings/lists', ['admin']],
     'add list item' => ['POST', '/settings/diagnoses', ['admin']],
-    'edit list item' => ['PUT', '/settings/ranks/1', ['admin']],
-    'delete list item' => ['DELETE', '/settings/age-brackets/1', ['admin']],
+    'edit list item' => ['PUT', '/settings/ranks/{rank}', ['admin']],
+    'delete list item' => ['DELETE', '/settings/age-brackets/{bracket}', ['admin']],
+    'move rank' => ['PUT', '/settings/ranks/{rank}/move', ['admin']],
     // User accounts: Admin, System Admin
     'users page' => ['GET', '/users', ['admin', 'system_admin']],
     'add user' => ['POST', '/users', ['admin', 'system_admin']],
@@ -71,11 +74,15 @@ it('lets each role reach only the routes rbac.md allows', function (string $meth
     $visit = Visit::factory()->create(['encoded_by' => $actor->id, 'visited_at' => now()]);
     $patient = Patient::factory()->create();
     $otherUser = User::factory()->encoder()->create();
+    $rank = Rank::factory()->create();
+    $bracket = AgeBracket::create(['min_age' => 0, 'max_age' => 17]);
 
     $uri = strtr($uri, [
         '{visit}' => $visit->id,
         '{patient}' => $patient->id,
         '{user}' => $otherUser->id,
+        '{rank}' => $rank->id,
+        '{bracket}' => $bracket->id,
     ]);
 
     $response = $this->actingAs($actor)->from('/settings/profile')->call($method, $uri);
@@ -105,6 +112,6 @@ it('answers a JSON request from a role that is not allowed with JSON', function 
 });
 
 it('sends signed-out users to the login page instead of a 403', function (string $method, string $uri) {
-    $this->call($method, strtr($uri, ['{visit}' => 1, '{patient}' => 1, '{user}' => 1]))
+    $this->call($method, strtr($uri, ['{visit}' => 1, '{patient}' => 1, '{user}' => 1, '{rank}' => 1, '{bracket}' => 1]))
         ->assertRedirect(route('login'));
 })->with('protected routes');

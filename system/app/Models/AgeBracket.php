@@ -49,10 +49,23 @@ class AgeBracket extends Model
         return $age >= $this->min_age && ($this->max_age === null || $age <= $this->max_age);
     }
 
-    /** @param Builder<AgeBracket> $query */
+    /**
+     * By From age. Active brackets never overlap, so this is also the
+     * order of the ages. sort_order is not used.
+     *
+     * @param  Builder<AgeBracket>  $query
+     */
     #[Scope]
     protected function ordered(Builder $query): void
     {
-        $query->orderBy('sort_order')->orderBy('min_age');
+        $query->orderBy('min_age')->orderBy('id');
+    }
+
+    /**
+     * Do two age ranges share at least one age? null = "and above".
+     */
+    public static function rangesOverlap(int $min, ?int $max, int $otherMin, ?int $otherMax): bool
+    {
+        return ($otherMax === null || $min <= $otherMax) && ($max === null || $max >= $otherMin);
     }
 }
