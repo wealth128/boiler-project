@@ -70,3 +70,14 @@ export type Snapshot = {
     month_label: string;
     taken_at: DateTimeString;
 };
+
+/** Status of a monthly report (ReportController). */
+export type MonthStatus = {
+    /** "2026-09" */
+    period: string;
+    closed: boolean;
+    /** Visits "Delete month report" would move to Trash. */
+    visit_count: number;
+    /** Admin only: shows the Close, Reopen and Delete buttons. */
+    can_manage: boolean;
+};

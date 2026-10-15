@@ -1,5 +1,5 @@
 import { useId, useState } from 'react';
-import type { FormEvent, KeyboardEvent } from 'react';
+import type { FormEvent, KeyboardEvent, ReactNode } from 'react';
 import {
     checkDeleteReason,
     DeleteReasonField,
@@ -32,6 +32,10 @@ type MoveToTrashRowProps = {
     errors?: MoveToTrashErrors;
     /** Replaces the default spacing, which fits a table cell. */
     className?: string;
+    /** Replaces the default "Move to Trash?" question, e.g. with a count. */
+    prompt?: ReactNode;
+    /** Small note under the row. */
+    hint?: ReactNode;
 };
 
 /**
@@ -47,6 +51,8 @@ export function MoveToTrashRow({
     processing = false,
     errors: serverErrors = {},
     className = '-mx-2.5 -my-2',
+    prompt = <b>Move to Trash?</b>,
+    hint,
 }: MoveToTrashRowProps) {
     const id = useId();
     const [value, setValue] = useState<DeleteReasonValue>(emptyDeleteReason);
@@ -103,7 +109,7 @@ export function MoveToTrashRow({
             )}
         >
             <label htmlFor={id} className="text-sm">
-                <b>Move to Trash?</b> Reason (required):
+                {prompt} Reason (required):
             </label>
             <div className="flex flex-wrap items-center gap-2">
                 <DeleteReasonField
@@ -146,6 +152,11 @@ export function MoveToTrashRow({
                 >
                     {message}
                 </span>
+            )}
+            {hint && (
+                <p className="basis-full text-xs text-muted-foreground">
+                    {hint}
+                </p>
             )}
         </form>
     );

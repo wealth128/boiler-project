@@ -390,7 +390,7 @@ it('opens with last month and all categories when nothing is chosen', function (
         ->and($props['sheet']['category'])->toBeNull()
         ->and(array_keys($props['report']['categories']))->toBe(['OPD', 'ER', 'Admission'])
         ->and($props['report']['totals'])->toBe(['patients' => 1, 'visits' => 1])
-        ->and($props['month_status'])->toBe(['closed' => false])
+        ->and($props['month_status'])->toMatchArray(['closed' => false])
         ->and($props['snapshot'])->toBeNull();
 });
 
@@ -539,7 +539,7 @@ it('shows the saved copy of a closed month, even after a diagnosis is renamed', 
         'month_label' => 'September 2026',
         'taken_at' => now()->toIso8601String(),
     ])
-        ->and($props['month_status'])->toBe(['closed' => true])
+        ->and($props['month_status'])->toMatchArray(['closed' => true])
         ->and($props['report']['categories']['ER']['patients'])->toBe(1)
         ->and(asMap($props['report']['categories']['ER']['diagnoses']))->toBe(['Hypertension' => 1])
         ->and($props['report']['totals'])->toEqual(['patients' => 1, 'visits' => 1]);
@@ -572,7 +572,7 @@ it('counts a reopened month live again', function () {
     $props = $this->actingAs($this->admin)->get('/reports?month=2026-09')->inertiaProps();
 
     expect($props['snapshot'])->toBeNull()
-        ->and($props['month_status'])->toBe(['closed' => false])
+        ->and($props['month_status'])->toMatchArray(['closed' => false])
         ->and($props['report']['categories']['ER']['patients'])->toBe(2);
 });
 
@@ -588,7 +588,7 @@ it('counts live when a closed month only has a saved copy in the old shape', fun
     $props = $this->actingAs($this->admin)->get('/reports?month=2026-09')->inertiaProps();
 
     expect($props['snapshot'])->toBeNull()
-        ->and($props['month_status'])->toBe(['closed' => true])
+        ->and($props['month_status'])->toMatchArray(['closed' => true])
         ->and($props['report']['categories']['ER']['patients'])->toBe(1);
 });
 

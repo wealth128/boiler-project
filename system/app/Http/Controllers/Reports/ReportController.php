@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Reports;
 
 use App\Enums\Category;
+use App\Enums\MonthReportDeleteReason;
 use App\Enums\Permission;
 use App\Http\Controllers\Controller;
 use App\Models\MonthClosure;
 use App\Models\ReportSnapshot;
 use App\Models\Setting;
+use App\Models\Visit;
 use App\Services\ReportBuilder;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
@@ -54,12 +56,39 @@ class ReportController extends Controller
             ],
             'report' => $report,
             // The month's status for a monthly report: null for other periods.
-            'month_status' => $filters->period() === null ? null : ['closed' => $saved !== null || MonthClosure::isClosed($filters->month)],
+            'month_status' => $this->monthStatus($filters, $saved !== null),
+            // Admin only: the reasons for "Delete month report".
+            'month_delete_reasons' => Gate::allows(Permission::CloseMonth->value) ? MonthReportDeleteReason::options() : [],
             'snapshot' => $saved === null ? null : [
                 'month_label' => $filters->label,
                 'taken_at' => $saved['taken_at']->toIso8601String(),
             ],
         ]);
+    }
+
+    /**
+     * Status of a monthly report (null for other periods): closed or open,
+     * the period for the month buttons, and how many visits "Delete month
+     * report" would move to Trash. Only Admin gets the buttons (canManage).
+     *
+     * @return array{period: string, closed: bool, visit_count: int, can_manage: bool}|null
+     */
+    private function monthStatus(ReportFilters $filters, bool $hasSavedCopy): ?array
+    {
+        $period = $filters->period();
+
+        if ($period === null) {
+            return null;
+        }
+
+        [$from, $to] = ReportBuilder::monthRange($period);
+
+        return [
+            'period' => $period,
+            'closed' => $hasSavedCopy || MonthClosure::isClosed($period),
+            'visit_count' => Visit::query()->where('visited_at', '>=', $from)->where('visited_at', '<', $to)->count(),
+            'can_manage' => Gate::allows(Permission::CloseMonth->value),
+        ];
     }
 
     /**
