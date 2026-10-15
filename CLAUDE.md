@@ -8,12 +8,13 @@ A centralized system that replaces Google Sheets and manual tallying. Offices **
 - `system/`: the Laravel application. **All code goes here.**
 
 ## Key Planning Docs (read in this order)
-1. `planning/mvp-scope.md`: fields, counting rules, scope
-2. `planning/rbac.md`: roles and permission matrix
-3. `planning/database-schema.md`: tables, columns, delete rules
-4. `planning/architecture.md`: stack and backup
-5. `planning/setup-and-structure.md`: setup, route map, file structure
-6. `planning/phase5-foundation.md`: current build plan
+1. `planning/project-history.md`: read first. Decisions, current status and how to work with me.
+2. `planning/mvp-scope.md`: fields, counting rules, scope
+3. `planning/rbac.md`: roles and permission matrix
+4. `planning/database-schema.md`: tables, columns, delete rules
+5. `planning/architecture.md`: stack and backup
+6. `planning/setup-and-structure.md`: setup, route map, file structure
+7. `planning/phase5-foundation.md`: current build plan
 
 ## Stack
 Laravel (latest) + official **React starter kit** (Inertia, TypeScript, Tailwind) + **MySQL** (`patient_census`). Monolith: no separate API and no Sanctum. Timezone `Asia/Manila`. Testing with Pest.
