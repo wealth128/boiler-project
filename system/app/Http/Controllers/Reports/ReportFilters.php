@@ -149,6 +149,38 @@ final class ReportFilters
         return $this->type === self::MONTHLY ? $this->month : null;
     }
 
+    /**
+     * The file name for an export, without the extension:
+     * census-report_2026-09_all, census-report_2026-Q3_er,
+     * census-report_2026_admission, census-report_2026-09-01_to_2026-09-30_all.
+     */
+    public function fileStem(): string
+    {
+        $period = str_replace(' ', '_', $this->periodCode());
+
+        return 'census-report_'.$period.'_'.strtolower($this->category?->value ?? 'all');
+    }
+
+    /** The category as written in the audit log: "All", "OPD", "ER" or "Admission". */
+    public function categoryName(): string
+    {
+        return $this->category?->value ?? 'All';
+    }
+
+    /**
+     * The period as written in the audit log: "2026-09", "2026-Q3", "2026"
+     * or "2026-09-01 to 2026-09-30".
+     */
+    public function periodCode(): string
+    {
+        return match ($this->type) {
+            self::MONTHLY => $this->month,
+            self::QUARTERLY => "{$this->year}-Q{$this->quarter}",
+            self::ANNUAL => (string) $this->year,
+            default => "{$this->customFrom} to {$this->customTo}",
+        };
+    }
+
     /** The title on the report sheet. */
     public function title(): string
     {

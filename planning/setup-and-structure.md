@@ -22,11 +22,13 @@ You have PHP, Composer, Node and MySQL, so Laragon is **not needed for developme
 
 **a. Check versions** (in Command Prompt or PowerShell):
 ```
-php -v          (needs 8.2 or higher)
+php -v          (needs 8.3 or higher)
 composer -V
 node -v         (needs 20 or higher)
 mysql --version
 ```
+
+**PHP extensions required:** `gd` (Excel export needs it; it is off by default in a fresh `php.ini`, so remove the `;` before `extension=gd`), `intl`, `zip`, `mbstring`, `pdo_mysql`, `fileinfo`, `openssl`. Check with `php -m`.
 
 **b. Create the database and an app user:**
 ```

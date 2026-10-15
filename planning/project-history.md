@@ -112,7 +112,14 @@ This file carries over what was discussed in the first planning-and-review conve
 8. Flag anything Claude Code decided on its own; say if it's fine or should change.
 9. Give the exact "approve / fix" message, then commit → merge → push.
 
-## 8. Lessons Learned
+## 8. Phase 8 (deployment) notes
+- Server PHP must be **8.3 or newer** (maatwebsite/excel 4 requires it).
+- Required PHP extensions include **gd, intl, zip, mbstring, pdo_mysql, fileinfo, openssl**. `gd` is off by default in a fresh `php.ini`; PhpSpreadsheet (Excel export) will not install or run without it.
+- The hospital network has **no internet**. Run `composer install --no-dev` and `npm run build` on a dev PC, then copy the `vendor` folder and the built `public/build` assets to the server.
+- `storage/` (and `bootstrap/cache/`) must be **writable** by the web server: dompdf font cache, logs and backups live there.
+- PDF exports run with remote resources and PHP execution switched off (`isRemoteEnabled` and `isPhpEnabled` false), so the server needs no outside access for them.
+
+## 9. Lessons Learned
 - **VS Code can overwrite files** changed from outside (it saved old copies over `project-phases.md` and `prompt-6c.md`). Close a file's tab before someone else edits it; choose **Don't Save** if asked.
 - **Tests only on `patient_census_test`.** RefreshDatabase wipes every table; it once ran on the dev database.
 - **PowerShell splits commit messages on quotes.** Claude Code writes the message to a temporary file instead.
