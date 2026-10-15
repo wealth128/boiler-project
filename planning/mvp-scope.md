@@ -33,7 +33,7 @@ _AFP Serial No. removed (too personal)._
 
 ## 4. Reports
 - **Periods:** Monthly, quarterly, annual, custom date range
-- **Per category (OPD / ER / Admission):** Total patients, sex, age bracket, diagnosis (Top 10 plus Others), branch of service with rank breakdown
+- **Per category (OPD / ER / Admission):** Total patients and visits, sex, age bracket, diagnosis, branch of service with rank breakdown. Sex, age bracket and branch/rank count each patient once (latest visit). **Diagnosis counts every visit** and lists every diagnosis by name, highest count first, then by name. There is no Top 10 and no "Others" line. "Other (specify)" visits show the typed text as their own lines (upper/lower case and extra spaces ignored; "Other (unspecified)" if empty). The Diagnosis total equals the category's Visits.
 - **Formats:** On-screen, PDF, Excel, Print. The user chooses.
 - **Header:** Hospital name/logo, period, Prepared by, Noted by: Commanding Officer
 

@@ -36,7 +36,8 @@ This file carries over what was discussed in the first planning-and-review conve
 - **Only ER encodes in v1.0.** OPD and Admission accounts are off. ER can choose any category.
 - **Transfers:** no transfer screen. A transfer is a new visit in the new category, with a remark like "From ER, admitted to ward".
 - **Counting:** each patient counted **once per category per period**; total visits shown as a separate line. A visit counts in the month it was encoded.
-- **Reports:** per category: total patients and visits, sex, age brackets, diagnosis Top 10 + Others, Branch × Rank. Formats: screen, PDF, Excel, print. Header: hospital name/logo, period, Prepared by, Noted by: Commanding Officer.
+- **Diagnosis table is per visit and lists every diagnosis by name, typed Other text included; decided 2026-10-15.** It replaces "Top 10 + Others". Sex, Age range and Branch/rank stay per patient (latest visit).
+- **Reports:** per category: total patients and visits, sex, age brackets, diagnosis (per visit, every diagnosis by name), Branch × Rank. Formats: screen, PDF, Excel, print. Header: hospital name/logo, period, Prepared by, Noted by: Commanding Officer.
 - No import of old Google Sheets. Not in v1.0: discharge, transfer tracking, bed census, dashboards.
 
 ### Roles & access
@@ -88,15 +89,17 @@ This file carries over what was discussed in the first planning-and-review conve
 | Security review (`planning/security.md` section 3) | End of Phase 6 |
 | Phase 7 parallel run (1 month beside Google Sheets) · 7.5 Docs · 8 Deploy · 9 Training | Later |
 
-## 6. Notes for Prompt 6d (Reports), not yet written
+## 6. Notes for Prompt 6d (Reports)
 - Screen per prototype "Reports": period type (Monthly / Quarterly / Annual / Custom), period picker, category (All / OPD / ER / Admission), Generate. Admin and Viewer (CO).
 - Counting SQL is described in `planning/database-schema.md` (each patient once per category per period, using their latest visit in the period; Trash excluded).
-- Sections: totals, sex, age brackets (with a "No bracket" line if an age fits none), diagnosis Top 10 + Others, Branch × Rank in the Lists seniority order.
+- Sections: totals, sex, age brackets (with a "No bracket" line if an age fits none), diagnosis per visit (every diagnosis by name, no Top 10, no Others line, total equals Visits), Branch × Rank in the Lists seniority order.
 - Closed months show the saved snapshot. Close / Reopen / Delete month report are Admin only.
 - Exports: PDF (dompdf), Excel (maatwebsite), Print. Same permission as the screen; Excel cells starting with = + - @ written as text.
 - Hospital name/logo and signatories come from Settings (6h); use the settings table values / placeholders for now.
-- Consider splitting into 6d-1 counts on screen, 6d-2 close/reopen/delete month, 6d-3 exports.
+- **Agreed 2026-10-15: Reports is split into three prompts**, each built, reviewed and committed on its own: 6d-1 counts on screen (`planning/Prompts/prompt-6d-1.md`, written), 6d-2 close/reopen/delete month, 6d-3 PDF/Excel/Print.
 - Tests should use small known data sets and exact expected numbers.
+- 6d-3: Print, PDF and Excel must show the full Diagnosis list (the 10-row scroll box is screen only).
+- **6d-1 built (2026-10-15):** counting in `App\Services\ReportBuilder` (latest visit per patient per category via NOT EXISTS; grouped SQL). Changed the same day: the Diagnosis table counts every visit and lists every diagnosis (typed Other text merged ignoring case and spaces), and saved copies are `ReportBuilder::VERSION` 3. Month/year lists start at **January 2026** (my decision: `ReportFilters::FIRST_YEAR`); earlier dates only via Custom range. Report header reads settings keys `hospital_name`, `report_office`, `prepared_by`, `prepared_by_title`, `noted_by`, `noted_by_title` (defaults used when empty), so **the Settings screen (6h) must let Admin edit all six**.
 
 ## 7. Reviewer Checklist (used on every step)
 1. Does it match the prompt item by item, and the prototype?

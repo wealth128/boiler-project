@@ -1,6 +1,6 @@
 # Keyboard Shortcuts
 
-_Last updated: 2026-10-14 · One section per screen. Print and post beside each PC._
+_Last updated: 2026-10-15 · One section per screen. Print and post beside each PC._
 
 You can do everything on these screens without the mouse.
 
@@ -160,3 +160,27 @@ Same keys as on Patient Records: choose a reason, **Enter** to move it to Trash,
 | Key | What it does |
 |---|---|
 | **Tab** to **Previous**, a page number or **Next**, then **Enter** | Go to that page (50 rows per page) |
+
+---
+
+## Reports
+
+Nothing is counted until you press **Generate**. The choices are then kept in the address bar, so Refresh and Back keep them.
+
+| Key | What it does |
+|---|---|
+| **Tab** / **Shift + Tab** | Next / previous box. Order: Period type → Month (or Quarter and Year, or Year, or From and To) → Category → Generate |
+| Type the first letters, or **↑ / ↓** | Choose in Period type, Month, Quarter, Year or Category |
+| **Alt + ↓** | Open a list |
+| **Enter** | Generate, from any box |
+| Type in From / To | Dates go day, month, year in the order your browser shows. **↑ / ↓** change the part the cursor is in. |
+
+### Diagnosis list (per visit)
+Shows 10 diagnoses at a time. A longer list scrolls inside its box, and the Total line stays at the bottom.
+
+| Key | What it does |
+|---|---|
+| **Tab** to the Diagnosis list | Put the cursor in the list |
+| **↑ / ↓** | Scroll one line |
+| **Page Up / Page Down** | Scroll one page |
+| **Home / End** | Go to the top / bottom |

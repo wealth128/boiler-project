@@ -51,11 +51,12 @@ it('closes a month and saves the report counts', function () {
 
     $snapshot = ReportSnapshot::where('period', '2026-09')->sole();
     expect($snapshot->created_by)->toBe($this->admin->id)
-        ->and($snapshot->data['categories'])->toEqual([
-            'OPD' => ['patients' => 2, 'visits' => 3],
-            'ER' => ['patients' => 1, 'visits' => 1],
-            'Admission' => ['patients' => 0, 'visits' => 0],
+        ->and(collect($snapshot->data['categories'])->map(fn ($c) => [$c['patients'], $c['visits']])->all())->toEqual([
+            'OPD' => [2, 3],
+            'ER' => [1, 1],
+            'Admission' => [0, 0],
         ])
+        ->and($snapshot->data['totals'])->toEqual(['patients' => 2, 'visits' => 4])
         ->and(AuditLog::where('action', 'month.closed')->sole()->changes)->toBe(['period' => '2026-09']);
 });
 
@@ -107,7 +108,7 @@ it('saves a fresh snapshot when the month is closed again', function () {
     Visit::factory()->create(['category' => Category::Admission, 'visited_at' => '2026-09-12 12:00']);
     $closure = $this->months->close('2026-09', $this->admin);
 
-    expect(ReportSnapshot::where('period', '2026-09')->sole()->data['categories']['Admission'])->toEqual(['patients' => 1, 'visits' => 1])
+    expect(ReportSnapshot::where('period', '2026-09')->sole()->data['categories']['Admission'])->toMatchArray(['patients' => 1, 'visits' => 1])
         ->and($closure->reopened_by)->toBeNull()
         ->and(MonthClosure::count())->toBe(1)
         ->and(AuditLog::where('action', 'month.closed')->count())->toBe(2);
