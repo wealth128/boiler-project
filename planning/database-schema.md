@@ -173,7 +173,7 @@ On reopen, the copy is discarded. Closing again saves a fresh copy. Both actions
 - **Age brackets** aren't linked by key. Reports place each visit's `age` into a bracket when the report runs.
 
 ## 4. Check: Can Every Report Count Be Produced?
-Counting rule: **each patient once per category per period**, using their latest visit in that period. Deleted visits (in Trash) are excluded.
+Counting rule: **each patient once per category per period**, using their latest visit in that period. Deleted visits (in Trash) are excluded. **Exception: the Diagnosis table counts every visit**, not the latest one, so it adds up to Total visits.
 
 | Report item | Comes from |
 |---|---|
@@ -181,7 +181,7 @@ Counting rule: **each patient once per category per period**, using their latest
 | Total visits | `COUNT(*)` |
 | Sex | `patients.sex` |
 | Age range | `visits.age` matched to `age_brackets` |
-| Diagnosis Top 10 | `visits.diagnosis_id` (+ "Others") |
+| Diagnosis (per visit) | Every visit in the category and period, not the latest visit: `COUNT(*)` grouped by `visits.diagnosis_id`. "Other (specify)" visits are grouped by their typed `visits.diagnosis_other` instead (case and extra spaces ignored). No Top 10 and no "Others" line. |
 | Branch × Rank | `visits.branch_id`, `visits.rank_id` |
 
 Example: OPD patients by sex for September 2026
