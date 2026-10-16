@@ -94,9 +94,8 @@ export function StatusPanel({ status, marks }: StatusPanelProps) {
                         </span>
                         <Button
                             type="button"
-                            variant="outline"
                             size="sm"
-                            className="mt-1.5 block"
+                            className="mt-2 block"
                             onClick={() => setAsking(item)}
                         >
                             Mark {noun(item)} done
