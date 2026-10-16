@@ -48,100 +48,109 @@
     .generated { margin-top: 12pt; font-size: 8pt; }
 </style>
 </head>
+@php
+    // Pages: this tab only, or the summary and every category (each on its own page).
+    $pages = $pages ?? [$sheet['category'] ?? 'summary'];
+@endphp
 <body>
-    <div class="head">
-        @if (! empty($logoData))
-            <div><img class="logo" src="{{ $logoData }}" alt=""></div>
+@foreach ($pages as $pageIndex => $page)
+    <div class="page"@if ($pageIndex > 0) style="page-break-before: always"@endif>
+        <div class="head">
+            @if (! empty($logoData))
+                <div><img class="logo" src="{{ $logoData }}" alt=""></div>
+            @endif
+            <div class="org">{{ $sheet['hospital_name'] }} · {{ $sheet['office'] }}</div>
+            <h1>{{ $sheet['title'] }}</h1>
+            <div class="period">{{ $sheet['period_label'] }}· {{ $page === 'summary' ? 'Summary' : $page }}</div>
+        </div>
+
+        @if ($snapshot)
+            <div class="note">Saved copy, taken when {{ $snapshot['month_label'] }} was closed on {{ $snapshot['taken_at']->format('d-M-Y H:i') }}. Later changes to lists or records do not affect it.</div>
         @endif
-        <div class="org">{{ $sheet['hospital_name'] }} · {{ $sheet['office'] }}</div>
-        <h1>{{ $sheet['title'] }}</h1>
-        <div class="period">{{ $sheet['period_label'] }}@if ($sheet['category']) · {{ $sheet['category'] }} only @endif</div>
-    </div>
 
-    @if ($snapshot)
-        <div class="note">Saved copy, taken when {{ $snapshot['month_label'] }} was closed on {{ $snapshot['taken_at']->format('d-M-Y H:i') }}. Later changes to lists or records do not affect it.</div>
-    @endif
-
-    @if (! $sheet['category'])
-        <table class="totals"><tr>
-            <td><b>{{ number_format($report['totals']['patients']) }}</b><span>Total patients (all categories)</span></td>
-            <td><b>{{ number_format($report['totals']['visits']) }}</b><span>Total visits</span></td>
-            @foreach ($report['categories'] as $name => $data)
-                <td><b>{{ number_format($data['patients']) }}</b><span>{{ $name }} patients</span></td>
-            @endforeach
-            <td></td>
-        </tr></table>
-    @endif
-
-    @foreach ($report['categories'] as $name => $data)
-        <div class="cat">
-            <h2>{{ $name }}</h2>
+        @if ($page === 'summary')
             <table class="totals"><tr>
-                <td><b>{{ number_format($data['patients']) }}</b><span>Patients</span></td>
-                <td><b>{{ number_format($data['visits']) }}</b><span>Visits</span></td>
+                <td><b>{{ number_format($report['totals']['patients']) }}</b><span>Total patients (all categories)</span></td>
+                <td><b>{{ number_format($report['totals']['visits']) }}</b><span>Total visits</span></td>
+                @foreach ($report['categories'] as $name => $data)
+                    <td><b>{{ number_format($data['patients']) }}</b><span>{{ $name }} patients</span></td>
+                @endforeach
                 <td></td>
             </tr></table>
+        @endif
 
-            @if ($data['patients'] === 0)
-                <p class="none">No {{ $name }} patients in this period.</p>
-            @else
-                <table class="grid"><tr>
-                    <td class="l">
-                        <h4>Sex</h4>
-                        <table class="lines">
-                            @foreach ($data['sex'] as $line)
-                                <tr><td>{{ $line['label'] }}</td><td class="n">{{ number_format($line['count']) }}</td></tr>
-                            @endforeach
-                            <tr class="total"><td>Total</td><td class="n">{{ number_format($data['patients']) }}</td></tr>
-                        </table>
-                    </td>
-                    <td class="r">
-                        <h4>Age range</h4>
-                        <table class="lines">
-                            @foreach ($data['age'] as $line)
-                                <tr><td>{{ $line['label'] }}</td><td class="n">{{ number_format($line['count']) }}</td></tr>
-                            @endforeach
-                        </table>
-                    </td>
+        @if ($page !== 'summary')
+            @php $name = $page; $data = $report['categories'][$page]; @endphp
+            <div class="cat">
+                <h2>{{ $name }}</h2>
+                <table class="totals"><tr>
+                    <td><b>{{ number_format($data['patients']) }}</b><span>Patients</span></td>
+                    <td><b>{{ number_format($data['visits']) }}</b><span>Visits</span></td>
+                    <td></td>
                 </tr></table>
 
-                <h4>Diagnosis (per visit)</h4>
-                <table class="lines">
-                    @foreach ($data['diagnoses'] as $line)
-                        <tr><td>{{ $line['label'] }}</td><td class="n">{{ number_format($line['count']) }}</td></tr>
-                    @endforeach
-                    <tr class="total"><td>Total</td><td class="n">{{ number_format($data['visits']) }}</td></tr>
-                </table>
+                @if ($data['patients'] === 0)
+                    <p class="none">No visits encoded for {{ $name }} in this period.</p>
+                @else
+                    <table class="grid"><tr>
+                        <td class="l">
+                            <h4>Sex</h4>
+                            <table class="lines">
+                                @foreach ($data['sex'] as $line)
+                                    <tr><td>{{ $line['label'] }}</td><td class="n">{{ number_format($line['count']) }}</td></tr>
+                                @endforeach
+                                <tr class="total"><td>Total</td><td class="n">{{ number_format($data['patients']) }}</td></tr>
+                            </table>
+                        </td>
+                        <td class="r">
+                            <h4>Age range</h4>
+                            <table class="lines">
+                                @foreach ($data['age'] as $line)
+                                    <tr><td>{{ $line['label'] }}</td><td class="n">{{ number_format($line['count']) }}</td></tr>
+                                @endforeach
+                            </table>
+                        </td>
+                    </tr></table>
 
-                <h4>Branch of service and rank</h4>
-                <table class="lines">
-                    <tr><th>Branch / Rank</th><th class="n">Patients</th></tr>
-                    @foreach ($data['branches'] as $branch)
-                        <tr class="br"><td>{{ $branch['name'] }}</td><td class="n">{{ number_format($branch['total']) }}</td></tr>
-                        @foreach ($branch['ranks'] as $rank)
-                            <tr class="rk"><td>{{ $rank['label'] }}</td><td class="n">{{ number_format($rank['count']) }}</td></tr>
+                    <h4>Diagnosis (per visit)</h4>
+                    <table class="lines">
+                        @foreach ($data['diagnoses'] as $line)
+                            <tr><td>{{ $line['label'] }}</td><td class="n">{{ number_format($line['count']) }}</td></tr>
                         @endforeach
-                    @endforeach
-                </table>
-            @endif
-        </div>
-    @endforeach
+                        <tr class="total"><td>Total</td><td class="n">{{ number_format($data['visits']) }}</td></tr>
+                    </table>
 
-    <table class="sign"><tr>
-        <td>
-            @if (! empty($signatureData['prepared']))<img src="{{ $signatureData['prepared'] }}" alt="">@endif
-            <div class="line"><b>{{ $sheet['prepared_by'] }}</b>Prepared by · {{ $sheet['prepared_by_title'] }}</div>
-        </td>
-        <td>
-            @if (! empty($signatureData['noted']))<img src="{{ $signatureData['noted'] }}" alt="">@endif
-            <div class="line"><b>{{ $sheet['noted_by'] }}</b>Noted by · {{ $sheet['noted_by_title'] }}</div>
-        </td>
-    </tr></table>
+                    <h4>Branch of service and rank</h4>
+                    <table class="lines">
+                        <tr><th>Branch / Rank</th><th class="n">Patients</th></tr>
+                        @foreach ($data['branches'] as $branch)
+                            <tr class="br"><td>{{ $branch['name'] }}</td><td class="n">{{ number_format($branch['total']) }}</td></tr>
+                            @foreach ($branch['ranks'] as $rank)
+                                <tr class="rk"><td>{{ $rank['label'] }}</td><td class="n">{{ number_format($rank['count']) }}</td></tr>
+                            @endforeach
+                        @endforeach
+                    </table>
+                @endif
+            </div>
+        @endif
 
-    @if (! empty($sheet['signature_note']))
-        <div class="signote">{{ $sheet['signature_note'] }}</div>
-    @endif
+        <table class="sign"><tr>
+            <td>
+                @if (! empty($signatureData['prepared']))<img src="{{ $signatureData['prepared'] }}" alt="">@endif
+                <div class="line"><b>{{ $sheet['prepared_by'] }}</b>Prepared by · {{ $sheet['prepared_by_title'] }}</div>
+            </td>
+            <td>
+                @if (! empty($signatureData['noted']))<img src="{{ $signatureData['noted'] }}" alt="">@endif
+                <div class="line"><b>{{ $sheet['noted_by'] }}</b>Noted by · {{ $sheet['noted_by_title'] }}</div>
+            </td>
+        </tr></table>
 
-    <div class="generated">Generated {{ $generatedAt->format('d-M-Y H:i') }}</div>
+        @if (! empty($sheet['signature_note']))
+            <div class="signote">{{ $sheet['signature_note'] }}</div>
+        @endif
+
+        <div class="generated">Generated {{ $generatedAt->format('d-M-Y H:i') }}</div>
+    </div>
+@endforeach
 </body>
 </html>

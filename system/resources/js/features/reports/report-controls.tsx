@@ -12,7 +12,6 @@ import type {
     ReportFilters,
     ReportOptions,
 } from "@/features/reports/types";
-import type { Category } from "@/types";
 
 const TYPE_LABELS: Record<PeriodType, string> = {
     monthly: "Monthly",
@@ -27,9 +26,10 @@ type ReportControlsProps = {
 };
 
 /**
- * Period type, the matching period fields, Category and Generate. The choices
- * are only applied (and put in the URL) when Generate is pressed, or Enter is
- * pressed in a field, so Refresh and Back keep them.
+ * Period type, the matching period fields and Generate. The choices are only
+ * applied (and put in the URL) when Generate is pressed, or Enter is pressed
+ * in a field, so Refresh and Back keep them. The category is chosen with the
+ * tabs under this panel, and Generate keeps the tab that is open.
  */
 export function ReportControls({ filters, options }: ReportControlsProps) {
     const [values, setValues] = useState<ReportFilters>(filters);
@@ -71,7 +71,7 @@ export function ReportControls({ filters, options }: ReportControlsProps) {
     return (
         <form
             onSubmit={generate}
-            className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-[repeat(4,minmax(0,1fr))_auto] lg:items-end"
+            className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-[repeat(3,minmax(0,1fr))_auto] lg:items-end"
             noValidate
         >
             <div className="grid gap-1.5">
@@ -172,24 +172,6 @@ export function ReportControls({ filters, options }: ReportControlsProps) {
                     </div>
                 </>
             )}
-
-            <div className="grid gap-1.5">
-                <Label htmlFor="report-category">Category</Label>
-                <NativeSelect
-                    id="report-category"
-                    value={values.category}
-                    onChange={(e) =>
-                        set({ category: e.target.value as Category | "" })
-                    }
-                >
-                    <option value="">All</option>
-                    {options.categories.map((category) => (
-                        <option key={category} value={category}>
-                            {category}
-                        </option>
-                    ))}
-                </NativeSelect>
-            </div>
 
             <Button type="submit" disabled={loading}>
                 Generate

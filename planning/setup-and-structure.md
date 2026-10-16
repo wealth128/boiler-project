@@ -83,7 +83,8 @@ With Inertia there's no separate API. Each URL below is a Laravel route. **GET**
 | Records | GET | `/records/visits` · `/records/patients` | Lists with filters | Admin |
 | | DELETE | `/visits/{visit}` · `/patients/{patient}` | Move to Trash (reason) | Admin |
 | Reports | GET | `/reports` | Report on screen | Admin, CO |
-| | GET | `/reports/export/pdf` · `/reports/export/excel` | Download | Admin, CO |
+| | GET | `/reports/print` | Print view (opens in a new tab and starts the Print dialog); `?scope=all` = summary and every category | Admin, CO |
+| | GET | `/reports/export/pdf` · `/reports/export/excel` | Download (PDF: this tab, or `?scope=all`; Excel: always every category) | Admin, CO |
 | | POST | `/months/{period}/close` · `/months/{period}/reopen` | Close / reopen month | Admin |
 | | DELETE | `/months/{period}` | Delete month report (to Trash) | Admin |
 | Lists | GET | `/settings/lists` | Diagnoses, ranks, age brackets | Admin |

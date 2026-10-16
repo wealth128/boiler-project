@@ -13,87 +13,120 @@ import type {
 } from "@/features/reports/types";
 import { formatDate, formatDateTime } from "@/lib/dates";
 import { formatCount } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import type { Category } from "@/types";
 
-type ReportSheetProps = {
+/** A page of the report: the summary, or one category by its name. */
+export type ReportPageKey = "summary" | Category;
+
+type ReportPageProps = {
+    page: ReportPageKey;
     sheet: Sheet;
     report: Report;
     snapshot: Snapshot | null;
+    className?: string;
 };
 
 const boxTitle =
     "mb-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase print:break-after-avoid";
 
+/** The note above a saved copy of a closed month. */
+export function SnapshotNote({ snapshot }: { snapshot: Snapshot }) {
+    return (
+        <div
+            role="note"
+            className="mb-3.5 rounded-md bg-navy-soft px-3 py-2 text-sm font-medium text-navy print:hidden"
+        >
+            Saved copy, taken when {snapshot.month_label} was closed on{" "}
+            {formatDateTime(snapshot.taken_at)}. Later changes to lists or
+            records don’t affect it.
+        </div>
+    );
+}
+
 /**
- * The report as it prints (prototype "Reports"): header, grand totals when
- * all categories are shown, one section per category, signatures, and when
- * it was generated. Reads only the report it is given, so a saved copy of a
- * closed month shows exactly as it was.
+ * One page of the report as it prints (prototype "Reports"): header, then
+ * either the grand totals (Summary) or one category's section, then the
+ * signatures and when it was generated. Reads only the report it is given, so
+ * a saved copy of a closed month shows exactly as it was. Used by the Reports
+ * tabs and by the print view (one page per category, each on a new sheet).
  */
-export function ReportSheet({ sheet, report, snapshot }: ReportSheetProps) {
+export function ReportPage({
+    page,
+    sheet,
+    report,
+    snapshot,
+    className,
+}: ReportPageProps) {
     const categories = Object.entries(report.categories) as [
         Category,
         CategoryReport,
     ][];
+    const label = page === "summary" ? "Summary" : page;
+    const data = page === "summary" ? undefined : report.categories[page];
 
     return (
-        <>
+        <article
+            aria-label={`${sheet.title}, ${sheet.period_label}, ${label}`}
+            // Print: the whole page width, no frame, and no table row split
+            // across two pages.
+            className={cn(
+                "max-w-[980px] rounded-lg border bg-card px-4 pt-5 pb-8 sm:px-7 sm:pt-7 print:max-w-none print:rounded-none print:border-0 print:p-0 print:[&_tr]:break-inside-avoid",
+                className,
+            )}
+        >
+            <ReportHeader sheet={{ ...sheet, category: label }} />
+
             {snapshot && (
-                <div
-                    role="note"
-                    className="mb-3.5 rounded-md bg-navy-soft px-3 py-2 text-sm font-medium text-navy"
-                >
+                <p className="mb-3 hidden text-xs text-muted-foreground print:block">
                     Saved copy, taken when {snapshot.month_label} was closed on{" "}
-                    {formatDateTime(snapshot.taken_at)}. Later changes to lists
-                    or records don’t affect it.
-                </div>
+                    {formatDateTime(snapshot.taken_at)}.
+                </p>
             )}
 
-            <article
-                aria-label={`${sheet.title}, ${sheet.period_label}`}
-                // Print: the whole page width, no frame, and no table row split
-                // across two pages.
-                className="max-w-[980px] rounded-lg border bg-card px-4 pt-5 pb-8 sm:px-7 sm:pt-7 print:max-w-none print:rounded-none print:border-0 print:p-0 print:[&_tr]:break-inside-avoid"
-            >
-                <ReportHeader sheet={sheet} />
+            {page === "summary" ? (
+                <Totals
+                    tiles={[
+                        {
+                            value: report.totals.patients,
+                            label: "Total patients (all categories)",
+                        },
+                        {
+                            value: report.totals.visits,
+                            label: "Total visits",
+                        },
+                        ...categories.map(([name, category]) => ({
+                            value: category.patients,
+                            label: `${name} patients`,
+                        })),
+                    ]}
+                />
+            ) : (
+                data && <CategorySection name={page} data={data} />
+            )}
 
-                {!sheet.category && (
-                    <Totals
-                        tiles={[
-                            {
-                                value: report.totals.patients,
-                                label: "Total patients (all categories)",
-                            },
-                            {
-                                value: report.totals.visits,
-                                label: "Total visits",
-                            },
-                            ...categories.map(([name, data]) => ({
-                                value: data.patients,
-                                label: `${name} patients`,
-                            })),
-                        ]}
-                    />
-                )}
+            <ReportSignatures sheet={sheet} />
 
-                {categories.map(([name, data]) => (
-                    <CategorySection key={name} name={name} data={data} />
-                ))}
-
-                <ReportSignatures sheet={sheet} />
-
-                <p className="mt-4 text-xs text-muted-foreground print:break-inside-avoid">
-                    {snapshot
-                        ? `Saved copy from ${formatDateTime(snapshot.taken_at)}`
-                        : `Generated ${formatDateTime(report.generated_at)}`}
-                    {" · "}
-                    {formatDate(report.from)} to {formatDate(report.to)}
-                </p>
-            </article>
-        </>
+            <p className="mt-4 text-xs text-muted-foreground print:break-inside-avoid">
+                {snapshot
+                    ? `Saved copy from ${formatDateTime(snapshot.taken_at)}`
+                    : `Generated ${formatDateTime(report.generated_at)}`}
+                {" · "}
+                {formatDate(report.from)} to {formatDate(report.to)}
+            </p>
+        </article>
     );
 }
 
+/** The page on the Reports screen: the saved-copy note, then the page. */
+export function ReportSheet(props: ReportPageProps) {
+    return (
+        <>
+            {props.snapshot && <SnapshotNote snapshot={props.snapshot} />}
+            <ReportPage {...props} />
+        </>
+    );
+}
 function Totals({ tiles }: { tiles: { value: number; label: string }[] }) {
     return (
         <dl className="mb-3 flex flex-wrap gap-x-7 gap-y-3">
@@ -133,7 +166,7 @@ function CategorySection({
 
             {data.patients === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                    No {name} patients in this period.
+                    No visits encoded for {name} in this period.
                 </p>
             ) : (
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 print:grid-cols-2">

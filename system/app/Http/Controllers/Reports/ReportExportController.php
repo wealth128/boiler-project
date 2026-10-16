@@ -46,6 +46,8 @@ class ReportExportController extends Controller
                 // Signature pictures only on a final report (every month closed);
                 // a closed month uses the copies frozen when it was closed.
                 'signatureData' => $resolver->signatureData($data),
+                // This tab only, or the summary and every category, each on its own page.
+                'pages' => $filters->pages(),
             ]);
 
         $this->addFooter($pdf, 'Generated '.$generatedAt->format('d-M-Y H:i'));
@@ -66,13 +68,14 @@ class ReportExportController extends Controller
         $data = $resolver->resolve($request->query());
         $filters = $data['filters'];
 
-        $workbook = new ReportWorkbook($data['report'], $data['sheet'], $data['snapshot'], now());
+        // Always every category: a Summary sheet and one sheet per category.
+        $workbook = new ReportWorkbook($data['report'], [...$data['sheet'], 'category' => null], $data['snapshot'], now());
 
-        $this->logExport($audit, $request, 'excel', $filters);
+        $this->logExport($audit, $request, 'excel', $filters, 'All');
 
         return response(Excel::raw($workbook, ExcelWriter::XLSX), 200, [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'Content-Disposition' => 'attachment; filename="'.$filters->fileStem().'.xlsx"',
+            'Content-Disposition' => 'attachment; filename="'.$filters->fileStem(everything: true).'.xlsx"',
             'Cache-Control' => 'private, no-store',
         ]);
     }
@@ -99,7 +102,7 @@ class ReportExportController extends Controller
         $canvas->page_text(($width - $textWidth) / 2, $height - 32, $label, $font, $size, [0, 0, 0]);
     }
 
-    private function logExport(AuditLogger $audit, Request $request, string $format, ReportFilters $filters): void
+    private function logExport(AuditLogger $audit, Request $request, string $format, ReportFilters $filters, ?string $category = null): void
     {
         /** @var User $user */
         $user = $request->user();
@@ -108,7 +111,7 @@ class ReportExportController extends Controller
         $audit->log('report.exported', $user, [
             'format' => $format,
             'period' => $filters->periodCode(),
-            'category' => $filters->categoryName(),
+            'category' => $category ?? $filters->categoryName(),
         ]);
     }
 }

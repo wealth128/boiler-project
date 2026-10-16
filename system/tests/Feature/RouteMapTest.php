@@ -50,6 +50,7 @@ dataset('route map', [
     ['PUT', 'settings/hospital', 'hospital.update'],
     ['GET', 'settings/hospital/logo', 'hospital.logo'],
     ['DELETE', 'settings/hospital/logo', 'hospital.logo.destroy'],
+    ['GET', 'reports/print', 'reports.print'],
     ['GET', 'settings/hospital/signature/{who}', 'hospital.signature'],
     ['GET', 'reports/signatures/{period}/{who}', 'reports.signature'],
     ['DELETE', 'settings/hospital/signature/{who}', 'hospital.signature.destroy'],
