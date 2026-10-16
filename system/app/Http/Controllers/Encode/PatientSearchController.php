@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Encode;
 
+use App\Enums\Permission;
 use App\Http\Controllers\Controller;
 use App\Models\Patient;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 /**
  * "Find returning patient" on the Encode screen. The only JSON endpoint in
@@ -27,6 +29,9 @@ class PatientSearchController extends Controller
 
     public function __invoke(Request $request): JsonResponse
     {
+        // The route has role:encoder,admin; the Gate is the same rule inside the controller.
+        Gate::authorize(Permission::EncodeVisits->value);
+
         $query = trim((string) $request->query('q', ''));
 
         if (mb_strlen($query) < self::MIN_LENGTH) {

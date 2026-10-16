@@ -7,6 +7,7 @@ use App\Http\Requests\Settings\PasswordUpdateRequest;
 use App\Models\User;
 use App\Observers\AuditObserver;
 use App\Services\AuditLogger;
+use App\Services\UserSessions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rules\Password;
@@ -32,7 +33,7 @@ class SecurityController extends Controller
     /**
      * Update the user's password.
      */
-    public function update(PasswordUpdateRequest $request, AuditLogger $audit): RedirectResponse
+    public function update(PasswordUpdateRequest $request, AuditLogger $audit, UserSessions $sessions): RedirectResponse
     {
         /** @var User $user */
         $user = $request->user();
@@ -45,6 +46,9 @@ class SecurityController extends Controller
 
             $audit->log('user.password_changed', $user, ['was_temporary' => false], by: $user);
         });
+
+        // Other PCs signed in as this user are signed out; this one stays.
+        $sessions->endOthers($user, $request->session()->getId());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Password updated.')]);
 

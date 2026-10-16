@@ -1,6 +1,6 @@
 # Project History & Handover: AFP Hospital Patient Encoding & Reporting System
 
-_Last updated: 2026-10-18 (Step 6d-4 done) · Read this first in any new Claude conversation about this project._
+_Last updated: 2026-10-18 (Step 6x done) · Read this first in any new Claude conversation about this project._
 
 This file carries over what was discussed in the first planning-and-review conversation (Oct 3–15, 2026), so a new conversation can continue without starting over. The official rules are still in `CLAUDE.md` and the other `planning/` files. This file explains **what was decided, why, where we are, and how to work with me.**
 
@@ -9,10 +9,10 @@ This file carries over what was discussed in the first planning-and-review conve
 ## 0. Quick Start (read this first; it may be all you need)
 | | |
 |---|---|
-| **Current step** | 6d-4 Reports split by category is done and merged (2026-10-18; 6h Settings is also done) |
+| **Current step** | 6x Review fixes is done and merged (2026-10-18; 6h Settings and 6d-4 Reports split by category are also done) |
 | **Next step** | **Prompt 6i: Self-setup and self-care** (includes adding the logo and signature files in `storage/app/private` to the daily backup), then the Security review (`planning/security.md` section 3). Start a **new conversation** for each step. |
-| **Next prompt file** | Prompt 6i (not written yet). Last prompt: `planning/Prompts/prompt-6h.md` |
-| **Last merged commit** | Step 6d-4 Reports split by category merge into main (2026-10-18, not pushed yet; hash: see `git log -1`) |
+| **Next prompt file** | Prompt 6i (not written yet). Last prompt: `planning/Prompts/prompt-6x.md` |
+| **Last merged commit** | Step 6x Review fixes merge into main (2026-10-18, not pushed yet; hash: see `git log -1`) |
 | **Open decisions** | HTTPS vs HTTP on the hospital LAN (Phase 8). The logo and signature files are not backed up yet (fix in 6i, see section 8). |
 
 **Token-saving rules (agreed 2026-10-16):**
@@ -113,6 +113,15 @@ This file carries over what was discussed in the first planning-and-review conve
 - **Button visibility (6h):** Log out in the sidebar is a red outlined button, the Encode "Clear" button and the logo file button are solid or outlined in navy, so they read as clickable.
 - **Reports split by category (6d-4, built 2026-10-18): display only.** The Reports screen has tabs **OPD | ER | Admission | Summary**, one at a time. Nothing is counted differently and the saved month snapshot format is unchanged: the report always holds every category and the tab only chooses what is shown, so the numbers are the same whichever tab is open (tests check this for open and closed months). **Default tab is ER.** The tab is kept in the URL with the period filters (`?category=er`, any letter case); a bad value, an old `?category=` (the former "All") or an array falls back to ER. **The Category dropdown was removed** from the filter panel (the tabs replace it); Generate keeps the open tab. An empty category says "No visits encoded for <category> in this period." Summary holds the grand totals and each category's patients. Saved copies are shown with categories in the usual order (OPD, ER, Admission), because MySQL JSON reorders keys (order only, never a number).
 - **Print and PDF (6d-4):** a choice **"This category"** (the open tab; "This page (Summary)" on the Summary tab) or **"All categories"** (`?scope=all`): the Summary and then OPD, ER and Admission, **each on its own page with its own header and signature block**, following the same signature rules as 6h (pictures only when final, "Not final" note otherwise, frozen block for a closed month). **Print opens a print view in a new tab** (`GET /reports/print`, Admin and Viewer, `ReportPrintController` and `pages/reports/print.tsx`) and starts the browser's Print dialog there; Ctrl+P on the Reports screen still prints the open tab. **Excel always has every sheet** (Summary and one per category) whichever tab is open, and its file name ends in `_all`; PDF names end in the tab (`_er`, `_summary`) or `_all`. **`report.exported` records the tab ("OPD", "ER", "Admission", "Summary") or "All"** (every-page PDF, and Excel). Tabs use arrow keys / Home / End to move focus and Enter or Space to open (see `docs/keyboard-shortcuts.md`).
+- **Review fixes (6x, built 2026-10-18).**
+  - **Sessions end on a new password:** resetting a password (Admin, System Admin, `census:reset-admin-password`) deletes all of that user's rows in the `sessions` table; changing your own password (Settings > Security, or "Choose your new password") deletes your other sessions and keeps the current one. Audit entries are unchanged. This needs the database session driver (`App\Services\UserSessions`; with another driver it does nothing).
+  - **Close month race:** `MonthService::close` takes a lock per month and re-checks "already closed" on the locked `month_closures` row inside the transaction; a refused second close says "<Month> is already closed." and touches nothing. Frozen picture folders are removed on failure only when that request made them.
+  - **Quarter and year snapshots, Option A (decided):** when closing a month makes every month of its quarter (or year) closed, a snapshot of that quarter (or year) is saved in `report_snapshots` under the key `YYYY-Qn` (or `YYYY`), counted by the same `ReportBuilder::build` call, with its own frozen signature block and picture folder. Quarterly and annual reports use it, so a final quarter or year does not change either (a patient correction does not move it). Reopening any month in it deletes the quarter and year snapshots and their pictures. A quarter or year with no snapshot (a month open, or months closed before this existed) is counted live, shows "Not final" ("month still open", or "no saved copy" when all months are closed but the older data has no snapshot) and no signature pictures. **Months closed before 6x get no automatic quarter or year snapshot** (no backfill). Counting rules are unchanged. Nothing lists or reads these keys as months (guarded by a test).
+  - **Snapshot version not bumped:** `ReportBuilder::VERSION` stays 3, because a bump would make every closed month count live. Saved copies of closed months keep their old rank lines; new snapshots merge typed ranks.
+  - **Typed "Other" rank merged like diagnoses:** in the report, typed rank text is cleaned of extra spaces, compared ignoring case, and counted under the listed rank of the same branch when it matches (a rank in Trash too); typed text that matches a rank of another branch is not merged. Report-time only, nothing changes on save.
+  - **Gate and limits:** the Encode page and the patient search check the `encode-visits` Gate in the controller. Print, PDF and Excel share a limiter of 20 a minute per user, the patient search 60 (`report-files` and `patient-search`), with a friendly 429 page / JSON message.
+  - **Duplicate patient race:** saving a new patient (not a returning patient, not "save as new") runs under a lock for the name and birthdate and re-checks inside the save; the second encoder gets the existing duplicate message.
+  - **Login "tries left" message kept (decided):** after a wrong password the login says how many attempts are left before the account locks. The review suggested removing it; I decided to keep it because the LAN users need to know before they lock themselves out.
 - **Security plan:** `planning/security.md`. Every step follows its section 2. HTTPS vs HTTP on the LAN is **still to decide** with hospital IT/CO (Phase 8).
 - **Documentation phase 7.5** added: developer guide, database guide, how-to, learning path, operations guide, user manual, keyboard shortcuts (collected in `docs/keyboard-shortcuts.md` as each screen is built).
 
@@ -129,6 +138,7 @@ This file carries over what was discussed in the first planning-and-review conve
 | 6g Backup screen (status, history, run now, USB copy / test restore reminders) | Done, merged (2026-10-16, not pushed) |
 | 6h Settings (hospital name, office line, signatories, logo, signature pictures; crop; frozen signature block) | Done, merged (2026-10-18, not pushed) |
 | 6d-4 Reports split by category (OPD / ER / Admission / Summary tabs; Print / PDF this category or all; Excel all sheets) | Done, merged (2026-10-18, not pushed) |
+| 6x Review fixes (sessions end on password change, close-month race, quarter and year snapshots, Gate on Encode, throttles, typed Other rank, duplicate patient race) | Done, merged (2026-10-18, not pushed) |
 | **6i Self-setup and self-care** (includes backing up the logo and signature files) | **Next** |
 | Security review (`planning/security.md` section 3) | End of Phase 6 |
 | Phase 7 parallel run (1 month beside Google Sheets) · 7.5 Docs · 8 Deploy · 9 Training | Later |
@@ -164,6 +174,7 @@ This file carries over what was discussed in the first planning-and-review conve
 - PDF exports run with remote resources and PHP execution switched off (`isRemoteEnabled` and `isPhpEnabled` false), so the server needs no outside access for them.
 - **Set `'serve' => false` in `config/filesystems.php`** (the `local` disk) so Laravel's `storage/{path}` route is not registered (also in `planning/security.md` section 4). Backups are not under that disk, but the route should not exist on the server.
 - **PHP upload limits:** set `upload_max_filesize` and `post_max_size` to **at least 2 MB** (the default `upload_max_filesize` is 2M, `post_max_size` 8M). The logo and signature pictures are saved at 1 MB at most; a smaller limit would refuse a valid picture.
+- **Sessions and locks need the right drivers:** keep `SESSION_DRIVER=database` (a password reset or change ends other logins by deleting rows in the `sessions` table) and a cache store that supports locks (`CACHE_STORE=database`, file or redis; not `null`), used by the close-month and new-patient locks.
 - **Backups cover the database only (open item, fix in 6i):** the logo and signature picture files in `storage/app/private` (`logo.*`, `signature-*.*` and the `frozen-signatures/` folder) are **not backed up yet**. If that folder is lost, the database still names the files but the pictures are gone. In 6i, include that folder in the daily backup (and in the restore notes).
 - **Backup folder:** set `BACKUP_PATH` in `.env` to the shared folder on the **second PC** (e.g. `//BACKUP-PC/census-backups`, forward slashes). The default `storage/app/backups` is on the same disk as the database, so it is for testing only. The server's Windows account needs write access, and `MYSQLDUMP_PATH` must point to the real `mysqldump.exe`.
 

@@ -7,6 +7,7 @@ use App\Http\Requests\Auth\ChoosePasswordRequest;
 use App\Models\User;
 use App\Observers\AuditObserver;
 use App\Services\AuditLogger;
+use App\Services\UserSessions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -35,7 +36,7 @@ class ChoosePasswordController extends Controller
         ]);
     }
 
-    public function update(ChoosePasswordRequest $request, AuditLogger $audit): RedirectResponse
+    public function update(ChoosePasswordRequest $request, AuditLogger $audit, UserSessions $sessions): RedirectResponse
     {
         /** @var User $user */
         $user = $request->user();
@@ -53,6 +54,9 @@ class ChoosePasswordController extends Controller
 
             $audit->log('user.password_changed', $user, ['was_temporary' => true], by: $user);
         });
+
+        // Other PCs signed in as this user are signed out; this one stays.
+        $sessions->endOthers($user, $request->session()->getId());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Password changed.']);
 

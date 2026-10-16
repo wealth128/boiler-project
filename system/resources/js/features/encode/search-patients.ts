@@ -2,6 +2,13 @@ import { router } from '@inertiajs/react';
 import PatientSearchController from '@/actions/App/Http/Controllers/Encode/PatientSearchController';
 import type { PatientMatch } from './types';
 
+/** The server said "too many requests" (429): wait a minute. */
+export class SearchRateLimited extends Error {
+    constructor() {
+        super('Too many patient searches');
+    }
+}
+
 /**
  * Ask the server for patients matching a last name or Patient ID
  * (GET /patients/search). Patients in Trash are never returned.
@@ -29,6 +36,10 @@ export async function searchPatients(
         router.reload();
 
         return null;
+    }
+
+    if (response.status === 429) {
+        throw new SearchRateLimited();
     }
 
     if (!response.ok) {

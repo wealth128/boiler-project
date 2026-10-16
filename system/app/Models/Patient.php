@@ -53,6 +53,21 @@ class Patient extends Model
         });
     }
 
+    /**
+     * Is there already a patient (not in Trash) with this last name, first
+     * name and birthdate? The database comparison ignores upper / lower case.
+     * Used by the duplicate guard when a new patient is encoded, before the
+     * save and again inside it.
+     */
+    public static function identityExists(string $lastName, string $firstName, string $birthdate): bool
+    {
+        return static::query()
+            ->where('last_name', trim($lastName))
+            ->where('first_name', trim($firstName))
+            ->whereDate('birthdate', $birthdate)
+            ->exists();
+    }
+
     public static function formatNumber(int $id): string
     {
         return 'P-'.str_pad((string) $id, 6, '0', STR_PAD_LEFT);

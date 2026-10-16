@@ -6,6 +6,7 @@ use App\Enums\Role;
 use App\Models\User;
 use App\Observers\AuditObserver;
 use App\Services\AuditLogger;
+use App\Services\UserSessions;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -30,7 +31,7 @@ class ResetAdminPasswordCommand extends Command
 
     protected $description = "Reset the Admin account's password (for IT on the server)";
 
-    public function handle(AuditLogger $audit): int
+    public function handle(AuditLogger $audit, UserSessions $sessions): int
     {
         $admin = $this->findAdmin();
 
@@ -81,6 +82,9 @@ class ResetAdminPasswordCommand extends Command
                 'temporary' => true,
             ]);
         });
+
+        // Anyone signed in as this Admin is signed out at once.
+        $sessions->endAll($admin);
 
         $this->info('Password changed'.($wasLocked ? ' and account unlocked' : '').'. Give the new password to the Admin privately.');
         $this->line('It is temporary: the Admin must choose a new password right after logging in.');

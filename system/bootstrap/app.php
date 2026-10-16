@@ -57,7 +57,14 @@ return Application::configure(basePath: dirname(__DIR__))
         // patient search) keep their JSON answer.
         $exceptions->respond(function (Response $response, Throwable $e, Request $request) {
             $status = $response->getStatusCode();
-            $friendly = [403, 404, 413, 419, 500, 503];
+            $friendly = [403, 404, 413, 419, 429, 500, 503];
+
+            // Too many requests: a short JSON message for the patient search.
+            if ($status === 429 && $request->expectsJson()) {
+                return response()->json(['message' => 'Too many requests, wait a minute.'], 429, array_filter([
+                    'Retry-After' => $response->headers->get('Retry-After'),
+                ]));
+            }
 
             if (! in_array($status, $friendly, true) || $request->expectsJson()) {
                 return $response;
@@ -85,15 +92,27 @@ return Application::configure(basePath: dirname(__DIR__))
                 $message = 'The file is too large. A picture must be 1 MB or smaller.';
             }
 
+            // Too many Print / PDF / Excel requests in a minute.
+            if ($status === 429) {
+                $message = 'Too many requests, wait a minute and try again.';
+            }
+
             if ($message === 'This action is unauthorized.') {
                 $message = '';
             }
 
-            return Inertia::render('errors/error', [
+            $page = Inertia::render('errors/error', [
                 'status' => $status,
                 'message' => $message !== '' ? $message : null,
             ])
                 ->toResponse($request)
                 ->setStatusCode($status);
+
+            // Keep "wait this long" on a 429, for browsers and scripts.
+            if ($status === 429 && $response->headers->has('Retry-After')) {
+                $page->headers->set('Retry-After', (string) $response->headers->get('Retry-After'));
+            }
+
+            return $page;
         });
     })->create();

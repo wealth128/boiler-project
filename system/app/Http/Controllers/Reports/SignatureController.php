@@ -13,22 +13,24 @@ use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * The signature pictures frozen when a month was closed (FrozenSignatures).
+ * The signature pictures frozen when a month (or a quarter or year) was closed (FrozenSignatures).
  * Same rules as the current signature pictures: a signed-in Admin or Viewer
  * (role:admin,viewer on the route plus the view-reports Gate). The files are
  * on the private disk, never under public/. 404 when the month is not
- * closed or has no such picture.
+ * closed, the quarter or year has no snapshot, or there is no such picture.
  */
 class SignatureController extends Controller
 {
-    public function show(string $period, string $who, FrozenSignatures $frozen, HospitalSettings $hospital): StreamedResponse
+    public function show(string $span, string $who, FrozenSignatures $frozen, HospitalSettings $hospital): StreamedResponse
     {
         Gate::authorize(Permission::ViewReports->value);
 
-        abort_unless(MonthClosure::isClosed($period), 404);
+        // A month must still be closed. A quarter or a year only has a
+        // snapshot while all its months are closed (reopening removes it).
+        abort_if(preg_match('/^\d{4}-\d{2}$/', $span) === 1 && ! MonthClosure::isClosed($span), 404);
 
-        $block = ReportSnapshot::query()->where('period', $period)->first()?->signature_block ?? abort(404);
-        $path = $frozen->file($period, $who, $block) ?? abort(404);
+        $block = ReportSnapshot::query()->where('period', $span)->first()?->signature_block ?? abort(404);
+        $path = $frozen->file($span, $who, $block) ?? abort(404);
 
         return Storage::disk('local')->response($path, null, [
             'Content-Type' => $hospital->imageMime($path),

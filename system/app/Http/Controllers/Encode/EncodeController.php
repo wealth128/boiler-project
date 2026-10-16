@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Encode;
 
 use App\Enums\Category;
+use App\Enums\Permission;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Models\Diagnosis;
@@ -27,6 +28,9 @@ class EncodeController extends Controller
 {
     public function index(Request $request): Response
     {
+        // The route has role:encoder,admin; the Gate is the same rule inside the controller.
+        Gate::authorize(Permission::EncodeVisits->value);
+
         /** @var User $user */
         $user = $request->user();
         $editing = $this->visitToEdit($request);

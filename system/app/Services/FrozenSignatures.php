@@ -5,13 +5,13 @@ namespace App\Services;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * The signature block of a closed month, frozen at close: the Prepared by and
+ * The signature block of a closed month (or of a quarter or year whose months are all closed), frozen at close: the Prepared by and
  * Noted by names and titles, and a copy of the two signature pictures. It is
  * saved with the month's report snapshot, so a closed month keeps showing
  * the signatures it was closed with, even after Settings change.
  *
  * The picture copies live on the private "local" disk, in one folder per
- * month (frozen-signatures/2026-09/), never in public/. They are served only
+ * month, quarter or year (frozen-signatures/2026-09/, 2026-Q3/, 2026/), never in public/. They are served only
  * by SignatureController (signed-in Admin or Viewer). Reopening the month
  * removes the folder together with the snapshot.
  */
@@ -98,7 +98,7 @@ class FrozenSignatures
 
         return $path === null
             ? null
-            : route('reports.signature', ['period' => $period, 'who' => $who, 'v' => Storage::disk('local')->lastModified($path)], false);
+            : route('reports.signature', ['span' => $period, 'who' => $who, 'v' => Storage::disk('local')->lastModified($path)], false);
     }
 
     /**

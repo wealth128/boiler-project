@@ -25,11 +25,14 @@ use App\Services\AuditLogger;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -51,6 +54,19 @@ class AppServiceProvider extends ServiceProvider
         $this->configureDefaults();
         $this->configureAuthorization();
         $this->configureAuditEvents();
+        $this->configureRateLimits();
+    }
+
+    /**
+     * Limits per signed-in user, per minute (a 429 shows "Too many requests"):
+     * - report-files: Print, PDF and Excel together (20). Each one counts
+     *   every report, so this stops a stuck button or script, not normal use.
+     * - patient-search: the Encode search box (60). It searches while typing.
+     */
+    protected function configureRateLimits(): void
+    {
+        RateLimiter::for('report-files', fn (Request $request): Limit => Limit::perMinute(20)->by($request->user()?->id ?? $request->ip()));
+        RateLimiter::for('patient-search', fn (Request $request): Limit => Limit::perMinute(60)->by($request->user()?->id ?? $request->ip()));
     }
 
     /**
