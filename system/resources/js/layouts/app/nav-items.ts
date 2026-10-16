@@ -7,6 +7,7 @@ import hospital from '@/routes/hospital';
 import lists from '@/routes/lists';
 import records from '@/routes/records';
 import reports from '@/routes/reports';
+import system from '@/routes/system';
 import trash from '@/routes/trash';
 import users from '@/routes/users';
 
@@ -90,6 +91,13 @@ export const APP_NAV_ITEMS: AppNavItem[] = [
         href: backups.index(),
         permission: 'view-backups',
         activePath: '/backups',
+        group: 'admin',
+    },
+    {
+        title: 'System health',
+        href: system.health(),
+        permission: 'view-health',
+        activePath: '/system/health',
         group: 'admin',
     },
     {

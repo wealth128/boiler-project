@@ -29,10 +29,15 @@ All software used is free/open source (Laravel, React, MySQL Community, Laragon)
 
 ## 3. Deployment Steps (summary; full steps in the operations guide)
 1. Copy the ready-to-install `system/` folder to the server.
-2. Create the database `patient_census` and the user `census_app` with **only** SELECT, INSERT, UPDATE, DELETE (a separate account runs migrations). MySQL listens on `127.0.0.1` only.
-3. Create `.env` for production: `APP_ENV=production`, `APP_DEBUG=false`, new `APP_KEY` (`php artisan key:generate`), database password, `BACKUP_PATH`, `MYSQLDUMP_PATH`, `LOG_STACK=daily`.
-4. `php artisan migrate --force`, then seed **only** the lists (branches, ranks, diagnoses, age brackets, settings) and the first Admin + System Admin with temporary passwords. **Never run the dev seeder.**
-5. `php artisan config:cache`, `route:cache`, `view:cache`. Set `'serve' => false` in `config/filesystems.php`. Check `php artisan route:list` has no `_inertia/devtools` or `storage/{path}` routes.
+2. **Run `php artisan census:install`** (steps 2 to 5 of the old manual list are now this one command). It checks PHP 8.3+, the extensions and the folders (and stops on any FIX), asks for the MySQL root password (hidden, never saved), then:
+   - creates the database `patient_census` and the user `census_app` with a random password and **only** SELECT, INSERT, UPDATE, DELETE, LOCK TABLES, SHOW VIEW, TRIGGER (MySQL listens on `127.0.0.1` only);
+   - writes the production `.env` (`APP_ENV=production`, `APP_DEBUG=false`, new `APP_KEY`, `LOG_STACK=daily`, `MYSQLDUMP_PATH` found in Laragon, `BACKUP_PATH` asked and tested);
+   - runs the migrations with root, seeds **only** the lists and settings (never the dev seeder), and creates the Admin and System Admin with temporary passwords shown once ("Write these down and put them in the sealed envelope");
+   - runs `config:cache`, `route:cache`, `view:cache` and writes `storage/logs/install.log` (no passwords).
+   On an installed system it refuses; `php artisan census:install --repair` re-checks and fixes missing `.env` keys without touching data.
+3. Still by hand: set `'serve' => false` in `config/filesystems.php`. Check `php artisan route:list` has no `_inertia/devtools` or `storage/{path}` routes.
+4. Run `php artisan census:health`. Everything must be OK or Warning (the scheduler shows Problem until step 7 is done).
+5. The `.env` and the caches were already made by step 2. After any later change to `.env`, run `php artisan census:install --repair` to rebuild the caches.
 6. Web server (Laragon/Apache) points to `system/public`. Windows Firewall: allow only the web port from the LAN; block 3306.
 7. **Windows Task Scheduler:** run `php artisan schedule:run` every minute (this runs the 02:00 backup).
 8. Folder permissions: `storage/` and `bootstrap/cache/` writable by the server account; `.env` and the backup folder readable only by the server account and IT.
@@ -48,15 +53,16 @@ All software used is free/open source (Laravel, React, MySQL Community, Laragon)
 ## 5. Backups: What to Do
 | When | What | Who |
 |---|---|---|
-| Daily 02:00 | Automatic backup to the backup PC, kept 30 days | System |
-| Every morning | Check for the red bar (backup failed) | Admin |
+| Daily 02:00 | Automatic backup to the backup PC, kept 30 days: the database dump **and** the picture zip | System |
+| Every morning | Check for the red bars (backup failed, or automatic tasks not running) and the **System health** page | Admin |
 | Weekly | Copy the latest backup to the USB drive, store it in another room, click "Mark USB copy done" | Admin |
-| Monthly | Test restore into a spare database, compare record counts, click "Mark test restore done" | IT |
-| Before any system update | Run "Run backup now" first | IT |
+| Monthly | Test restore on a spare PC with `php artisan census:restore <file>`, compare record counts, click "Mark test restore done" | IT |
+| Before any system update | Nothing extra: `php artisan census:update` takes a backup first and stops if it fails | IT |
+| Any time | `php artisan census:health` (exit code 1 means a Problem) | IT |
 
-**Restore (when the server fails), in short:** set up a new server (section 2–3 steps 1–8), restore the latest backup file into `patient_census`, check record counts and the last encoded visits, then let users back in. Anything encoded after the last backup must be re-encoded from paper. Full steps in the operations guide.
+**Restore (when the server fails), in short:** set up a new server (section 2, then `census:install`, then steps 6 to 8 of section 3), then run `php artisan census:restore <backup file>` with the latest backup in `BACKUP_PATH`. It asks you to type `RESTORE`, takes a safety backup, asks for the MySQL root password (hidden), loads the dump, unzips the matching picture zip, migrates, signs everyone out and prints the record counts and the last encoded visit. Check those, then let users back in. Anything encoded after the last backup must be re-encoded from paper. If a restore or update fails, the site stays in maintenance mode on purpose: the command prints `php artisan up` and the `census:restore` command that undoes it. Full steps in the operations guide.
 
-**Before handover:** do one complete practice restore on a spare PC and record the result.
+**Before handover:** do one complete practice **install** (`census:install`), **update** (`census:update`) and **restore** (`census:restore`) on a spare PC and record the result. These three commands were built in Step 6i-1 and tested only with fakes.
 
 ## 6. Accounts & Access at Handover
 - [ ] Remove or deactivate every developer/test account; make sure no dev users exist in production.
@@ -82,7 +88,7 @@ All software used is free/open source (Laravel, React, MySQL Community, Laragon)
 | Yearly | Review lists (diagnoses, ranks, brackets) with the office; review this plan and the security plan | Admin / IT |
 | On any staff change | Create, deactivate or move accounts the same day | Admin / System Admin |
 
-**Updating the system later** (offline): build the new version on a dev PC, back up the server, copy the new files (keep `.env` and `storage/`), run `php artisan migrate --force` and clear/rebuild the caches, then smoke test. Steps in the operations guide.
+**Updating the system later** (offline): build the new version on a dev PC, copy the new files over the old ones (keep `.env` and `storage/`), then run `php artisan census:update`. It backs up first (stops if that fails), puts the site in maintenance mode, asks for the MySQL root password, runs `migrate --force`, rebuilds the caches, brings the site back and writes the audit entry `system.updated`. Then smoke test. Steps in the operations guide.
 
 ## 9. Support After Handover
 - Who to call first (hospital IT), and the developer's contact and support period, if any, written on the acceptance form.

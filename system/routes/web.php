@@ -16,6 +16,7 @@ use App\Http\Controllers\Reports\ReportPrintController;
 use App\Http\Controllers\Reports\SignatureController;
 use App\Http\Controllers\Settings\HospitalController;
 use App\Http\Controllers\Settings\ListController;
+use App\Http\Controllers\System\HealthController;
 use App\Http\Controllers\Trash\TrashController;
 use App\Http\Controllers\Users\UserAccountController;
 use App\Http\Controllers\Users\UserController;
@@ -158,6 +159,11 @@ Route::middleware('auth')->group(function () {
         Route::post('backups/marks/{type}', [BackupController::class, 'mark'])
             ->whereIn('type', ['usb-copy', 'test-restore'])
             ->name('backups.mark');
+    });
+
+    // --- System health ------------------------------------------ Admin
+    Route::middleware('role:admin')->group(function () {
+        Route::get('system/health', HealthController::class)->name('system.health');
     });
 });
 

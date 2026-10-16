@@ -23,6 +23,9 @@ The system holds patient names, birthdates and diagnoses, so it is treated as se
 | Every change written to the audit log, which can't be edited or deleted | Step 5 |
 | Delete goes to Trash first, with a reason; permanent delete needs the ID typed | Step 5 |
 | Daily backup at 02:00, kept 30 days, each run recorded | Step 5 |
+| Every backup also zips the picture files; a run succeeds only if both files were written | Step 6i-1 |
+| Red bar for Admin when the scheduler stops (no backup, no 8 PM sign-out); System health page and `census:health` | Step 6i-1 |
+| `census:install`, `census:update`, `census:restore`: root password typed hidden, never stored or logged; restore needs `RESTORE` typed, takes a safety backup first and refuses files outside `BACKUP_PATH` | Step 6i-1 |
 | Pages share only the user's id, name, username, role and office | Step 2.5 |
 | AFP serial number not collected | Phase 1 |
 
@@ -61,7 +64,8 @@ A full check of the finished system, by Claude Code and then by me:
 
 **MySQL**
 - Listens on `127.0.0.1` only (not reachable from other PCs).
-- `census_app` gets only SELECT, INSERT, UPDATE, DELETE on `patient_census` for daily use. Migrations run with a separate account during updates. The `root` password is strong and kept by IT only.
+- `census_app` gets only these rights, on `patient_census` only (created by `php artisan census:install`, step 6i-1): **SELECT, INSERT, UPDATE, DELETE** for daily use, plus the least `mysqldump` needs for the backup: **LOCK TABLES, SHOW VIEW, TRIGGER**. No CREATE, ALTER, DROP, GRANT or global rights. Its password is random (32 letters and numbers) and lives only in `.env`.
+- Migrations run with `root` during `census:install`, `census:update` and `census:restore`. The `root` password is strong and kept by IT only. The commands ask for it with hidden typing and keep it in memory only: it is never written to `.env`, a log, the audit log or the config cache. (Loading a backup needs a temporary MySQL login file with owner-only rights, deleted right after.)
 
 **Windows server PC**
 - Firewall: allow only the web port (80 or 443) from the hospital LAN. Block MySQL's port 3306 from outside.

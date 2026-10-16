@@ -104,6 +104,9 @@ With Inertia there's no separate API. Each URL below is a Laravel route. **GET**
 | | DELETE | `/trash/{type}/{id}` · `/trash` | Delete permanently / Empty Trash | Admin |
 | Backup | GET · POST | `/backups` · `/backups/run` | Last backup status / run now | Admin |
 | | POST | `/backups/marks/{type}` | Mark the weekly USB copy / monthly test restore as done (`{type}` = `usb-copy` or `test-restore`) | Admin |
+| System | GET | `/system/health` | System health: each check as OK / Warning / Problem with a "What to do" line (`view-health` Gate). The same checks run in the terminal with `php artisan census:health` | Admin |
+
+**Terminal commands for IT** (run on the server, no route): `census:install` (new server setup, `--repair` to re-check), `census:update` (after copying a new version), `census:restore {file}` (put a backup back), `census:health`, `census:reset-admin-password`, `backup:run`.
 
 Every route goes through `auth` plus a `role:` middleware. The detailed rules (same-day edit, closed month) are checked in Policies.
 

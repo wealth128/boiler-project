@@ -70,6 +70,11 @@ export function StatusPanel({ status, marks }: StatusPanelProps) {
                                 {last.size_mb !== null &&
                                     ` · ${last.size_mb.toFixed(2)} MB`}
                             </span>
+                            <span className="block font-mono text-xs break-all text-muted-foreground">
+                                {last.zip_name ?? 'No picture zip'}
+                                {last.zip_size_mb !== null &&
+                                    ` · ${last.zip_size_mb.toFixed(2)} MB`}
+                            </span>
                         </>
                     ) : (
                         'None yet'

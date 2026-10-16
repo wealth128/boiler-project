@@ -85,8 +85,18 @@ export default function BackupsIndex({ status, marks, runs }: Props) {
         },
         {
             key: 'file',
-            header: 'File',
-            cell: (run) => run.file_name ?? '—',
+            header: 'Files',
+            cell: (run) =>
+                run.file_name === null ? (
+                    '—'
+                ) : (
+                    <>
+                        <span className="block">{run.file_name}</span>
+                        <span className="block text-muted-foreground">
+                            {run.zip_name ?? 'no picture zip'}
+                        </span>
+                    </>
+                ),
             className: 'font-mono text-xs break-all',
         },
         {
@@ -94,7 +104,20 @@ export default function BackupsIndex({ status, marks, runs }: Props) {
             header: 'Size',
             align: 'right',
             cell: (run) =>
-                run.size_mb === null ? '—' : `${run.size_mb.toFixed(2)} MB`,
+                run.size_mb === null ? (
+                    '—'
+                ) : (
+                    <>
+                        <span className="block">
+                            {run.size_mb.toFixed(2)} MB
+                        </span>
+                        <span className="block text-muted-foreground">
+                            {run.zip_size_mb === null
+                                ? '—'
+                                : `${run.zip_size_mb.toFixed(2)} MB`}
+                        </span>
+                    </>
+                ),
             className: 'whitespace-nowrap',
         },
         {

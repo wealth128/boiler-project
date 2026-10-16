@@ -6,6 +6,8 @@ export type BackupStatusInfo = {
         finished_at: string;
         file_name: string | null;
         size_mb: number | null;
+        zip_name: string | null;
+        zip_size_mb: number | null;
     } | null;
     next_run: string;
     keep_days: number;
@@ -32,6 +34,9 @@ export type BackupRunRow = {
     status: 'success' | 'failed';
     file_name: string | null;
     size_mb: number | null;
+    /** The picture files zip next to the dump (null for runs made before it existed). */
+    zip_name: string | null;
+    zip_size_mb: number | null;
     /** Failed runs only. Plain text: React escapes it. */
     error: string | null;
 };
