@@ -6,6 +6,7 @@ use App\Enums\Role;
 use App\Models\Setting;
 use App\Models\User;
 use App\Services\BackupMonitor;
+use App\Services\SchedulerHeartbeat;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -48,6 +49,8 @@ class HandleInertiaRequests extends Middleware
             'hospital' => fn (): array => $this->hospital(),
             // Backup warnings at the top of every page: Admin only.
             'backupAlerts' => fn (): array => $request->user()?->role === Role::Admin ? app(BackupMonitor::class)->alerts() : [],
+            // Red bar when the scheduler stopped (no backup, no 8 PM sign-out): Admin only.
+            'schedulerAlert' => fn (): ?string => $request->user()?->role === Role::Admin ? app(SchedulerHeartbeat::class)->alert() : null,
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }

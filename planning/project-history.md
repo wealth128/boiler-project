@@ -1,6 +1,6 @@
 # Project History & Handover: AFP Hospital Patient Encoding & Reporting System
 
-_Last updated: 2026-10-18 (Step 6x done) · Read this first in any new Claude conversation about this project._
+_Last updated: 2026-10-18 (Step 6i-1 done) · Read this first in any new Claude conversation about this project._
 
 This file carries over what was discussed in the first planning-and-review conversation (Oct 3–15, 2026), so a new conversation can continue without starting over. The official rules are still in `CLAUDE.md` and the other `planning/` files. This file explains **what was decided, why, where we are, and how to work with me.**
 
@@ -9,11 +9,12 @@ This file carries over what was discussed in the first planning-and-review conve
 ## 0. Quick Start (read this first; it may be all you need)
 | | |
 |---|---|
-| **Current step** | 6x Review fixes is done and merged (2026-10-18; 6h Settings and 6d-4 Reports split by category are also done) |
-| **Next step** | **Prompt 6i: Self-setup and self-care** (includes adding the logo and signature files in `storage/app/private` to the daily backup), then the Security review (`planning/security.md` section 3). Start a **new conversation** for each step. |
-| **Next prompt file** | Prompt 6i (not written yet). Last prompt: `planning/Prompts/prompt-6x.md` |
-| **Last merged commit** | Step 6x Review fixes merge into main (2026-10-18, not pushed yet; hash: see `git log -1`) |
-| **Open decisions** | HTTPS vs HTTP on the hospital LAN (Phase 8). The logo and signature files are not backed up yet (fix in 6i, see section 8). |
+| **Current step** | **6i-1 Self-setup and self-care is done** and merged (2026-10-18): picture zip in every backup, `census:install` / `census:update` / `census:restore` / `census:health`, scheduler heartbeat bar, System health page |
+| **Next step** | **6i-2 Windows scripts** (double-click helpers around these commands), then the Security review (`planning/security.md` section 3). Start a **new conversation** for each step. |
+| **Still to prove** | `census:install`, `census:update` and `census:restore` were only tested with fakes (no real MySQL root login, no real restore). **They need a real test on a spare PC** before handover. |
+| **Next prompt file** | Prompt 6i-2 (not written yet). Last prompt: `planning/Prompts/prompt-6i.md` |
+| **Last merged commit** | Step 6i-1 merge into main (2026-10-18, not pushed yet; hash: see `git log -1`) |
+| **Open decisions** | HTTPS vs HTTP on the hospital LAN (Phase 8). |
 
 **Token-saving rules (agreed 2026-10-16):**
 - Start a **new conversation for each major step** (6f, 6g, 6h, security review…). Give it only this file plus the step's prompt; read other files or chat history only when I say so.
@@ -88,6 +89,14 @@ This file carries over what was discussed in the first planning-and-review conve
   - **Run backup now** runs `BackupService` once behind a lock shared with the scheduler and `backup:run` ("A backup is already running."). It writes the audit entry `backup.run_manual`.
   - Error text on screen hides the database password and login. `mysqldump` gets `SystemRoot` explicitly on Windows, or it fails with "Can't create TCP/IP socket (10106)" when started from the web server.
 
+- **Self-setup and self-care (6i-1, decided 2026-10-18):**
+  - **Every backup has two files:** the database dump and a zip of `storage/app/private` (logo, signatures, frozen signature folders) with the same date stamp (`patient_census_files_YYYY-MM-DD_HHMMSS.zip`). A run is **Success only if both were written**; if either fails, both are deleted and the run is Failed. The 30-day cleanup removes old zips too. `backup_runs` keeps `zip_name` and `zip_size_bytes`; the Backups page shows both files.
+  - **Scheduler heartbeat bar:** the scheduler saves a "last ran" time every minute. Older than 5 minutes (or never), Admin sees a red bar on every page with a link to System health. It is a separate shared prop (`schedulerAlert`), Admin only.
+  - **System health page:** Admin only (`/system/health`, `view-health` Gate, role:admin; other roles get 403). 11 checks as OK / Warning / Problem with one "What to do" line. Shows no passwords, `.env` contents or connection details. `php artisan census:health` runs the same checks and exits 1 on any Problem.
+  - **`census:install`** (`--repair` for an installed system), **`census:update`**, **`census:restore {file}`**: the MySQL root password is typed hidden and kept in memory only; never in `.env`, logs or the audit log. `census_app` gets only SELECT, INSERT, UPDATE, DELETE, LOCK TABLES, SHOW VIEW, TRIGGER (`planning/security.md` section 4). The dev seeder never runs.
+  - **The 8 small decisions Claude Code made, approved:** (1) update and restore ask for the root password before `down`, so a typo never leaves the site in maintenance mode; (2) restore drops and recreates the database before loading; (3) restore deletes all sessions afterwards, so everyone logs in again; (4) the restore safety backup skips the 30-day cleanup, so it cannot delete the file being restored; (5) if update or restore fails, the site stays in maintenance mode on purpose and the command prints the next steps (`php artisan up`, or `php artisan census:restore <safety backup>`); (6) caches are rebuilt in a new PHP process so they read the new `.env`; (7) the install asks every question first, then changes things; (8) `census_app` is created for `localhost` only, with a login test at the end.
+  - **Temporary MySQL login file** (only when loading a backup): written to the system temp folder, never under `storage/app/private` (it is zipped into backups), owner-only, deleted in a `finally` block even when loading fails. Tested.
+
 ### Stack
 - Laravel 13 (PHP 8.3) + official React starter kit (Inertia, TypeScript, Tailwind), Fortify, Wayfinder, Pest, MySQL. Monolith. **No Sanctum, no Spatie.** Allowed packages: maatwebsite/excel, barryvdh/laravel-dompdf. vite-plus 0.3.3 (when updating it, update the `vite` alias in package.json to match).
 - Databases: `patient_census` (dev), `patient_census_test` (**tests only**). User `census_app`.
@@ -125,7 +134,7 @@ This file carries over what was discussed in the first planning-and-review conve
 - **Security plan:** `planning/security.md`. Every step follows its section 2. HTTPS vs HTTP on the LAN is **still to decide** with hospital IT/CO (Phase 8).
 - **Documentation phase 7.5** added: developer guide, database guide, how-to, learning path, operations guide, user manual, keyboard shortcuts (collected in `docs/keyboard-shortcuts.md` as each screen is built).
 
-## 5. Where We Are (2026-10-18)
+## 5. Where We Are (2026-10-18, after 6i-1)
 | Step | Status |
 |---|---|
 | 1–5, 5b, 5c (foundation, login, RBAC, audit, Trash service, backup, temp passwords) | Done, merged |
@@ -139,7 +148,8 @@ This file carries over what was discussed in the first planning-and-review conve
 | 6h Settings (hospital name, office line, signatories, logo, signature pictures; crop; frozen signature block) | Done, merged (2026-10-18, not pushed) |
 | 6d-4 Reports split by category (OPD / ER / Admission / Summary tabs; Print / PDF this category or all; Excel all sheets) | Done, merged (2026-10-18, not pushed) |
 | 6x Review fixes (sessions end on password change, close-month race, quarter and year snapshots, Gate on Encode, throttles, typed Other rank, duplicate patient race) | Done, merged (2026-10-18, not pushed) |
-| **6i Self-setup and self-care** (includes backing up the logo and signature files) | **Next** |
+| 6i-1 Self-setup and self-care (picture zip in every backup, `census:install` / `update` / `restore` / `health`, scheduler heartbeat bar, System health page) | Done, merged (2026-10-18, not pushed). Commands tested with fakes only: **real test on a spare PC still to do** |
+| **6i-2 Windows scripts** | **Next** |
 | Security review (`planning/security.md` section 3) | End of Phase 6 |
 | Phase 7 parallel run (1 month beside Google Sheets) · 7.5 Docs · 8 Deploy · 9 Training | Later |
 
@@ -175,7 +185,7 @@ This file carries over what was discussed in the first planning-and-review conve
 - **Set `'serve' => false` in `config/filesystems.php`** (the `local` disk) so Laravel's `storage/{path}` route is not registered (also in `planning/security.md` section 4). Backups are not under that disk, but the route should not exist on the server.
 - **PHP upload limits:** set `upload_max_filesize` and `post_max_size` to **at least 2 MB** (the default `upload_max_filesize` is 2M, `post_max_size` 8M). The logo and signature pictures are saved at 1 MB at most; a smaller limit would refuse a valid picture.
 - **Sessions and locks need the right drivers:** keep `SESSION_DRIVER=database` (a password reset or change ends other logins by deleting rows in the `sessions` table) and a cache store that supports locks (`CACHE_STORE=database`, file or redis; not `null`), used by the close-month and new-patient locks.
-- **Backups cover the database only (open item, fix in 6i):** the logo and signature picture files in `storage/app/private` (`logo.*`, `signature-*.*` and the `frozen-signatures/` folder) are **not backed up yet**. If that folder is lost, the database still names the files but the pictures are gone. In 6i, include that folder in the daily backup (and in the restore notes).
+- **Backups cover the database and the pictures (done in 6i-1):** every backup also zips `storage/app/private` (`logo.*`, `signature-*.*`, `frozen-signatures/`). `census:restore` unzips the matching picture zip back; if it is missing, it warns and continues.
 - **Backup folder:** set `BACKUP_PATH` in `.env` to the shared folder on the **second PC** (e.g. `//BACKUP-PC/census-backups`, forward slashes). The default `storage/app/backups` is on the same disk as the database, so it is for testing only. The server's Windows account needs write access, and `MYSQLDUMP_PATH` must point to the real `mysqldump.exe`.
 
 ## 9. Lessons Learned

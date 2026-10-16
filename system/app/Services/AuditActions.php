@@ -25,8 +25,10 @@ final class AuditActions
 
     public const SETTINGS = 'Settings';
 
+    public const SYSTEM = 'System';
+
     /** Order of the groups in the Action filter. */
-    public const GROUPS = [self::VISITS, self::PATIENTS, self::MONTHS, self::LISTS, self::USERS, self::TRASH, self::BACKUPS, self::SETTINGS];
+    public const GROUPS = [self::VISITS, self::PATIENTS, self::MONTHS, self::LISTS, self::USERS, self::TRASH, self::BACKUPS, self::SETTINGS, self::SYSTEM];
 
     /**
      * Code => [label, group].
@@ -72,6 +74,9 @@ final class AuditActions
         'settings.logo_removed' => ['Hospital logo removed', self::SETTINGS],
         'settings.signature_changed' => ['Signature picture changed', self::SETTINGS],
         'settings.signature_removed' => ['Signature picture removed', self::SETTINGS],
+
+        'system.updated' => ['System updated', self::SYSTEM],
+        'system.restored' => ['System restored from a backup', self::SYSTEM],
 
         'visit.deleted' => ['Visit moved to Trash', self::TRASH],
         'visit.restored' => ['Visit restored', self::TRASH],

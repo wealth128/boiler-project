@@ -58,6 +58,8 @@ class BackupController extends Controller
                     'finished_at' => $success->finished_at->toIso8601String(),
                     'file_name' => $success->file_name,
                     'size_mb' => $this->megabytes($success->size_bytes),
+                    'zip_name' => $success->zip_name,
+                    'zip_size_mb' => $this->megabytes($success->zip_size_bytes),
                 ],
                 'next_run' => $this->monitor->nextRun()->toIso8601String(),
                 'keep_days' => (int) config('census.backup.keep_days'),
@@ -73,6 +75,8 @@ class BackupController extends Controller
                     'status' => $run->status->value,
                     'file_name' => $run->file_name,
                     'size_mb' => $this->megabytes($run->size_bytes),
+                    'zip_name' => $run->zip_name,
+                    'zip_size_mb' => $this->megabytes($run->zip_size_bytes),
                     // Only failures show the message (a success only says how many old files were removed).
                     'error' => $run->status === BackupStatus::Failed ? $this->monitor->scrub((string) $run->message) : null,
                 ])->values()->all(),
@@ -107,10 +111,11 @@ class BackupController extends Controller
         }
 
         $size = BackupMonitor::megabytes($run->size_bytes);
+        $zipSize = BackupMonitor::megabytes($run->zip_size_bytes);
 
-        $this->audit->log('backup.run_manual', $run, ['label' => $run->file_name, 'result' => 'success', 'size' => $size]);
+        $this->audit->log('backup.run_manual', $run, ['label' => $run->file_name, 'result' => 'success', 'size' => $size, 'zip' => $run->zip_name, 'zip_size' => $zipSize]);
 
-        return $this->toast('success', "Backup finished: {$run->file_name}, {$size}");
+        return $this->toast('success', "Backup finished: {$run->file_name}, {$size}, and the pictures zip, {$zipSize}");
     }
 
     /**

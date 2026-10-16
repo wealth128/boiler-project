@@ -26,7 +26,26 @@ return [
         'mysqldump_path' => env('MYSQLDUMP_PATH') ?: 'mysqldump',
         'path' => env('BACKUP_PATH') ?: storage_path('app/backups'),
         'keep_days' => 30,
+        // The picture files (logo, signatures, frozen signature folders) that
+        // every backup zips next to the database dump.
+        'files_path' => storage_path('app/private'),
     ],
+
+    // Shown on the System health page and saved in the audit log by
+    // census:update. Change it with each release.
+    'version' => '1.0.0',
+
+    // Files the setup commands (census:install, census:update,
+    // census:restore) read and write. Only tests change these.
+    'paths' => [
+        'env' => base_path('.env'),
+        'env_example' => base_path('.env.example'),
+        'install_log' => storage_path('logs/install.log'),
+    ],
+
+    // The scheduler saves a "last ran" time every minute. Older than this
+    // many minutes, Admin sees a red bar (planning/deployment-handover.md).
+    'scheduler_stale_minutes' => 5,
 
     // Passwords for the first Admin and System Admin accounts. Only the
     // seeder reads them. There is no fallback: seeding stops if they are empty.

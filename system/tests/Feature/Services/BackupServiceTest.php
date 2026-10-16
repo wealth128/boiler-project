@@ -165,7 +165,7 @@ it('keeps the last 30 days and deletes older backups', function () {
         ->and(file_exists($recent))->toBeTrue()
         ->and(file_exists($this->folder.'/notes.txt'))->toBeTrue()
         ->and(file_exists($this->folder.'/other_app_2020-01-01_000000.sql'))->toBeTrue()
-        ->and($run->message)->toBe('Removed 1 backup(s) older than 30 days.');
+        ->and($run->message)->toBe('Removed 1 old backup file(s) older than 30 days.');
 });
 
 it('deletes no old backups after a failed run', function () {

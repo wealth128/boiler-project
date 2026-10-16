@@ -44,11 +44,13 @@ Office PCs (browser)  ──LAN──▶  Server PC (Laragon)
 | Copy | Where | How often |
 |---|---|---|
 | 1. Live database | Server PC (MySQL) | Always |
-| 2. Backup file | Second PC on the network | **Daily**, automatic (`mysqldump` via the Laravel scheduler), keep 30 days |
-| 3. Backup file | External USB drive, stored in a different room or locked cabinet | **Weekly**, plugged in and copied by Admin |
+| 2. Backup files | Second PC on the network | **Daily**, automatic (via the Laravel scheduler), keep 30 days. Each backup is **two files with the same date stamp**: the database dump (`patient_census_YYYY-MM-DD_HHMMSS.sql`, from `mysqldump`) and the picture zip (`patient_census_files_YYYY-MM-DD_HHMMSS.zip`: logo, signatures, frozen signature folders from `storage/app/private`) |
+| 3. Backup files | External USB drive, stored in a different room or locked cabinet | **Weekly**, plugged in and copied by Admin (both files) |
 
 - Data is lost only if **all three** fail at the same time.
-- If the backup fails, it shows on the Admin screen.
+- A backup counts as **Success only if both files were written**. If it fails, it shows on the Admin screen.
+- The scheduler saves a "last ran" time every minute. If it is more than 5 minutes old, Admin sees a red bar (no backup and no 8 PM sign-out would happen). The **System health** page (Admin) and `php artisan census:health` check backups, disk space, the scheduler and the server settings.
+- Restore with `php artisan census:restore <file>`: it takes a safety backup first, loads the dump and unzips the matching picture zip.
 - **Test restore once a month** onto a spare PC to prove the backups work.
 
 ## 5. Server PC Setup (outline, detailed in Phase 8)

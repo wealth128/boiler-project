@@ -16,10 +16,15 @@ use Throwable;
  *
  * 1. Runs mysqldump (MYSQLDUMP_PATH) into BACKUP_PATH as
  *    patient_census_YYYY-MM-DD_HHMMSS.sql.
- * 2. After a successful backup, deletes this app's backup files older than
- *    30 days from that folder. Other files are never touched, and nothing
- *    is deleted after a failed run, so old copies survive a broken backup.
- * 3. Records the run in backup_runs: success, or failed with the error.
+ * 2. Zips the picture files (storage/app/private: logo, signatures, frozen
+ *    signature folders) next to it, with the same date stamp:
+ *    patient_census_files_YYYY-MM-DD_HHMMSS.zip.
+ *    A run is a success only if BOTH files were written.
+ * 3. After a successful backup, deletes this app's backup files (dumps and
+ *    zips) older than 30 days from that folder. Other files are never
+ *    touched, and nothing is deleted after a failed run, so old copies
+ *    survive a broken backup.
+ * 4. Records the run in backup_runs: success, or failed with the error.
  *    Failures also go to the Laravel log. Admin sees the last run.
  *
  * The database password goes to mysqldump in a temporary option file
@@ -30,7 +35,9 @@ class BackupService
 {
     public const FILE_PREFIX = 'patient_census_';
 
-    private const FILE_PATTERN = '/^patient_census_(\d{4}-\d{2}-\d{2}_\d{6})\.sql$/';
+    public const FILE_PATTERN = '/^patient_census_(\d{4}-\d{2}-\d{2}_\d{6})\.sql$/';
+
+    public const ZIP_PATTERN = '/^patient_census_files_(\d{4}-\d{2}-\d{2}_\d{6})\.zip$/';
 
     /** Name of the lock that keeps two backups from running together. */
     public const LOCK = 'backup-run';
@@ -39,7 +46,7 @@ class BackupService
      * Run a backup unless one is already running (from the scheduler, the
      * command or the Backups screen). Returns null when it is busy.
      */
-    public function runIfIdle(): ?BackupRun
+    public function runIfIdle(bool $prune = true): ?BackupRun
     {
         // Longer than the mysqldump timeout, so a crash frees the lock by itself.
         $lock = Cache::lock(self::LOCK, 3700);
@@ -49,18 +56,34 @@ class BackupService
         }
 
         try {
-            return $this->run();
+            return $this->run($prune);
         } finally {
             $lock->release();
         }
     }
 
-    public function run(): BackupRun
+    public function __construct(private readonly FolderZipper $zipper) {}
+
+    /** The picture zip that belongs to a database dump, by the shared date stamp. */
+    public static function zipNameFor(string $sqlName): ?string
+    {
+        return preg_match(self::FILE_PATTERN, $sqlName, $match) === 1 ? 'patient_census_files_'.$match[1].'.zip' : null;
+    }
+
+    /**
+     * @param  bool  $prune  Delete backups older than 30 days after a success.
+     *                       census:restore passes false for its safety backup, so
+     *                       cleaning up can never delete the file being restored.
+     */
+    public function run(bool $prune = true): BackupRun
     {
         $startedAt = CarbonImmutable::now();
         $folder = rtrim((string) config('census.backup.path'), '\\/');
-        $fileName = self::FILE_PREFIX.$startedAt->format('Y-m-d_His').'.sql';
+        $stamp = $startedAt->format('Y-m-d_His');
+        $fileName = self::FILE_PREFIX.$stamp.'.sql';
+        $zipName = 'patient_census_files_'.$stamp.'.zip';
         $file = $folder.DIRECTORY_SEPARATOR.$fileName;
+        $zipFile = $folder.DIRECTORY_SEPARATOR.$zipName;
         $optionFile = null;
 
         try {
@@ -71,7 +94,7 @@ class BackupService
             $optionFile = $this->writeOptionFile();
 
             $result = Process::timeout(3600)
-                ->env($this->windowsEnvironment())
+                ->env(self::windowsEnvironment())
                 ->run($this->command($optionFile, $file));
 
             if ($result->failed()) {
@@ -87,13 +110,27 @@ class BackupService
             }
 
             $size = (int) filesize($file);
-            $removed = $this->deleteOldBackups($folder);
+
+            $this->zipper->zip((string) config('census.backup.files_path'), $zipFile, [$folder]);
+
+            clearstatcache(true, $zipFile);
+
+            if (! is_file($zipFile) || filesize($zipFile) === 0) {
+                throw new RuntimeException('The picture backup (zip) is missing or empty.');
+            }
+
+            $zipSize = (int) filesize($zipFile);
+            $removed = $prune ? $this->deleteOldBackups($folder) : 0;
 
             return $this->record($startedAt, BackupStatus::Success, $fileName, $size,
-                $removed > 0 ? "Removed {$removed} backup(s) older than ".config('census.backup.keep_days').' days.' : null);
+                $removed > 0 ? "Removed {$removed} old backup file(s) older than ".config('census.backup.keep_days').' days.' : null,
+                $zipName, $zipSize);
         } catch (Throwable $e) {
-            if (is_file($file)) {
-                @unlink($file); // never leave half a backup behind
+            // Never leave half a backup behind: both files go, or neither stays.
+            foreach ([$file, $zipFile] as $partial) {
+                if (is_file($partial)) {
+                    @unlink($partial);
+                }
             }
 
             Log::error('Backup failed: '.$e->getMessage(), ['folder' => $folder]);
@@ -114,7 +151,7 @@ class BackupService
      *
      * @return array<string, string>
      */
-    private function windowsEnvironment(): array
+    public static function windowsEnvironment(): array
     {
         if (DIRECTORY_SEPARATOR !== '\\') {
             return [];
@@ -181,7 +218,7 @@ class BackupService
         $removed = 0;
 
         foreach (scandir($folder) ?: [] as $name) {
-            if (! preg_match(self::FILE_PATTERN, $name, $match)) {
+            if (! preg_match(self::FILE_PATTERN, $name, $match) && ! preg_match(self::ZIP_PATTERN, $name, $match)) {
                 continue;
             }
 
@@ -195,7 +232,7 @@ class BackupService
         return $removed;
     }
 
-    private function record(CarbonImmutable $startedAt, BackupStatus $status, ?string $fileName, ?int $size, ?string $message): BackupRun
+    private function record(CarbonImmutable $startedAt, BackupStatus $status, ?string $fileName, ?int $size, ?string $message, ?string $zipName = null, ?int $zipSize = null): BackupRun
     {
         return BackupRun::create([
             'started_at' => $startedAt,
@@ -203,6 +240,8 @@ class BackupService
             'status' => $status,
             'file_name' => $fileName,
             'size_bytes' => $size,
+            'zip_name' => $zipName,
+            'zip_size_bytes' => $zipSize,
             'message' => $message,
         ]);
     }

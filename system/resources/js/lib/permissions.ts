@@ -23,6 +23,7 @@ export const PERMISSIONS = {
     'manage-trash': ['admin'],
     'view-backups': ['admin'],
     'manage-settings': ['admin'],
+    'view-health': ['admin'],
 } as const satisfies Record<string, readonly Role[]>;
 
 export type Permission = keyof typeof PERMISSIONS;

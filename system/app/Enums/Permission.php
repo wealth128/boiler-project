@@ -26,6 +26,7 @@ enum Permission: string
     case ManageTrash = 'manage-trash';
     case ViewBackups = 'view-backups';
     case ManageSettings = 'manage-settings';
+    case ViewHealth = 'view-health';
 
     /**
      * Roles that have this permission.
@@ -44,7 +45,8 @@ enum Permission: string
             self::ViewAudit,
             self::ManageTrash,
             self::ViewBackups,
-            self::ManageSettings => [Role::Admin],
+            self::ManageSettings,
+            self::ViewHealth => [Role::Admin],
         };
     }
 

@@ -16,9 +16,11 @@ use Illuminate\Support\Carbon;
  * @property BackupStatus $status
  * @property string|null $file_name
  * @property int|null $size_bytes
+ * @property string|null $zip_name
+ * @property int|null $zip_size_bytes
  * @property string|null $message
  */
-#[Fillable(['started_at', 'finished_at', 'status', 'file_name', 'size_bytes', 'message'])]
+#[Fillable(['started_at', 'finished_at', 'status', 'file_name', 'size_bytes', 'zip_name', 'zip_size_bytes', 'message'])]
 class BackupRun extends Model
 {
     public $timestamps = false;
@@ -30,6 +32,7 @@ class BackupRun extends Model
             'finished_at' => 'datetime',
             'status' => BackupStatus::class,
             'size_bytes' => 'integer',
+            'zip_size_bytes' => 'integer',
         ];
     }
 }

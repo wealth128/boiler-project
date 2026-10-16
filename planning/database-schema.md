@@ -163,7 +163,8 @@ On reopen, the month's copy is discarded together with its frozen signature pict
 | id | PK | |
 | started_at / finished_at | datetime | |
 | status | enum('success','failed') | Failures show on the Admin screen |
-| file_name / size_bytes | varchar / bigint | |
+| file_name / size_bytes | varchar / bigint | The database dump |
+| zip_name / zip_size_bytes | varchar / bigint, null | The picture files zip (`storage/app/private`: logo, signatures) taken with the same date stamp (added in Step 6i-1). Null for runs made before it and for failed runs. A run is `success` only if both files were written |
 | message | text, null | Error detail |
 
 ### backup_marks

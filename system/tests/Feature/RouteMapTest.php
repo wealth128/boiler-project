@@ -46,6 +46,7 @@ dataset('route map', [
     ['GET', 'backups', 'backups.index'],
     ['POST', 'backups/run', 'backups.run'],
     ['POST', 'backups/marks/{type}', 'backups.mark'],
+    ['GET', 'system/health', 'system.health'],
     ['GET', 'settings/hospital', 'hospital.edit'],
     ['PUT', 'settings/hospital', 'hospital.update'],
     ['GET', 'settings/hospital/logo', 'hospital.logo'],

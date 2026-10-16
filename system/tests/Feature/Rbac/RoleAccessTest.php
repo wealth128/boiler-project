@@ -67,6 +67,7 @@ dataset('protected routes', [
     'run backup' => ['POST', '/backups/run', ['admin']],
     'mark usb copy' => ['POST', '/backups/marks/usb-copy', ['admin']],
     'mark test restore' => ['POST', '/backups/marks/test-restore', ['admin']],
+    'system health page' => ['GET', '/system/health', ['admin']],
     // Hospital settings: Admin. (The logo picture, open to Admin and Viewer, is in HospitalSettingsTest: it is a 404 until a logo exists.)
     'hospital settings page' => ['GET', '/settings/hospital', ['admin']],
     'save hospital settings' => ['PUT', '/settings/hospital', ['admin']],

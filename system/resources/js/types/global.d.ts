@@ -16,6 +16,8 @@ declare module '@inertiajs/core' {
             sidebarOpen: boolean;
             /** Backup warnings, Admin only (empty for everyone else). */
             backupAlerts: BackupAlert[];
+            /** Red bar text when the scheduler stopped, Admin only. */
+            schedulerAlert: string | null;
             [key: string]: unknown;
         };
     }
