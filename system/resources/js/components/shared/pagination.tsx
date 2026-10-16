@@ -14,21 +14,28 @@ type PaginationProps = {
     perPageUrl: (perPage: number) => string;
     /** Plural word for the rows, e.g. "visits". */
     noun: string;
+    /**
+     * Show the "Rows per page" dropdown even when all rows fit on one page of
+     * 10 (as long as there is at least one row).
+     */
+    alwaysShow?: boolean;
 };
 
 /**
  * "Showing 51–100 of 1,234 visits" with Previous, page numbers, Next and a
  * "Rows per page" dropdown (10, 20, 50). Choosing a size goes back to
- * page 1. Hidden when there are no more rows than the smallest page size.
+ * page 1. Hidden when there are no more rows than the smallest page size,
+ * unless alwaysShow is set.
  */
 export function Pagination({
     meta,
     pageUrl,
     perPageUrl,
     noun,
+    alwaysShow = false,
 }: PaginationProps) {
     if (
-        meta.total <= PER_PAGE_OPTIONS[0] ||
+        (meta.total <= PER_PAGE_OPTIONS[0] && !alwaysShow) ||
         meta.from === null ||
         meta.to === null
     ) {

@@ -17,7 +17,7 @@ import type {
 } from '@/features/backups/types';
 import { formatDateTime } from '@/lib/dates';
 import { formatCount } from '@/lib/format';
-import { DEFAULT_PER_PAGE, pagingQuery, showsPaging } from '@/lib/paging';
+import { DEFAULT_PER_PAGE, pagingQuery } from '@/lib/paging';
 import { cn } from '@/lib/utils';
 
 type Props = {
@@ -135,7 +135,7 @@ export default function BackupsIndex({ status, marks, runs }: Props) {
                     caption="Backup runs, newest first"
                     empty={<EmptyState message="No backups have run yet." />}
                     footer={
-                        showsPaging(runs.meta) ? (
+                        runs.meta.total > 0 ? (
                             <Pagination
                                 meta={runs.meta}
                                 pageUrl={(page) =>
@@ -143,6 +143,7 @@ export default function BackupsIndex({ status, marks, runs }: Props) {
                                 }
                                 perPageUrl={(size) => backupsUrl(1, size)}
                                 noun="backups"
+                                alwaysShow
                             />
                         ) : undefined
                     }
