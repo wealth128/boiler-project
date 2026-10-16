@@ -136,10 +136,13 @@ Saved copy of a month's report, taken when Admin closes the month. Closed months
 | id | PK | |
 | period | char(7) | e.g. `2026-09`. One current copy per month. |
 | data | JSON | All counts for OPD, ER and Admission, with the bracket, diagnosis and rank labels as they were at closing |
+| signature_block | JSON, null | The signature block as it was at closing: `prepared_by`, `prepared_by_title`, `noted_by`, `noted_by_title`, and `prepared_signature` / `noted_signature` (file names inside the month's frozen folder, or null when no picture was set). Null for a month closed before this column existed: it then uses the current settings. |
 | created_by | FK → users | Admin who closed the month |
 | created_at | datetime | |
 
-On reopen, the copy is discarded. Closing again saves a fresh copy. Both actions go to the audit log.
+On reopen, the copy is discarded together with its frozen signature pictures. Closing again saves a fresh copy and freezes the signature block again. Both actions go to the audit log.
+
+**Frozen signature pictures:** at closing, the two signature pictures in Settings are copied to `storage/app/private/frozen-signatures/{period}/prepared.png|jpg` and `noted.png|jpg` (the private `local` disk, never under `public/`). They are served only by `GET /reports/signatures/{period}/{who}` for a signed-in Admin or Viewer (CO), and only while the month is closed. Reopening deletes the month's folder. Only the closed month itself uses the frozen block; quarterly and annual reports (even with all months closed) use the current settings. The report numbers in `data` are not affected.
 
 ### audit_logs
 | Column | Type | Notes |
@@ -178,6 +181,8 @@ Overdue = no mark in the last **8 days** (USB copy) or **35 days** (test restore
 |---|---|---|
 | key | varchar(50) PK | e.g. `hospital_name`, `logo_path`, `prepared_by`, `noted_by` |
 | value | text | |
+
+Keys: `hospital_name`, `hospital_subtitle`, `report_office`, `prepared_by`, `prepared_by_title`, `noted_by`, `noted_by_title` (text; an empty value means its default), and `logo_path`, `prepared_by_signature`, `noted_by_signature` (the file name of a picture, or empty). The pictures are PNG or JPG, saved again by the server, and stored on the private `local` disk under fixed names (`logo.png|jpg`, `signature-prepared.png|jpg`, `signature-noted.png|jpg`), outside `public/`. They are served only by signed-in routes (Admin and Viewer).
 
 ## 3. Relationships
 - One **patient** has many **visits**.

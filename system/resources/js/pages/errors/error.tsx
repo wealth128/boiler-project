@@ -4,11 +4,11 @@ import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import { home, login } from '@/routes';
 
-type ErrorStatus = 403 | 404 | 500 | 503;
+type ErrorStatus = 403 | 404 | 413 | 500 | 503;
 
 type ErrorPageProps = {
     status: ErrorStatus;
-    /** Reason from the server, e.g. "September 2026 is closed..." (403 only). */
+    /** Reason from the server, e.g. "September 2026 is closed..." (403, 413). */
     message: string | null;
 };
 
@@ -20,6 +20,10 @@ const TEXT: Record<ErrorStatus, { title: string; body: string }> = {
     404: {
         title: 'Page not found',
         body: 'This page does not exist, or the record was moved to Trash. Check the address, or go back to your home page.',
+    },
+    413: {
+        title: 'File too large',
+        body: 'Nothing was saved from this last step. Choose a smaller file and try again.',
     },
     500: {
         title: 'Something went wrong',

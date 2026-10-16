@@ -3,6 +3,7 @@ import type { Permission } from '@/lib/permissions';
 import audit from '@/routes/audit';
 import backups from '@/routes/backups';
 import encode from '@/routes/encode';
+import hospital from '@/routes/hospital';
 import lists from '@/routes/lists';
 import records from '@/routes/records';
 import reports from '@/routes/reports';
@@ -89,6 +90,13 @@ export const APP_NAV_ITEMS: AppNavItem[] = [
         href: backups.index(),
         permission: 'view-backups',
         activePath: '/backups',
+        group: 'admin',
+    },
+    {
+        title: 'Hospital settings',
+        href: hospital.edit(),
+        permission: 'manage-settings',
+        activePath: '/settings/hospital',
         group: 'admin',
     },
 ];

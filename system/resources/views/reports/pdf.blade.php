@@ -12,6 +12,7 @@
     h1, h2, h3, h4 { margin: 0; page-break-after: avoid; }
 
     .head { text-align: center; border-bottom: 2px solid #000; padding-bottom: 6pt; margin-bottom: 10pt; }
+    .logo { max-height: 48pt; max-width: 120pt; margin-bottom: 4pt; }
     .org { font-size: 8pt; letter-spacing: 1pt; text-transform: uppercase; }
     .head h1 { font-size: 14pt; margin: 3pt 0 2pt; }
     .period { font-size: 10pt; }
@@ -40,13 +41,18 @@
 
     .sign { margin-top: 26pt; page-break-inside: avoid; }
     .sign td { width: 50%; vertical-align: top; padding-right: 30pt; }
+    .sign img { display: block; max-height: 40pt; max-width: 140pt; margin-bottom: 2pt; }
     .sign .line { border-top: 1px solid #000; padding-top: 3pt; font-size: 8pt; }
     .sign b { display: block; font-size: 9.5pt; min-height: 13pt; }
+    .signote { margin-top: 6pt; font-size: 7.5pt; font-style: italic; }
     .generated { margin-top: 12pt; font-size: 8pt; }
 </style>
 </head>
 <body>
     <div class="head">
+        @if (! empty($logoData))
+            <div><img class="logo" src="{{ $logoData }}" alt=""></div>
+        @endif
         <div class="org">{{ $sheet['hospital_name'] }} · {{ $sheet['office'] }}</div>
         <h1>{{ $sheet['title'] }}</h1>
         <div class="period">{{ $sheet['period_label'] }}@if ($sheet['category']) · {{ $sheet['category'] }} only @endif</div>
@@ -122,9 +128,19 @@
     @endforeach
 
     <table class="sign"><tr>
-        <td><div class="line"><b>{{ $sheet['prepared_by'] }}</b>Prepared by · {{ $sheet['prepared_by_title'] }}</div></td>
-        <td><div class="line"><b>{{ $sheet['noted_by'] }}</b>Noted by · {{ $sheet['noted_by_title'] }}</div></td>
+        <td>
+            @if (! empty($signatureData['prepared']))<img src="{{ $signatureData['prepared'] }}" alt="">@endif
+            <div class="line"><b>{{ $sheet['prepared_by'] }}</b>Prepared by · {{ $sheet['prepared_by_title'] }}</div>
+        </td>
+        <td>
+            @if (! empty($signatureData['noted']))<img src="{{ $signatureData['noted'] }}" alt="">@endif
+            <div class="line"><b>{{ $sheet['noted_by'] }}</b>Noted by · {{ $sheet['noted_by_title'] }}</div>
+        </td>
     </tr></table>
+
+    @if (! empty($sheet['signature_note']))
+        <div class="signote">{{ $sheet['signature_note'] }}</div>
+    @endif
 
     <div class="generated">Generated {{ $generatedAt->format('d-M-Y H:i') }}</div>
 </body>

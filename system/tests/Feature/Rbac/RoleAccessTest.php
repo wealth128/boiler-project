@@ -66,6 +66,12 @@ dataset('protected routes', [
     'run backup' => ['POST', '/backups/run', ['admin']],
     'mark usb copy' => ['POST', '/backups/marks/usb-copy', ['admin']],
     'mark test restore' => ['POST', '/backups/marks/test-restore', ['admin']],
+    // Hospital settings: Admin. (The logo picture, open to Admin and Viewer, is in HospitalSettingsTest: it is a 404 until a logo exists.)
+    'hospital settings page' => ['GET', '/settings/hospital', ['admin']],
+    'save hospital settings' => ['PUT', '/settings/hospital', ['admin']],
+    'remove hospital logo' => ['DELETE', '/settings/hospital/logo', ['admin']],
+    'remove prepared signature' => ['DELETE', '/settings/hospital/signature/prepared', ['admin']],
+    'remove noted signature' => ['DELETE', '/settings/hospital/signature/noted', ['admin']],
     // Own account pages: everyone signed in
     'profile' => ['GET', '/settings/profile', ALL_ROLES],
     'password' => ['GET', '/settings/security', ALL_ROLES],

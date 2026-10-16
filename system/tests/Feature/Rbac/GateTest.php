@@ -16,6 +16,7 @@ dataset('gate matrix', [
     'close-month' => ['close-month', ['admin']],
     'view-audit' => ['view-audit', ['admin']],
     'view-backups' => ['view-backups', ['admin']],
+    'manage-settings' => ['manage-settings', ['admin']],
     'view-reports' => ['view-reports', ['admin', 'viewer']],
     'encode-visits' => ['encode-visits', ['encoder', 'admin']],
     'view-records' => ['view-records', ['admin']],
@@ -33,7 +34,7 @@ it('has a row in the table above for every Gate', function () {
 
     expect($names)->toEqualCanonicalizing([
         'manage-users', 'manage-lists', 'manage-trash', 'close-month', 'view-audit',
-        'view-backups', 'view-reports', 'encode-visits', 'view-records',
+        'view-backups', 'manage-settings', 'view-reports', 'encode-visits', 'view-records',
     ]);
 });
 

@@ -57,7 +57,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // patient search) keep their JSON answer.
         $exceptions->respond(function (Response $response, Throwable $e, Request $request) {
             $status = $response->getStatusCode();
-            $friendly = [403, 404, 419, 500, 503];
+            $friendly = [403, 404, 413, 419, 500, 503];
 
             if (! in_array($status, $friendly, true) || $request->expectsJson()) {
                 return $response;
@@ -79,6 +79,11 @@ return Application::configure(basePath: dirname(__DIR__))
             // A 404 message can name tables and IDs, and a 500 message can
             // hold anything, so those are never shown.
             $message = $status === 403 ? $e->getMessage() : '';
+
+            // A file bigger than the server accepts (the logo). Our own text.
+            if ($status === 413) {
+                $message = 'The file is too large. A picture must be 1 MB or smaller.';
+            }
 
             if ($message === 'This action is unauthorized.') {
                 $message = '';

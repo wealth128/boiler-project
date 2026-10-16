@@ -46,6 +46,13 @@ dataset('route map', [
     ['GET', 'backups', 'backups.index'],
     ['POST', 'backups/run', 'backups.run'],
     ['POST', 'backups/marks/{type}', 'backups.mark'],
+    ['GET', 'settings/hospital', 'hospital.edit'],
+    ['PUT', 'settings/hospital', 'hospital.update'],
+    ['GET', 'settings/hospital/logo', 'hospital.logo'],
+    ['DELETE', 'settings/hospital/logo', 'hospital.logo.destroy'],
+    ['GET', 'settings/hospital/signature/{who}', 'hospital.signature'],
+    ['GET', 'reports/signatures/{period}/{who}', 'reports.signature'],
+    ['DELETE', 'settings/hospital/signature/{who}', 'hospital.signature.destroy'],
 ]);
 
 it('registers every planned route behind auth and a role rule', function (string $method, string $uri, string $name) {
