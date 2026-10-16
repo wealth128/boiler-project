@@ -7,10 +7,10 @@ use App\Models\Visit;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
 
 /**
- * The Search box and paging shared by both Records tabs.
+ * The Search box and "back to the same page" shared by both Records tabs.
+ * (Paging: App\Services\TablePaging.)
  *
  * Search:
  *
@@ -23,9 +23,6 @@ use Illuminate\Pagination\LengthAwarePaginator;
 final class RecordSearch
 {
     public const MAX_LENGTH = 60;
-
-    /** Rows per page on both tabs. */
-    public const PER_PAGE = 50;
 
     /**
      * The search text from the URL: trimmed, spaces collapsed, at most
@@ -47,39 +44,6 @@ final class RecordSearch
         $value = $request->query($key);
 
         return is_string($value) ? $value : '';
-    }
-
-    /**
-     * Page numbers for the table footer.
-     *
-     * @param  LengthAwarePaginator<int, mixed>  $page
-     * @return array{current_page: int, last_page: int, per_page: int, total: int, from: int|null, to: int|null}
-     */
-    public static function pageMeta(LengthAwarePaginator $page): array
-    {
-        return [
-            'current_page' => $page->currentPage(),
-            'last_page' => $page->lastPage(),
-            'per_page' => $page->perPage(),
-            'total' => $page->total(),
-            'from' => $page->firstItem(),
-            'to' => $page->lastItem(),
-        ];
-    }
-
-    /**
-     * A page number past the end (e.g. after the last row of the last page
-     * went to Trash) goes to the last page instead of an empty table.
-     *
-     * @param  LengthAwarePaginator<int, mixed>  $page
-     */
-    public static function redirectPastLastPage(Request $request, LengthAwarePaginator $page): ?RedirectResponse
-    {
-        if ($page->total() === 0 || $page->currentPage() <= $page->lastPage()) {
-            return null;
-        }
-
-        return redirect($request->fullUrlWithQuery(['page' => $page->lastPage()]));
     }
 
     /**

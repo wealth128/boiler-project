@@ -11,7 +11,7 @@ Features: `encode`, `records`, `reports`, `lists` (dropdown lists at /settings/l
 | `Actions/Fortify/`            | Login             | `AuthenticateUser`: username login, 5-wrong-password lock, login audit entries      |
 | `Enums/`                      | Global            | Fixed value lists: Role, Office, Category, Sex, BackupStatus, Permission (Gates)    |
 | `Models/`                     | Global            | One model per table. `Models/Concerns/MovesToTrash` holds the soft-delete logic.    |
-| `Services/`                   | Global            | Shared logic: AuditLogger, ReportBuilder, TrashService, MonthService, BackupService |
+| `Services/`                   | Global            | Shared logic: AuditLogger, ReportBuilder, TrashService, MonthService, BackupService, TablePaging |
 | `Policies/`                   | Global            | VisitPolicy, UserPolicy, TrashPolicy (PatientPolicy comes with Records)             |
 | `Observers/`                  | Global            | `AuditObserver`: audit entries on create, update, Trash, restore, purge             |
 | `Console/Commands/`           | Global            | `backup:run` (daily 02:00, routes/console.php), `census:reset-admin-password`       |
@@ -40,6 +40,7 @@ Features: `encode`, `records`, `reports`, `lists` (dropdown lists at /settings/l
 | DataTable     | `data-table.tsx`      | Plain tables with an empty message and an optional line under each row |
 | ReasonConfirm | `reason-confirm.tsx`  | "Move to Trash?" and other confirms that need a reason                 |
 | TypeToConfirm | `type-to-confirm.tsx` | Permanent delete: the user types the item's ID first                   |
+| Pagination    | `pagination.tsx`      | Page numbers under a long table (50 rows per page, `TablePaging`)      |
 | CategoryChip  | `category-chip.tsx`   | OPD / ER / Admission label in its color                                |
 | Chip          | `chip.tsx`            | Other small labels: "New patient", "Closed", counts                    |
 | EmptyState    | `empty-state.tsx`     | What an empty list or table shows                                      |

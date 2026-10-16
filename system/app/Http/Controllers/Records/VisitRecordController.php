@@ -10,6 +10,7 @@ use App\Models\Branch;
 use App\Models\MonthClosure;
 use App\Models\User;
 use App\Models\Visit;
+use App\Services\TablePaging;
 use App\Services\TrashService;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -55,10 +56,10 @@ class VisitRecordController extends Controller
         $page = $query
             ->orderByDesc('visited_at')
             ->orderByDesc('id')
-            ->paginate(RecordSearch::PER_PAGE)
+            ->paginate(TablePaging::PER_PAGE)
             ->withQueryString();
 
-        if ($redirect = RecordSearch::redirectPastLastPage($request, $page)) {
+        if ($redirect = TablePaging::redirectPastLastPage($request, $page)) {
             return $redirect;
         }
 
@@ -75,7 +76,7 @@ class VisitRecordController extends Controller
                 'data' => collect($page->items())
                     ->map(fn (Visit $visit): array => $this->row($visit, $closed->has($visit->period)))
                     ->values(),
-                'meta' => RecordSearch::pageMeta($page),
+                'meta' => TablePaging::meta($page),
             ],
             'deleteReasons' => VisitDeleteReason::options(),
         ]);

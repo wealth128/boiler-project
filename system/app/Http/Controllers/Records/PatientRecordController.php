@@ -7,6 +7,7 @@ use App\Enums\Permission;
 use App\Http\Controllers\Controller;
 use App\Models\Patient;
 use App\Models\User;
+use App\Services\TablePaging;
 use App\Services\TrashService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\RedirectResponse;
@@ -43,10 +44,10 @@ class PatientRecordController extends Controller
             ->orderBy('last_name')
             ->orderBy('first_name')
             ->orderBy('id')
-            ->paginate(RecordSearch::PER_PAGE)
+            ->paginate(TablePaging::PER_PAGE)
             ->withQueryString();
 
-        if ($redirect = RecordSearch::redirectPastLastPage($request, $page)) {
+        if ($redirect = TablePaging::redirectPastLastPage($request, $page)) {
             return $redirect;
         }
 
@@ -63,7 +64,7 @@ class PatientRecordController extends Controller
                         'visit_count' => (int) $patient->visits_count,
                     ])
                     ->values(),
-                'meta' => RecordSearch::pageMeta($page),
+                'meta' => TablePaging::meta($page),
             ],
             'deleteReasons' => PatientDeleteReason::options(),
         ]);

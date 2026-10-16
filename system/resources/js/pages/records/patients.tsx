@@ -14,15 +14,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { MoveToTrashRow } from '@/components/shared/move-to-trash-row';
 import type { MoveToTrashErrors } from '@/components/shared/move-to-trash-row';
-import { Pagination } from '@/features/records/pagination';
+import { Pagination } from '@/components/shared/pagination';
 import { RecordsTabs } from '@/features/records/records-tabs';
 import type {
-    Paged,
     PatientFilters,
     PatientRecord,
 } from '@/features/records/types';
 import { formatDate } from '@/lib/dates';
 import { formatCount } from '@/lib/format';
+import type { Paged } from '@/types';
 
 type Props = {
     filters: PatientFilters;

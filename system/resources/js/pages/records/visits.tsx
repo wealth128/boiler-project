@@ -17,17 +17,16 @@ import { Label } from '@/components/ui/label';
 import { NativeSelect } from '@/components/ui/native-select';
 import { MoveToTrashRow } from '@/components/shared/move-to-trash-row';
 import type { MoveToTrashErrors } from '@/components/shared/move-to-trash-row';
-import { Pagination } from '@/features/records/pagination';
+import { Pagination } from '@/components/shared/pagination';
 import { RecordsTabs } from '@/features/records/records-tabs';
 import type {
     BranchFilterOption,
-    Paged,
     VisitFilters,
     VisitRecord,
 } from '@/features/records/types';
 import { formatDateTime } from '@/lib/dates';
 import { formatCount } from '@/lib/format';
-import type { Category } from '@/types';
+import type { Category, Paged } from '@/types';
 
 type Props = {
     filters: VisitFilters;

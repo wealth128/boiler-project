@@ -2,7 +2,7 @@ import { Link } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
-import type { PageMeta } from './types';
+import type { PageMeta } from '@/types';
 
 type PaginationProps = {
     meta: PageMeta;

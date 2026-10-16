@@ -90,7 +90,7 @@ it('shows the placeholder page on every planned screen', function (string $uri) 
         ->assertOk()
         ->assertInertia(fn ($page) => $page->component('placeholder')->has('title'));
 })->with([
-    '/audit-log', '/trash', '/backups',
+    '/audit-log', '/backups',
 ]);
 
 it('answers the patient search with JSON', function () {
@@ -111,8 +111,6 @@ it('answers stub form actions with a "not built yet" toast', function () {
         ['delete', "/visits/{$visit->id}"],
         ['delete', "/patients/{$patient->id}"],
         ['post', '/months/2026-09/close'],
-        ['post', '/trash/visits/1/restore'],
-        ['delete', '/trash'],
         ['post', '/backups/run'],
     ] as [$method, $uri]) {
         $this->{$method}($uri)->assertRedirect('/encode');

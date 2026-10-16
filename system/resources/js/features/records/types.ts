@@ -5,22 +5,6 @@ import type { Category, DateTimeString, Sex } from '@/types';
  * PatientRecordController).
  */
 
-/** Page numbers for a table (RecordSearch::pageMeta). */
-export type PageMeta = {
-    current_page: number;
-    last_page: number;
-    per_page: number;
-    total: number;
-    /** Row number of the first row on this page, or null when empty. */
-    from: number | null;
-    to: number | null;
-};
-
-export type Paged<T> = {
-    data: T[];
-    meta: PageMeta;
-};
-
 /** Filters on the Visits tab, as they are in the URL. "" = All / no limit. */
 export type VisitFilters = {
     /** "2026-09-01" */
