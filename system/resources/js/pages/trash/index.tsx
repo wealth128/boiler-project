@@ -1,29 +1,30 @@
-import { Head, router } from '@inertiajs/react';
-import { useState } from 'react';
-import TrashController from '@/actions/App/Http/Controllers/Trash/TrashController';
-import { DataTable } from '@/components/shared/data-table';
-import type { DataTableColumn } from '@/components/shared/data-table';
-import { EmptyState } from '@/components/shared/empty-state';
-import { PageHeader } from '@/components/shared/page-header';
-import { Pagination } from '@/components/shared/pagination';
-import { Button } from '@/components/ui/button';
-import { PurgeRow } from '@/features/trash/purge-row';
-import type { TrashItem } from '@/features/trash/types';
-import { formatDateTime } from '@/lib/dates';
-import { formatCount } from '@/lib/format';
-import type { Paged } from '@/types';
+import { Head, router } from "@inertiajs/react";
+import { useState } from "react";
+import TrashController from "@/actions/App/Http/Controllers/Trash/TrashController";
+import { DataTable } from "@/components/shared/data-table";
+import type { DataTableColumn } from "@/components/shared/data-table";
+import { EmptyState } from "@/components/shared/empty-state";
+import { PageHeader } from "@/components/shared/page-header";
+import { Pagination } from "@/components/shared/pagination";
+import { Button } from "@/components/ui/button";
+import { PurgeRow } from "@/features/trash/purge-row";
+import type { TrashItem } from "@/features/trash/types";
+import { formatDateTime } from "@/lib/dates";
+import { formatCount } from "@/lib/format";
+import { pagingQuery, showsPaging } from "@/lib/paging";
+import type { Paged } from "@/types";
 
 type Props = {
     items: Paged<TrashItem>;
 };
 
 /** Typed to confirm Empty Trash (TrashController::EMPTY_PHRASE). */
-const EMPTY_PHRASE = 'EMPTY TRASH';
+const EMPTY_PHRASE = "EMPTY TRASH";
 
 /** Which row has its "Delete permanently?" question open, or the whole of Trash. */
-type Purging = { kind: 'item'; key: string } | { kind: 'all' } | null;
+type Purging = { kind: "item"; key: string } | { kind: "all" } | null;
 
-const actionClass = 'h-auto px-1.5 py-0.5 text-xs';
+const actionClass = "h-auto px-1.5 py-0.5 text-xs";
 
 /**
  * Trash (prototype/prototype.html, trashView). Admin only. Restore is one
@@ -33,6 +34,7 @@ const actionClass = 'h-auto px-1.5 py-0.5 text-xs';
  */
 export default function TrashIndex({ items }: Props) {
     const page = items.meta.current_page;
+    const perPage = items.meta.per_page;
     const total = items.meta.total;
     const [purging, setPurging] = useState<Purging>(null);
     const [processing, setProcessing] = useState(false);
@@ -55,7 +57,7 @@ export default function TrashIndex({ items }: Props) {
 
         router.post(
             TrashController.restore.url({ type: item.type, id: item.id }),
-            { page },
+            { page, per_page: perPage },
             {
                 preserveScroll: true,
                 onStart: () => setProcessing(true),
@@ -85,7 +87,7 @@ export default function TrashIndex({ items }: Props) {
         window.setTimeout(() =>
             document
                 .getElementById(
-                    was?.kind === 'item' ? `purge-${was.key}` : 'empty-trash',
+                    was?.kind === "item" ? `purge-${was.key}` : "empty-trash",
                 )
                 ?.focus(),
         );
@@ -97,7 +99,7 @@ export default function TrashIndex({ items }: Props) {
         router.delete(
             TrashController.destroy.url({ type: item.type, id: item.id }),
             {
-                data: { confirm: typed, page },
+                data: { confirm: typed, page, per_page: perPage },
                 preserveScroll: true,
                 onStart: () => setProcessing(true),
                 onFinish: () => setProcessing(false),
@@ -116,7 +118,7 @@ export default function TrashIndex({ items }: Props) {
         setPurgeError(undefined);
 
         router.delete(TrashController.empty.url(), {
-            data: { confirm: typed },
+            data: { confirm: typed, per_page: perPage },
             preserveScroll: true,
             onStart: () => setProcessing(true),
             onFinish: () => setProcessing(false),
@@ -128,27 +130,27 @@ export default function TrashIndex({ items }: Props) {
 
     const columns: DataTableColumn<TrashItem>[] = [
         {
-            key: 'type',
-            header: 'Type',
+            key: "type",
+            header: "Type",
             cell: (item) => item.type_label,
-            className: 'whitespace-nowrap',
+            className: "whitespace-nowrap",
         },
-        { key: 'item', header: 'Item', cell: (item) => item.item },
-        { key: 'reason', header: 'Reason', cell: (item) => item.reason },
+        { key: "item", header: "Item", cell: (item) => item.item },
+        { key: "reason", header: "Reason", cell: (item) => item.reason },
         {
-            key: 'deleted_by',
-            header: 'Deleted by',
+            key: "deleted_by",
+            header: "Deleted by",
             cell: (item) => item.deleted_by,
-            className: 'font-mono',
+            className: "font-mono",
         },
         {
-            key: 'deleted_at',
-            header: 'When',
+            key: "deleted_at",
+            header: "When",
             cell: (item) => formatDateTime(item.deleted_at),
-            className: 'font-mono whitespace-nowrap',
+            className: "font-mono whitespace-nowrap",
         },
         {
-            key: 'actions',
+            key: "actions",
             header: <span className="sr-only">Actions</span>,
             cell: (item) => (
                 <>
@@ -177,7 +179,7 @@ export default function TrashIndex({ items }: Props) {
                                 size="sm"
                                 className={`${actionClass} text-bad`}
                                 onClick={() =>
-                                    startPurge({ kind: 'item', key: item.key })
+                                    startPurge({ kind: "item", key: item.key })
                                 }
                                 disabled={processing}
                                 aria-label={`Delete ${item.type_label} ${item.item} permanently`}
@@ -197,7 +199,7 @@ export default function TrashIndex({ items }: Props) {
     ];
 
     const isPurging = (item: TrashItem) =>
-        purging?.kind === 'item' && purging.key === item.key;
+        purging?.kind === "item" && purging.key === item.key;
 
     return (
         <>
@@ -211,7 +213,7 @@ export default function TrashIndex({ items }: Props) {
             <section className="rounded-lg border bg-card">
                 <div className="flex items-center gap-3 border-b px-4 py-3">
                     <h2 className="text-base font-semibold">
-                        {formatCount(total)} {total === 1 ? 'item' : 'items'}
+                        {formatCount(total)} {total === 1 ? "item" : "items"}
                     </h2>
                     {total > 0 && (
                         <Button
@@ -219,7 +221,7 @@ export default function TrashIndex({ items }: Props) {
                             variant="destructive"
                             size="sm"
                             className="ml-auto"
-                            onClick={() => startPurge({ kind: 'all' })}
+                            onClick={() => startPurge({ kind: "all" })}
                             disabled={processing}
                         >
                             Empty Trash
@@ -231,7 +233,7 @@ export default function TrashIndex({ items }: Props) {
                     <EmptyState message="Trash is empty." />
                 ) : (
                     <>
-                        {purging?.kind === 'all' && (
+                        {purging?.kind === "all" && (
                             <PurgeRow
                                 question="Empty Trash?"
                                 confirmText={EMPTY_PHRASE}
@@ -248,7 +250,7 @@ export default function TrashIndex({ items }: Props) {
                             rowKey={(item) => item.key}
                             caption="Items in Trash"
                             rowClassName={(item) =>
-                                isPurging(item) ? 'bg-bad-soft' : undefined
+                                isPurging(item) ? "bg-bad-soft" : undefined
                             }
                             rowDetail={(item) => {
                                 if (isPurging(item)) {
@@ -277,17 +279,20 @@ export default function TrashIndex({ items }: Props) {
                                 ) : null;
                             }}
                             footer={
-                                items.meta.last_page > 1 ? (
+                                showsPaging(items.meta) ? (
                                     <Pagination
                                         meta={items.meta}
                                         pageUrl={(next) =>
                                             TrashController.index.url({
-                                                query: {
-                                                    page:
-                                                        next > 1
-                                                            ? next
-                                                            : undefined,
-                                                },
+                                                query: pagingQuery(
+                                                    perPage,
+                                                    next,
+                                                ),
+                                            })
+                                        }
+                                        perPageUrl={(size) =>
+                                            TrashController.index.url({
+                                                query: pagingQuery(size),
                                             })
                                         }
                                         noun="items"
@@ -302,8 +307,8 @@ export default function TrashIndex({ items }: Props) {
             <p className="mt-3 text-sm text-muted-foreground">
                 Items still used by visits, or visits in a closed month,
                 can&apos;t be deleted permanently. They stay in Trash so past
-                records and reports stay correct. Permanently deleted data
-                still exists in backups until the backups rotate out.
+                records and reports stay correct. Permanently deleted data still
+                exists in backups until the backups rotate out.
             </p>
         </>
     );

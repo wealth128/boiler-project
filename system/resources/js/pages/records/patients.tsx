@@ -1,28 +1,26 @@
-import { Head, router, usePage } from '@inertiajs/react';
-import { useEffect, useRef, useState } from 'react';
-import PatientRecordController from '@/actions/App/Http/Controllers/Records/PatientRecordController';
-import { DataTable } from '@/components/shared/data-table';
+import { Head, router, usePage } from "@inertiajs/react";
+import { useEffect, useRef, useState } from "react";
+import PatientRecordController from "@/actions/App/Http/Controllers/Records/PatientRecordController";
+import { DataTable } from "@/components/shared/data-table";
 import type {
     DeleteReasonOption,
     DeleteReasonValue,
-} from '@/components/shared/delete-reason-field';
-import type { DataTableColumn } from '@/components/shared/data-table';
-import { EmptyState } from '@/components/shared/empty-state';
-import { PageHeader } from '@/components/shared/page-header';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { MoveToTrashRow } from '@/components/shared/move-to-trash-row';
-import type { MoveToTrashErrors } from '@/components/shared/move-to-trash-row';
-import { Pagination } from '@/components/shared/pagination';
-import { RecordsTabs } from '@/features/records/records-tabs';
-import type {
-    PatientFilters,
-    PatientRecord,
-} from '@/features/records/types';
-import { formatDate } from '@/lib/dates';
-import { formatCount } from '@/lib/format';
-import type { Paged } from '@/types';
+} from "@/components/shared/delete-reason-field";
+import type { DataTableColumn } from "@/components/shared/data-table";
+import { EmptyState } from "@/components/shared/empty-state";
+import { PageHeader } from "@/components/shared/page-header";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { MoveToTrashRow } from "@/components/shared/move-to-trash-row";
+import type { MoveToTrashErrors } from "@/components/shared/move-to-trash-row";
+import { Pagination } from "@/components/shared/pagination";
+import { RecordsTabs } from "@/features/records/records-tabs";
+import type { PatientFilters, PatientRecord } from "@/features/records/types";
+import { formatDate } from "@/lib/dates";
+import { formatCount } from "@/lib/format";
+import { DEFAULT_PER_PAGE, pagingQuery, showsPaging } from "@/lib/paging";
+import type { Paged } from "@/types";
 
 type Props = {
     filters: PatientFilters;
@@ -34,11 +32,11 @@ type Props = {
 /** Wait this long after the last key before searching. */
 const SEARCH_DELAY_MS = 300;
 
-function patientsUrl(q: string, page = 1): string {
+function patientsUrl(q: string, page = 1, perPage = DEFAULT_PER_PAGE): string {
     return PatientRecordController.index.url({
         query: {
             q: q.trim() || undefined,
-            page: page > 1 ? page : undefined,
+            ...pagingQuery(perPage, page),
         },
     });
 }
@@ -69,7 +67,7 @@ export default function RecordsPatients({
         window.clearTimeout(timer.current);
         timer.current = window.setTimeout(
             () =>
-                router.visit(patientsUrl(value), {
+                router.visit(patientsUrl(value, 1, patients.meta.per_page), {
                     preserveState: true,
                     preserveScroll: true,
                     replace: true,
@@ -109,31 +107,31 @@ export default function RecordsPatients({
 
     const columns: DataTableColumn<PatientRecord>[] = [
         {
-            key: 'patient_no',
-            header: 'Patient ID',
+            key: "patient_no",
+            header: "Patient ID",
             cell: (patient) => patient.patient_no,
-            className: 'font-mono whitespace-nowrap',
+            className: "font-mono whitespace-nowrap",
         },
         {
-            key: 'name',
-            header: 'Name',
+            key: "name",
+            header: "Name",
             cell: (patient) => patient.patient_name,
         },
-        { key: 'sex', header: 'Sex', cell: (patient) => patient.sex },
+        { key: "sex", header: "Sex", cell: (patient) => patient.sex },
         {
-            key: 'birthdate',
-            header: 'Birthdate',
+            key: "birthdate",
+            header: "Birthdate",
             cell: (patient) => formatDate(patient.birthdate),
-            className: 'font-mono whitespace-nowrap',
+            className: "font-mono whitespace-nowrap",
         },
         {
-            key: 'visits',
-            header: 'Visits',
+            key: "visits",
+            header: "Visits",
             cell: (patient) => formatCount(patient.visit_count),
-            align: 'right',
+            align: "right",
         },
         {
-            key: 'actions',
+            key: "actions",
             header: <span className="sr-only">Actions</span>,
             cell: (patient) => (
                 <Button
@@ -158,7 +156,7 @@ export default function RecordsPatients({
 
             <PageHeader
                 title="Patient Records"
-                description={`${formatCount(total)} ${total === 1 ? 'patient' : 'patients'}. A patient can be moved to Trash only after all their visits are in Trash.`}
+                description={`${formatCount(total)} ${total === 1 ? "patient" : "patients"}. A patient can be moved to Trash only after all their visits are in Trash.`}
             />
 
             <RecordsTabs current="patients" url={url} />
@@ -186,7 +184,7 @@ export default function RecordsPatients({
                     caption="Patients"
                     empty={<EmptyState message="No patients match." />}
                     rowClassName={(patient) =>
-                        patient.id === trashing?.id ? 'bg-bad-soft' : undefined
+                        patient.id === trashing?.id ? "bg-bad-soft" : undefined
                     }
                     rowDetail={(patient) =>
                         patient.id === trashing?.id ? (
@@ -200,10 +198,19 @@ export default function RecordsPatients({
                         ) : null
                     }
                     footer={
-                        patients.meta.last_page > 1 ? (
+                        showsPaging(patients.meta) ? (
                             <Pagination
                                 meta={patients.meta}
-                                pageUrl={(page) => patientsUrl(filters.q, page)}
+                                pageUrl={(page) =>
+                                    patientsUrl(
+                                        filters.q,
+                                        page,
+                                        patients.meta.per_page,
+                                    )
+                                }
+                                perPageUrl={(size) =>
+                                    patientsUrl(filters.q, 1, size)
+                                }
                                 noun="patients"
                             />
                         ) : undefined

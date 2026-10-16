@@ -109,26 +109,65 @@ it('searches by name or Patient ID', function (string $q, array $expected) {
     'no match' => ['Zamora', []],
 ]);
 
-it('shows 50 patients per page with page numbers', function () {
-    foreach (range(1, 51) as $n) {
+it('shows 10 patients per page by default, with page numbers', function () {
+    foreach (range(1, 25) as $n) {
         Patient::factory()->create(['last_name' => sprintf('Patient%02d', $n)]);
     }
 
     $this->actingAs($this->admin)
         ->get('/records/patients')
         ->assertInertia(fn (Assert $page) => $page
-            ->has('patients.data', 50)
-            ->where('patients.meta.last_page', 2)
-            ->where('patients.meta.total', 51));
+            ->has('patients.data', 10)
+            ->where('patients.meta', ['current_page' => 1, 'last_page' => 3, 'per_page' => 10, 'total' => 25, 'from' => 1, 'to' => 10]));
 
     $this->actingAs($this->admin)
-        ->get('/records/patients?page=2')
+        ->get('/records/patients?page=3')
         ->assertInertia(fn (Assert $page) => $page
-            ->has('patients.data', 1)
-            ->where('patients.data.0.patient_name', fn (string $name) => str_starts_with($name, 'Patient51, ')));
+            ->has('patients.data', 5)
+            ->where('patients.data.4.patient_name', fn (string $name) => str_starts_with($name, 'Patient25, ')));
+});
+
+it('shows 20 or 50 patients per page when asked, and 10 for any other value', function (string $query, int $rows, int $perPage) {
+    foreach (range(1, 60) as $n) {
+        Patient::factory()->create(['last_name' => sprintf('Patient%02d', $n)]);
+    }
+
+    $this->actingAs($this->admin)
+        ->get('/records/patients'.$query)
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('patients.data', $rows)
+            ->where('patients.meta.per_page', $perPage));
+})->with([
+    '20' => ['?per_page=20', 20, 20],
+    '50' => ['?per_page=50', 50, 50],
+    '10' => ['?per_page=10', 10, 10],
+    '999' => ['?per_page=999', 10, 10],
+    '0' => ['?per_page=0', 10, 10],
+    'negative' => ['?per_page=-20', 10, 10],
+    'text' => ['?per_page=abc', 10, 10],
+    'decimal' => ['?per_page=20.5', 10, 10],
+    'empty' => ['?per_page=', 10, 10],
+    'a list' => ['?per_page[]=20', 10, 10],
+]);
+
+it('keeps the rows per page and the search when it goes to the last page', function () {
+    Patient::factory()->create(['last_name' => 'Zamora']);
+
+    $this->actingAs($this->admin)
+        ->get('/records/patients?q=zamora&per_page=20&page=4')
+        ->assertRedirect('/records/patients?q=zamora&per_page=20&page=1');
 });
 
 // --- Move to Trash -----------------------------------------------------------
+
+it('keeps the rows per page after moving a patient to Trash', function () {
+    $patient = Patient::factory()->create();
+
+    $this->actingAs($this->admin)->from('/records/patients?q=x&per_page=20&page=2')
+        ->delete("/patients/{$patient->id}", ['reason' => 'Duplicate patient record'])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect('/records/patients?q=x&per_page=20&page=2');
+});
 
 it('moves a patient with no active visits to Trash', function () {
     $patient = Patient::factory()->create();

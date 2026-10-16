@@ -9,10 +9,10 @@ This file carries over what was discussed in the first planning-and-review conve
 ## 0. Quick Start (read this first; it may be all you need)
 | | |
 |---|---|
-| **Current step** | 6f Audit log screen (6e Trash is done and merged) |
-| **Next step** | 6g Backup screen (start a **new conversation** for each step) |
-| **Next prompt file** | Not written yet (6f Audit log). Last prompt: `planning/Prompts/prompt-6e.md` |
-| **Last merged commit** | Step 6e Trash merge into main (2026-10-16, not pushed yet; hash: see `git log -1`) |
+| **Current step** | 6g Backup screen (6f Audit log is done and merged) |
+| **Next step** | 6h Settings (start a **new conversation** for each step) |
+| **Next prompt file** | Not written yet (6g Backup screen). Last prompt: `planning/Prompts/prompt-6f.md` |
+| **Last merged commit** | Step 6f Audit log merge into main (2026-10-16, not pushed yet; hash: see `git log -1`) |
 | **Open decisions** | HTTPS vs HTTP on the hospital LAN (Phase 8) |
 
 **Token-saving rules (agreed 2026-10-16):**
@@ -88,10 +88,15 @@ This file carries over what was discussed in the first planning-and-review conve
 ### Screens & design
 - **Claude Design dropped (2026-10-13).** `prototype/prototype.html` is the final screen reference. Claude Design may be used later only for visual polish after everything works.
 - **Encode (6a):** returning-patient search (Trash excluded); editing a returning patient's name/birthdate corrects all their visits; **duplicate-patient guard** (same name + birthdate asks "Use this patient" or "save as new"); Enter saves, Ctrl+Enter saves from Remarks.
-- **Records (6b):** Admin only; Visits and Patients tabs; 50 rows per page; default range first day of last month to today; filters kept in the URL; Edit opens Encode and returns to the same filters; a closed-month delete shows its message in the row.
+- **Records (6b):** Admin only; Visits and Patients tabs; 10 rows per page by default (10 / 20 / 50 dropdown); default range first day of last month to today; filters kept in the URL; Edit opens Encode and returns to the same filters; a closed-month delete shows its message in the row.
 - **Lists (6c):** no duplicate names (case-insensitive; ranks per branch); a name in Trash says "Restore it from Trash instead"; **Edit is for spelling only** (renames show on all past visits); **ranks have Move up / Move down** for seniority order (used in Encode and the Branch × Rank report table); **diagnoses alphabetical**, "Other (specify)" last and fixed; age brackets can't overlap; blank To = "and above".
-- **Trash (6e):** Admin only, one table of everything in Trash, newest first, 50 per page. A deleted month report shows as one row and its visits are not listed separately. Restore is one click; a refusal shows in that row (never a 403 page). Delete permanently and Empty Trash use the inline "type to confirm" row, and the server checks the typed text too. **Age brackets accept `18-25` (hyphen) or `18–25` (en dash)** because the en dash is not on the keyboard; every other type needs an exact match (surrounding spaces ignored). **A row that was already restored or deleted in another window shows "That item is no longer in Trash."** instead of a 404. Empty Trash deletes what is allowed (visits first, so a patient waiting only on its own trashed visit goes too) and says "Deleted N items. M items stay in Trash because they're still needed." A rank name can't clash on restore because the database already blocks a duplicate name in a branch, even in Trash.
-- **Shared paging (6e):** `App\Services\TablePaging` and `components/shared/pagination.tsx` (with `Paged` / `PageMeta` in `types/ui.ts`) are used by Records and Trash, and by every later long table (Audit log).
+- **Trash (6e):** Admin only, one table of everything in Trash, newest first, 10 per page by default (10 / 20 / 50 dropdown). A deleted month report shows as one row and its visits are not listed separately. Restore is one click; a refusal shows in that row (never a 403 page). Delete permanently and Empty Trash use the inline "type to confirm" row, and the server checks the typed text too. **Age brackets accept `18-25` (hyphen) or `18–25` (en dash)** because the en dash is not on the keyboard; every other type needs an exact match (surrounding spaces ignored). **A row that was already restored or deleted in another window shows "That item is no longer in Trash."** instead of a 404. Empty Trash deletes what is allowed (visits first, so a patient waiting only on its own trashed visit goes too) and says "Deleted N items. M items stay in Trash because they're still needed." A rank name can't clash on restore because the database already blocks a duplicate name in a branch, even in Trash.
+- **Shared paging (6e, changed in 6f):** `App\Services\TablePaging`, `components/shared/pagination.tsx` (with `Paged` / `PageMeta` in `types/ui.ts`) and `lib/paging.ts` are used by Records (both tabs), Trash and the Audit log, and by every later long table.
+- **Rows per page (2026-10-16): Records, Trash and Audit log: 10 rows per page by default, with a 10 / 20 / 50 dropdown.** The choice is kept in the URL (`?per_page=`), each Records tab keeps its own, changing it goes back to page 1 and keeps the filters, and Edit-return, delete, Restore, Delete permanently, Empty Trash and the last-page redirect keep it. The server accepts only 10, 20 or 50; anything else is 10. The dropdown is hidden when there are 10 rows or fewer in total. The User Accounts list has no paging.
+- **Audit log (6f):** Admin only (`view-audit`), read-only, no create/edit/delete routes, and viewing it is not logged. Columns: When, User (username + full name), Action, Record, PC. Filters in the URL: From / To (default first day of last month to today; empty = no limit), User (every account, including deactivated and in Trash), Action (grouped), Record (exact Visit No., Patient ID or username; a permanently deleted record is found by the ID or name saved in its entry). Bad filter values fall back to the defaults (no error page). **Details** shows "Field: old → new" with names instead of IDs and dates as DD-Mon-YYYY; a delete reason shows as saved. Any key containing "password" or "remember_token" is stripped before the page gets the data. Action labels live in one map (`App\Services\AuditActions`); an unknown code shows as itself.
+- **Audit log labels (6f):** list items have **separate labels** ("Diagnosis added", "Rank / type added", "Age bracket added") instead of one "List item added", so the Action dropdown has no duplicates. **One Trash action group** holds every "moved to Trash", "restored" and "deleted permanently" action for all record types; the Visits, Patients and Lists groups hold only add and edit actions. A system sign-out is labelled by its reason (e.g. "Signed out (account deactivated)").
+- **Audit log detail-line order (6f):** MySQL stores JSON keys in its own order, so the detail lines come in a **fixed order** (known fields in the order of `AuditRows::FIELDS`, the rest by name).
+- **Audit log index (6f):** a new migration adds an index on `audit_logs (user_id, created_at)`; `created_at` was already indexed.
 - **Security plan:** `planning/security.md`. Every step follows its section 2. HTTPS vs HTTP on the LAN is **still to decide** with hospital IT/CO (Phase 8).
 - **Documentation phase 7.5** added: developer guide, database guide, how-to, learning path, operations guide, user manual, keyboard shortcuts (collected in `docs/keyboard-shortcuts.md` as each screen is built).
 
@@ -104,8 +109,9 @@ This file carries over what was discussed in the first planning-and-review conve
 | 6c Lists | Done, merged |
 | 6d Reports (6d-1 counts, 6d-2 close/reopen/delete month, 6d-3 PDF/Excel/Print) | Done, merged and pushed (2026-10-16) |
 | 6e Trash (restore, delete permanently, Empty Trash) | Done, merged (2026-10-16, not pushed) |
-| **6f Audit log** | **Next** |
-| 6g Backup screen · 6h Settings | After 6f |
+| 6f Audit log (+ rows per page 10 / 20 / 50 on Records, Trash, Audit log) | Done, merged (2026-10-16, not pushed) |
+| **6g Backup screen** | **Next** |
+| 6h Settings | After 6g |
 | Security review (`planning/security.md` section 3) | End of Phase 6 |
 | Phase 7 parallel run (1 month beside Google Sheets) · 7.5 Docs · 8 Deploy · 9 Training | Later |
 

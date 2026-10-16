@@ -81,6 +81,8 @@ After picking a patient, the cursor jumps to the first empty field, usually **Di
 **Order (Tab), Visits tab:** Visits → Patients → From → To → Category → Branch → Search → each row's **Edit** and **Delete** → page numbers
 **Order (Tab), Patients tab:** Visits → Patients → Search → each row's **Delete** → page numbers
 
+**Rows per page (both tabs):** the last **Tab** stop under the table. Choose 10, 20 or 50 (type `1`, `2` or `5`, or **↑ / ↓**). It goes back to page 1, keeps the filters, and each tab remembers its own choice (it stays in the address, so **F5** keeps it). The default is 10.
+
 ### Filters
 | Field | Key | What it does |
 |---|---|---|
@@ -156,10 +158,7 @@ Same keys as on Patient Records: choose a reason, **Enter** to move it to Trash,
 | **Tab** to **Move to Trash**, then **Enter** | Move the account to Trash |
 | **Esc** | Close without moving anything |
 
-### Pages
-| Key | What it does |
-|---|---|
-| **Tab** to **Previous**, a page number or **Next**, then **Enter** | Go to that page (50 rows per page) |
+The User Accounts list has no pages: every account is on one screen, so there are no page numbers or "Rows per page" box.
 
 ---
 
@@ -189,7 +188,30 @@ Rows that can't be deleted permanently show "Can't delete permanently" with the 
 ### Pages
 | Key | What it does |
 |---|---|
-| **Tab** to **Previous**, a page number or **Next**, then **Enter** | Go to that page (50 rows per page) |
+| **Tab** to **Previous**, a page number or **Next**, then **Enter** | Go to that page (10 rows per page unless you change it) |
+| **Tab** to **Rows per page**, then type `1`, `2` or `5`, or **↑ / ↓** | Show 10, 20 or 50 rows; goes back to page 1 and keeps the choice after Refresh |
+
+---
+
+## Audit Log (Admin)
+
+Read-only. No new shortcuts: it uses the same keys as Patient Records.
+
+### Move around
+| Key | What it does |
+|---|---|
+| **Tab** / **Shift + Tab** | Next / previous. Order: From → To → User → Action → Record → each row's **Details** → page numbers |
+| **Enter** / **Space** on **Details** | Show or hide what changed under that entry ("Field: old → new") |
+
+### Filters
+| Field | Key | What it does |
+|---|---|---|
+| From, To | Type the numbers | Fill month, day and year; **← / →** move between them. The list updates by itself. |
+| User, Action | Type the first letters, or **↑ / ↓** | Choose; the list updates right away |
+| Record | Type | The list updates after a short pause. Type a Visit No., Patient ID or username exactly, e.g. `V-000045`. |
+| Record | **Esc** | Clear the box |
+
+The filters stay in the address, so **F5 (Refresh)** and **Alt + ← (Back)** keep them. Pages: **Tab** to **Previous**, a page number or **Next**, then **Enter** (10 entries per page unless you change it). **Tab** to **Rows per page** and choose 10, 20 or 50 (type `1`, `2` or `5`, or **↑ / ↓**); it goes back to page 1 and keeps the choice after Refresh.
 
 ---
 

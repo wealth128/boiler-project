@@ -259,28 +259,56 @@ it('shows the typed text for "Other (specify)" rank and diagnosis', function () 
 
 // --- Paging ----------------------------------------------------------------
 
-it('shows 50 visits per page with page numbers', function () {
-    foreach (range(1, 51) as $minute) {
+it('shows 10 visits per page by default, with page numbers', function () {
+    foreach (range(1, 25) as $minute) {
         recordsVisit($this, ['visited_at' => now()->setTime(8, 0)->addMinutes($minute)]);
     }
 
     $this->actingAs($this->admin)
         ->get('/records/visits')
         ->assertInertia(fn (Assert $page) => $page
-            ->has('visits.data', 50)
+            ->has('visits.data', 10)
             ->where('visits.meta', [
-                'current_page' => 1, 'last_page' => 2, 'per_page' => 50,
-                'total' => 51, 'from' => 1, 'to' => 50,
+                'current_page' => 1, 'last_page' => 3, 'per_page' => 10,
+                'total' => 25, 'from' => 1, 'to' => 10,
             ]));
 
     $this->actingAs($this->admin)
-        ->get('/records/visits?page=2')
+        ->get('/records/visits?page=3')
         ->assertInertia(fn (Assert $page) => $page
-            ->has('visits.data', 1)
-            ->where('visits.meta.current_page', 2)
-            ->where('visits.meta.from', 51)
+            ->has('visits.data', 5)
+            ->where('visits.meta.current_page', 3)
+            ->where('visits.meta.from', 21)
             // The oldest one comes last.
-            ->where('visits.data.0.visited_at', now()->setTime(8, 1)->toIso8601String()));
+            ->where('visits.data.4.visited_at', now()->setTime(8, 1)->toIso8601String()));
+});
+
+it('shows 20 or 50 visits per page when asked, and 10 for any other value', function (string $query, int $rows, int $perPage) {
+    foreach (range(1, 60) as $minute) {
+        recordsVisit($this, ['visited_at' => now()->setTime(8, 0)->addMinutes($minute)]);
+    }
+
+    $this->actingAs($this->admin)
+        ->get('/records/visits'.$query)
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('visits.data', $rows)
+            ->where('visits.meta.per_page', $perPage));
+})->with([
+    '20' => ['?per_page=20', 20, 20],
+    '50' => ['?per_page=50', 50, 50],
+    '10' => ['?per_page=10', 10, 10],
+    '999' => ['?per_page=999', 10, 10],
+    'text' => ['?per_page=abc', 10, 10],
+    'negative' => ['?per_page=-50', 10, 10],
+    'a list' => ['?per_page[]=50', 10, 10],
+]);
+
+it('keeps the filters and rows per page when it goes to the last page', function () {
+    recordsVisit($this);
+
+    $this->actingAs($this->admin)
+        ->get('/records/visits?category=ER&per_page=50&page=5')
+        ->assertRedirect('/records/visits?category=ER&per_page=50&page=1');
 });
 
 it('goes to the last page when the page number is past the end', function () {
@@ -343,6 +371,35 @@ it('goes back to Records with the same filters after Save changes', function () 
         ->assertRedirect($records);
 
     expect($visit->fresh()->category->value)->toBe('OPD');
+});
+
+it('keeps the rows per page on the Edit way back, after Save changes and after Delete', function () {
+    $visit = recordsVisit($this);
+    $records = '/records/visits?from=2026-09-01&to=2026-10-09&per_page=20&page=2';
+
+    $this->actingAs($this->admin)
+        ->get('/encode?edit='.$visit->id.'&return='.urlencode($records))
+        ->assertInertia(fn (Assert $page) => $page->where('returnTo', $records));
+
+    $this->put("/visits/{$visit->id}", [
+        'patient_id' => $this->santos->id,
+        'last_name' => 'Santos',
+        'first_name' => 'Maria',
+        'middle_initial' => 'L',
+        'sex' => 'Female',
+        'birthdate' => $this->santos->birthdate->format('Y-m-d'),
+        'age' => 40,
+        'branch_id' => $this->army->id,
+        'rank_id' => $this->cpl->id,
+        'diagnosis_id' => $this->hypertension->id,
+        'category' => 'OPD',
+        'remarks' => '',
+        'return_to' => $records,
+    ])->assertSessionHasNoErrors()->assertRedirect($records);
+
+    $this->from($records)
+        ->delete("/visits/{$visit->id}", ['reason' => 'Duplicate entry'])
+        ->assertRedirect($records);
 });
 
 it('goes back to Encode after Save changes when not opened from Records', function () {
