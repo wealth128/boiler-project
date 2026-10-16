@@ -43,5 +43,6 @@ Code used by **2+ features** goes in global folders. Code used by one feature st
 - **Stop after each step.** Summarize in plain language what was built and how to check it, then wait for approval.
 - Run `php artisan test` and `npm run build` (or `npm run types`) before saying a step is done. Fix errors first.
 - Every keyboard shortcut you add goes into docs/keyboard-shortcuts.md in the same step.
+- At the end of every major step, before its commit, update planning/project-history.md: section 0 (Quick Start), section 5 (status table) and the decisions log for anything newly decided.
 - Never put real passwords in committed files. Use `.env`.
 - **Tests run ONLY on `patient_census_test`.** Never run `php artisan test` against `patient_census`: RefreshDatabase wipes every table. If the test database is unreachable, stop and tell me instead of switching databases.

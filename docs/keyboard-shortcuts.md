@@ -1,6 +1,6 @@
 # Keyboard Shortcuts
 
-_Last updated: 2026-10-15 · One section per screen. Print and post beside each PC._
+_Last updated: 2026-10-16 · One section per screen. Print and post beside each PC._
 
 You can do everything on these screens without the mouse.
 
@@ -155,6 +155,36 @@ Same keys as on Patient Records: choose a reason, **Enter** to move it to Trash,
 | Choose **Other (specify)** | The cursor moves to the text box. Type 10 to 200 characters. |
 | **Tab** to **Move to Trash**, then **Enter** | Move the account to Trash |
 | **Esc** | Close without moving anything |
+
+### Pages
+| Key | What it does |
+|---|---|
+| **Tab** to **Previous**, a page number or **Next**, then **Enter** | Go to that page (50 rows per page) |
+
+---
+
+## Trash (Admin)
+
+### Move around
+| Key | What it does |
+|---|---|
+| **Tab** / **Shift + Tab** | Next / previous button. Order: **Empty Trash** → each row's **Restore** and **Delete permanently** → page numbers |
+| **Enter** / **Space** | Press the focused button |
+
+Rows that can't be deleted permanently show "Can't delete permanently" with the reason, and **Tab** skips to the next row's **Restore**.
+
+### Restore
+| Key | What it does |
+|---|---|
+| **Tab** to **Restore**, then **Enter** | Restore the item right away. If it can't be restored, the reason shows under that row. |
+
+### "Delete permanently?" and "Empty Trash?" row
+| Key | What it does |
+|---|---|
+| Type the ID | The ID is shown in the row: the Visit No., Patient ID, username, name, age bracket (e.g. `18-25` with a normal hyphen, or `60 & above`) or the month as `2026-09`. For Empty Trash, type `EMPTY TRASH`. |
+| **Enter** | Delete permanently (only when the text matches) |
+| **Esc** | Cancel; the cursor goes back to the button you started from |
+| **Tab** | Delete permanently → Cancel |
 
 ### Pages
 | Key | What it does |

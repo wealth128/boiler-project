@@ -111,7 +111,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:admin')->group(function () {
         Route::get('trash', [TrashController::class, 'index'])->name('trash.index');
         Route::delete('trash', [TrashController::class, 'empty'])->name('trash.empty');
-        Route::whereIn('type', ['visits', 'patients', 'users', 'diagnoses', 'ranks', 'age-brackets', 'months'])->group(function () {
+        Route::whereIn('type', ['visits', 'patients', 'users', 'diagnoses', 'ranks', 'age-brackets', 'months'])->whereNumber('id')->group(function () {
             Route::post('trash/{type}/{id}/restore', [TrashController::class, 'restore'])->name('trash.restore');
             Route::delete('trash/{type}/{id}', [TrashController::class, 'destroy'])->name('trash.destroy');
         });
