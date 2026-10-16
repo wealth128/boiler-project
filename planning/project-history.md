@@ -1,6 +1,6 @@
 # Project History & Handover: AFP Hospital Patient Encoding & Reporting System
 
-_Last updated: 2026-10-16 (Step 6e done) · Read this first in any new Claude conversation about this project._
+_Last updated: 2026-10-16 (Step 6g done) · Read this first in any new Claude conversation about this project._
 
 This file carries over what was discussed in the first planning-and-review conversation (Oct 3–15, 2026), so a new conversation can continue without starting over. The official rules are still in `CLAUDE.md` and the other `planning/` files. This file explains **what was decided, why, where we are, and how to work with me.**
 
@@ -9,10 +9,10 @@ This file carries over what was discussed in the first planning-and-review conve
 ## 0. Quick Start (read this first; it may be all you need)
 | | |
 |---|---|
-| **Current step** | 6g Backup screen (6f Audit log is done and merged) |
-| **Next step** | 6h Settings (start a **new conversation** for each step) |
-| **Next prompt file** | Not written yet (6g Backup screen). Last prompt: `planning/Prompts/prompt-6f.md` |
-| **Last merged commit** | Step 6f Audit log merge into main (2026-10-16, not pushed yet; hash: see `git log -1`) |
+| **Current step** | 6h Settings (6g Backup screen is done and merged) |
+| **Next step** | Security review (`planning/security.md` section 3), after 6h (start a **new conversation** for each step) |
+| **Next prompt file** | Not written yet (6h Settings). Last prompt: `planning/Prompts/prompt-6g.md` |
+| **Last merged commit** | Step 6g Backup screen merge into main (2026-10-16, not pushed yet; hash: see `git log -1`) |
 | **Open decisions** | HTTPS vs HTTP on the hospital LAN (Phase 8) |
 
 **Token-saving rules (agreed 2026-10-16):**
@@ -80,6 +80,13 @@ This file carries over what was discussed in the first planning-and-review conve
 - **Close month** (only after the month ends) saves a report snapshot and locks edits. Reopen removes it. **Delete month report** moves all its visits to Trash as one item.
 - **Audit log** records every change; can't be edited; never logs passwords.
 - **Daily backup** at 02:00, kept 30 days, each run recorded. Logs: one file per day, kept 30 days.
+- **Backup screen (6g, decided 2026-10-16):**
+  - **Red warning** when the last run failed, or there is no successful backup in the last **26 hours** (daily run plus a 2-hour margin). It shows on the Backups page in full, and as a short line with a link at the top of every Admin page. Never shown to other roles.
+  - **No download and no restore from the browser.** Backup files hold all patient data, so they stay in the backup folder and IT copies them (weekly USB copy, monthly test restore).
+  - **USB copy and test restore marks** (new table `backup_marks`: who, when). Admin marks each with a confirm step; each mark is audited. A yellow warning shows on every Admin page when no USB copy was marked in **8 days** or no test restore in **35 days** (never marked counts as overdue). They are **reminders only and never block any work.**
+  - The warning banner is **hidden on /backups** itself, because the status panel shows the same warnings in full.
+  - **Run backup now** runs `BackupService` once behind a lock shared with the scheduler and `backup:run` ("A backup is already running."). It writes the audit entry `backup.run_manual`.
+  - Error text on screen hides the database password and login. `mysqldump` gets `SystemRoot` explicitly on Windows, or it fails with "Can't create TCP/IP socket (10106)" when started from the web server.
 
 ### Stack
 - Laravel 13 (PHP 8.3) + official React starter kit (Inertia, TypeScript, Tailwind), Fortify, Wayfinder, Pest, MySQL. Monolith. **No Sanctum, no Spatie.** Allowed packages: maatwebsite/excel, barryvdh/laravel-dompdf. vite-plus 0.3.3 (when updating it, update the `vite` alias in package.json to match).
@@ -110,8 +117,8 @@ This file carries over what was discussed in the first planning-and-review conve
 | 6d Reports (6d-1 counts, 6d-2 close/reopen/delete month, 6d-3 PDF/Excel/Print) | Done, merged and pushed (2026-10-16) |
 | 6e Trash (restore, delete permanently, Empty Trash) | Done, merged (2026-10-16, not pushed) |
 | 6f Audit log (+ rows per page 10 / 20 / 50 on Records, Trash, Audit log) | Done, merged (2026-10-16, not pushed) |
-| **6g Backup screen** | **Next** |
-| 6h Settings | After 6g |
+| 6g Backup screen (status, history, run now, USB copy / test restore reminders) | Done, merged (2026-10-16, not pushed) |
+| **6h Settings** | **Next** |
 | Security review (`planning/security.md` section 3) | End of Phase 6 |
 | Phase 7 parallel run (1 month beside Google Sheets) · 7.5 Docs · 8 Deploy · 9 Training | Later |
 
@@ -144,6 +151,8 @@ This file carries over what was discussed in the first planning-and-review conve
 - The hospital network has **no internet**. Run `composer install --no-dev` and `npm run build` on a dev PC, then copy the `vendor` folder and the built `public/build` assets to the server.
 - `storage/` (and `bootstrap/cache/`) must be **writable** by the web server: dompdf font cache, logs and backups live there.
 - PDF exports run with remote resources and PHP execution switched off (`isRemoteEnabled` and `isPhpEnabled` false), so the server needs no outside access for them.
+- **Set `'serve' => false` in `config/filesystems.php`** (the `local` disk) so Laravel's `storage/{path}` route is not registered (also in `planning/security.md` section 4). Backups are not under that disk, but the route should not exist on the server.
+- **Backup folder:** set `BACKUP_PATH` in `.env` to the shared folder on the **second PC** (e.g. `//BACKUP-PC/census-backups`, forward slashes). The default `storage/app/backups` is on the same disk as the database, so it is for testing only. The server's Windows account needs write access, and `MYSQLDUMP_PATH` must point to the real `mysqldump.exe`.
 
 ## 9. Lessons Learned
 - **VS Code can overwrite files** changed from outside (it saved old copies over `project-phases.md` and `prompt-6c.md`). Close a file's tab before someone else edits it; choose **Don't Save** if asked.

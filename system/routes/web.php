@@ -121,6 +121,10 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:admin')->group(function () {
         Route::get('backups', [BackupController::class, 'index'])->name('backups.index');
         Route::post('backups/run', [BackupController::class, 'run'])->name('backups.run');
+        // Mark the weekly USB copy / monthly test restore as done (a reminder only).
+        Route::post('backups/marks/{type}', [BackupController::class, 'mark'])
+            ->whereIn('type', ['usb-copy', 'test-restore'])
+            ->name('backups.mark');
     });
 });
 

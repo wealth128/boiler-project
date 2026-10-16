@@ -45,6 +45,7 @@ dataset('route map', [
     ['DELETE', 'trash', 'trash.empty'],
     ['GET', 'backups', 'backups.index'],
     ['POST', 'backups/run', 'backups.run'],
+    ['POST', 'backups/marks/{type}', 'backups.mark'],
 ]);
 
 it('registers every planned route behind auth and a role rule', function (string $method, string $uri, string $name) {
@@ -84,15 +85,6 @@ it('sends guests to the login page', function () {
     $this->post('/visits')->assertRedirect(route('login'));
 });
 
-it('shows the placeholder page on every planned screen', function (string $uri) {
-    $this->actingAs(User::factory()->admin()->create())
-        ->get($uri)
-        ->assertOk()
-        ->assertInertia(fn ($page) => $page->component('placeholder')->has('title'));
-})->with([
-    '/backups',
-]);
-
 it('answers the patient search with JSON', function () {
     $this->actingAs(User::factory()->encoder()->create())
         ->getJson('/patients/search?q=cruz')
@@ -111,7 +103,6 @@ it('answers stub form actions with a "not built yet" toast', function () {
         ['delete', "/visits/{$visit->id}"],
         ['delete', "/patients/{$patient->id}"],
         ['post', '/months/2026-09/close'],
-        ['post', '/backups/run'],
     ] as [$method, $uri]) {
         $this->{$method}($uri)->assertRedirect('/encode');
     }

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\BackupStatus;
 use App\Models\BackupRun;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 use RuntimeException;
@@ -31,6 +32,29 @@ class BackupService
 
     private const FILE_PATTERN = '/^patient_census_(\d{4}-\d{2}-\d{2}_\d{6})\.sql$/';
 
+    /** Name of the lock that keeps two backups from running together. */
+    public const LOCK = 'backup-run';
+
+    /**
+     * Run a backup unless one is already running (from the scheduler, the
+     * command or the Backups screen). Returns null when it is busy.
+     */
+    public function runIfIdle(): ?BackupRun
+    {
+        // Longer than the mysqldump timeout, so a crash frees the lock by itself.
+        $lock = Cache::lock(self::LOCK, 3700);
+
+        if (! $lock->get()) {
+            return null;
+        }
+
+        try {
+            return $this->run();
+        } finally {
+            $lock->release();
+        }
+    }
+
     public function run(): BackupRun
     {
         $startedAt = CarbonImmutable::now();
@@ -46,7 +70,9 @@ class BackupService
 
             $optionFile = $this->writeOptionFile();
 
-            $result = Process::timeout(3600)->run($this->command($optionFile, $file));
+            $result = Process::timeout(3600)
+                ->env($this->windowsEnvironment())
+                ->run($this->command($optionFile, $file));
 
             if ($result->failed()) {
                 $error = trim($result->errorOutput());
@@ -78,6 +104,25 @@ class BackupService
                 @unlink($optionFile);
             }
         }
+    }
+
+    /**
+     * On Windows, a program started from the web server (not the command
+     * line) can come up without SystemRoot. mysqldump then cannot start
+     * Winsock and stops with "Can't create TCP/IP socket (10106)". Pass it
+     * on explicitly. Nothing is added on other systems.
+     *
+     * @return array<string, string>
+     */
+    private function windowsEnvironment(): array
+    {
+        if (DIRECTORY_SEPARATOR !== '\\') {
+            return [];
+        }
+
+        $root = (string) (getenv('SystemRoot') ?: getenv('windir') ?: ($_SERVER['SystemRoot'] ?? '') ?: 'C:\\Windows');
+
+        return ['SystemRoot' => $root, 'windir' => $root];
     }
 
     /**

@@ -200,3 +200,23 @@ it('is scheduled daily at 2:00 AM', function () {
         ->and($event->expression)->toBe('0 2 * * *')
         ->and($event->withoutOverlapping)->toBeTrue();
 });
+
+it('passes SystemRoot to mysqldump on Windows, so it can open a network socket', function () {
+    fakeMysqldump();
+
+    app(BackupService::class)->run();
+
+    $seen = null;
+    Process::assertRan(function (PendingProcess $process) use (&$seen) {
+        $seen = $process->environment;
+
+        return true;
+    });
+
+    if (DIRECTORY_SEPARATOR === '\\') {
+        expect($seen)->toHaveKeys(['SystemRoot', 'windir'])
+            ->and($seen['SystemRoot'])->not->toBe('');
+    } else {
+        expect($seen)->toBe([]);
+    }
+});

@@ -1,4 +1,5 @@
 import { Breadcrumbs } from "@/components/breadcrumbs";
+import { BackupAlerts } from "@/components/shared/backup-alerts";
 import { AppSideNav } from "@/layouts/app/app-side-nav";
 import { AppTopBar } from "@/layouts/app/app-top-bar";
 import type { AppLayoutProps } from "@/types";
@@ -31,6 +32,7 @@ export default function AppLayout({
                             <Breadcrumbs breadcrumbs={breadcrumbs} />
                         </div>
                     )}
+                    <BackupAlerts />
                     {children}
                 </main>
             </div>
