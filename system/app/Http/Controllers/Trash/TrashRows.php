@@ -66,7 +66,7 @@ final class TrashRows
             ->orderByDesc('deleted_at')
             ->orderBy('type')
             ->orderByDesc('id')
-            ->paginate(TablePaging::PER_PAGE)
+            ->paginate(TablePaging::perPage($request))
             ->withQueryString();
     }
 
@@ -158,7 +158,7 @@ final class TrashRows
      * The Item column: "V-000123", "P-000012 · Santos, Maria L.",
      * "CPL (Army)", "18–25", "er.cruz", "September 2026 · 40 visits".
      */
-    private static function label(Model $item): string
+    public static function label(Model $item): string
     {
         return match (true) {
             $item instanceof Patient => "{$item->patient_no} · {$item->full_name}",

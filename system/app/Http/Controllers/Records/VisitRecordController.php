@@ -56,7 +56,7 @@ class VisitRecordController extends Controller
         $page = $query
             ->orderByDesc('visited_at')
             ->orderByDesc('id')
-            ->paginate(TablePaging::PER_PAGE)
+            ->paginate(TablePaging::perPage($request))
             ->withQueryString();
 
         if ($redirect = TablePaging::redirectPastLastPage($request, $page)) {

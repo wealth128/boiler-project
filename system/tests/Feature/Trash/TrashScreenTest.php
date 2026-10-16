@@ -206,21 +206,42 @@ it('keeps a month report in Trash, with its visits hidden, when its restore is r
     expect(collect(trashTestRows($this))->pluck('type')->all())->toBe(['patients', 'months']);
 });
 
-it('shows 50 rows per page with page numbers', function () {
-    Visit::factory()->count(51)->create();
+it('shows 10 rows per page by default, with page numbers', function () {
+    Visit::factory()->count(25)->create();
     Visit::query()->update(['deleted_at' => now(), 'delete_reason' => 'Duplicate entry']);
     $this->actingAs($this->admin);
 
     $this->get('/trash')->assertInertia(fn (Assert $page) => $page
-        ->has('items.data', 50)
-        ->where('items.meta', ['current_page' => 1, 'last_page' => 2, 'per_page' => 50, 'total' => 51, 'from' => 1, 'to' => 50]));
+        ->has('items.data', 10)
+        ->where('items.meta', ['current_page' => 1, 'last_page' => 3, 'per_page' => 10, 'total' => 25, 'from' => 1, 'to' => 10]));
 
-    $this->get('/trash?page=2')->assertInertia(fn (Assert $page) => $page
-        ->has('items.data', 1)
-        ->where('items.meta.current_page', 2)
-        ->where('items.meta.from', 51));
+    $this->get('/trash?page=3')->assertInertia(fn (Assert $page) => $page
+        ->has('items.data', 5)
+        ->where('items.meta.current_page', 3)
+        ->where('items.meta.from', 21));
 
-    $this->get('/trash?page=3')->assertRedirect('/trash?page=2');
+    $this->get('/trash?page=4')->assertRedirect('/trash?page=3');
+});
+
+it('shows 20 or 50 rows per page when asked, and 10 for any other value', function (string $query, int $rows, int $perPage) {
+    Visit::factory()->count(60)->create();
+    Visit::query()->update(['deleted_at' => now(), 'delete_reason' => 'Duplicate entry']);
+
+    $this->actingAs($this->admin)->get('/trash'.$query)->assertInertia(fn (Assert $page) => $page
+        ->has('items.data', $rows)
+        ->where('items.meta.per_page', $perPage));
+})->with([
+    '20' => ['?per_page=20', 20, 20],
+    '50' => ['?per_page=50', 50, 50],
+    '999' => ['?per_page=999', 10, 10],
+    'text' => ['?per_page=abc', 10, 10],
+    'a list' => ['?per_page[]=20', 10, 10],
+]);
+
+it('keeps the rows per page when it goes to the last page', function () {
+    trashTestMove($this, '2026-10-09 09:00', trashTestVisit($this), 'Duplicate entry');
+
+    $this->actingAs($this->admin)->get('/trash?per_page=20&page=3')->assertRedirect('/trash?per_page=20&page=1');
 });
 
 it('marks the items that can not be deleted permanently, with the reason', function () {
@@ -271,6 +292,27 @@ it('comes back to the page the click came from', function () {
     $this->actingAs($this->admin)
         ->post(trashTestRestoreUrl('visits', $visit->id), ['page' => 2])
         ->assertRedirect('/trash?page=2');
+});
+
+it('keeps the rows per page after Restore, Delete permanently and Empty Trash', function () {
+    $restore = trashTestMove($this, '2026-10-09 09:00', trashTestVisit($this), 'Duplicate entry');
+    $purge = trashTestMove($this, '2026-10-09 09:05', trashTestVisit($this), 'Duplicate entry');
+    $this->actingAs($this->admin);
+
+    $this->post(trashTestRestoreUrl('visits', $restore->id), ['page' => 2, 'per_page' => 20])
+        ->assertRedirect('/trash?page=2&per_page=20');
+
+    $this->delete("/trash/visits/{$purge->id}", ['confirm' => $purge->visit_no, 'per_page' => 50])
+        ->assertRedirect('/trash?per_page=50');
+
+    $this->delete('/trash', ['confirm' => 'EMPTY TRASH', 'per_page' => 20])->assertRedirect('/trash?per_page=20');
+
+    // The default size, and a size that is not offered, are left out.
+    $again = trashTestMove($this, '2026-10-09 09:10', trashTestVisit($this), 'Duplicate entry');
+    $this->post(trashTestRestoreUrl('visits', $again->id), ['per_page' => 10])->assertRedirect('/trash');
+
+    $last = trashTestMove($this, '2026-10-09 09:15', trashTestVisit($this), 'Duplicate entry');
+    $this->post(trashTestRestoreUrl('visits', $last->id), ['per_page' => 999])->assertRedirect('/trash');
 });
 
 it('shows a refused Restore as a message for that row, not a 403 page', function (Closure $make, string $type, Closure $expected, ?Closure $inTrash = null) {

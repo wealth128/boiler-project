@@ -65,7 +65,7 @@ class TrashController extends Controller
         $item = $this->find($trash, $type, $id);
 
         if ($item === null) {
-            return $this->gone();
+            return $this->gone($request);
         }
 
         $this->refusalInRow(fn () => $trash->restore($item, $this->actor($request)));
@@ -85,7 +85,7 @@ class TrashController extends Controller
         $item = $this->find($trash, $type, $id);
 
         if ($item === null) {
-            return $this->gone();
+            return $this->gone($request);
         }
 
         $actor = $this->actor($request);
@@ -129,7 +129,7 @@ class TrashController extends Controller
 
         Inertia::flash('toast', ['type' => $deleted > 0 ? 'success' : 'info', 'message' => $message]);
 
-        return redirect()->route('trash.index');
+        return redirect()->route('trash.index', $this->listQuery($request));
     }
 
     private function actor(Request $request): User
@@ -151,11 +151,11 @@ class TrashController extends Controller
         }
     }
 
-    private function gone(): RedirectResponse
+    private function gone(Request $request): RedirectResponse
     {
         Inertia::flash('toast', ['type' => 'warning', 'message' => 'That item is no longer in Trash.']);
 
-        return redirect()->route('trash.index');
+        return $this->backToList($request);
     }
 
     /**
@@ -186,7 +186,23 @@ class TrashController extends Controller
     {
         $page = $request->integer('page');
 
-        return redirect()->route('trash.index', $page > 1 ? ['page' => $page] : []);
+        return redirect()->route('trash.index', $this->listQuery($request, $page > 1 ? $page : null));
+    }
+
+    /**
+     * The page and rows per page to go back to. The page sends them with
+     * the request (body), so they are read from the input, not the URL.
+     *
+     * @return array<string, int>
+     */
+    private function listQuery(Request $request, ?int $page = null): array
+    {
+        $perPage = $request->integer('per_page');
+
+        return array_filter([
+            'page' => $page,
+            'per_page' => in_array($perPage, TablePaging::PER_PAGE_OPTIONS, true) && $perPage !== TablePaging::DEFAULT_PER_PAGE ? $perPage : null,
+        ]);
     }
 
     private static function items(int $count): string

@@ -7,13 +7,32 @@ use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 /**
- * Paging shared by every long table (Patient Records, Trash): 50 rows per
- * page, the page numbers for the footer, and the page-past-the-end redirect.
+ * Paging shared by every long table (Patient Records, Trash, Audit log): 10 rows per
+ * page by default (10, 20 or 50 with ?per_page=), the page numbers for the
+ * footer, and the page-past-the-end redirect.
  */
 final class TablePaging
 {
-    /** Rows per page. */
-    public const PER_PAGE = 50;
+    /** Rows per page when ?per_page= is missing or not allowed. */
+    public const DEFAULT_PER_PAGE = 10;
+
+    /** The only sizes the "Rows per page" dropdown offers. */
+    public const PER_PAGE_OPTIONS = [10, 20, 50];
+
+    /**
+     * Rows per page from ?per_page=. Only 10, 20 or 50 are allowed. Anything
+     * else (missing, 999, "abc", a list) is 10.
+     */
+    public static function perPage(Request $request): int
+    {
+        $value = $request->query('per_page');
+
+        if (is_string($value) && ctype_digit($value) && in_array((int) $value, self::PER_PAGE_OPTIONS, true)) {
+            return (int) $value;
+        }
+
+        return self::DEFAULT_PER_PAGE;
+    }
 
     /**
      * Page numbers for the table footer.

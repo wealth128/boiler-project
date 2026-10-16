@@ -1,32 +1,33 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
-import { useEffect, useRef, useState } from 'react';
-import EncodeController from '@/actions/App/Http/Controllers/Encode/EncodeController';
-import VisitRecordController from '@/actions/App/Http/Controllers/Records/VisitRecordController';
-import { CategoryChip } from '@/components/shared/category-chip';
-import { DataTable } from '@/components/shared/data-table';
+import { Head, Link, router, usePage } from "@inertiajs/react";
+import { useEffect, useRef, useState } from "react";
+import EncodeController from "@/actions/App/Http/Controllers/Encode/EncodeController";
+import VisitRecordController from "@/actions/App/Http/Controllers/Records/VisitRecordController";
+import { CategoryChip } from "@/components/shared/category-chip";
+import { DataTable } from "@/components/shared/data-table";
 import type {
     DeleteReasonOption,
     DeleteReasonValue,
-} from '@/components/shared/delete-reason-field';
-import type { DataTableColumn } from '@/components/shared/data-table';
-import { EmptyState } from '@/components/shared/empty-state';
-import { PageHeader } from '@/components/shared/page-header';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { NativeSelect } from '@/components/ui/native-select';
-import { MoveToTrashRow } from '@/components/shared/move-to-trash-row';
-import type { MoveToTrashErrors } from '@/components/shared/move-to-trash-row';
-import { Pagination } from '@/components/shared/pagination';
-import { RecordsTabs } from '@/features/records/records-tabs';
+} from "@/components/shared/delete-reason-field";
+import type { DataTableColumn } from "@/components/shared/data-table";
+import { EmptyState } from "@/components/shared/empty-state";
+import { PageHeader } from "@/components/shared/page-header";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
+import { MoveToTrashRow } from "@/components/shared/move-to-trash-row";
+import type { MoveToTrashErrors } from "@/components/shared/move-to-trash-row";
+import { Pagination } from "@/components/shared/pagination";
+import { RecordsTabs } from "@/features/records/records-tabs";
 import type {
     BranchFilterOption,
     VisitFilters,
     VisitRecord,
-} from '@/features/records/types';
-import { formatDateTime } from '@/lib/dates';
-import { formatCount } from '@/lib/format';
-import type { Category, Paged } from '@/types';
+} from "@/features/records/types";
+import { formatDateTime } from "@/lib/dates";
+import { formatCount } from "@/lib/format";
+import { DEFAULT_PER_PAGE, pagingQuery, showsPaging } from "@/lib/paging";
+import type { Category, Paged } from "@/types";
 
 type Props = {
     filters: VisitFilters;
@@ -41,13 +42,17 @@ type Props = {
 const SEARCH_DELAY_MS = 300;
 const DATE_DELAY_MS = 400;
 
-const actionClass = 'h-auto px-1.5 py-0.5 text-xs';
+const actionClass = "h-auto px-1.5 py-0.5 text-xs";
 
 /**
  * The URL for these filters. From and To are always sent: an empty value
  * means "no limit", while a missing one means the default range.
  */
-function visitsUrl(filters: VisitFilters, page = 1): string {
+function visitsUrl(
+    filters: VisitFilters,
+    page = 1,
+    perPage = DEFAULT_PER_PAGE,
+): string {
     return VisitRecordController.index.url({
         query: {
             from: filters.from,
@@ -55,7 +60,7 @@ function visitsUrl(filters: VisitFilters, page = 1): string {
             category: filters.category || undefined,
             branch: filters.branch || undefined,
             q: filters.q.trim() || undefined,
-            page: page > 1 ? page : undefined,
+            ...pagingQuery(perPage, page),
         },
     });
 }
@@ -91,7 +96,7 @@ export default function RecordsVisits({
         window.clearTimeout(timer.current);
         timer.current = window.setTimeout(
             () =>
-                router.visit(visitsUrl(next), {
+                router.visit(visitsUrl(next, 1, visits.meta.per_page), {
                     preserveState: true,
                     preserveScroll: true,
                     replace: true,
@@ -131,27 +136,27 @@ export default function RecordsVisits({
 
     const columns: DataTableColumn<VisitRecord>[] = [
         {
-            key: 'visited_at',
-            header: 'Date & time',
+            key: "visited_at",
+            header: "Date & time",
             cell: (visit) => formatDateTime(visit.visited_at),
-            className: 'font-mono whitespace-nowrap',
+            className: "font-mono whitespace-nowrap",
         },
         {
-            key: 'visit_no',
-            header: 'Visit',
+            key: "visit_no",
+            header: "Visit",
             cell: (visit) => visit.visit_no,
-            className: 'font-mono whitespace-nowrap',
+            className: "font-mono whitespace-nowrap",
         },
         {
-            key: 'patient_no',
-            header: 'Patient ID',
+            key: "patient_no",
+            header: "Patient ID",
             cell: (visit) => visit.patient_no,
-            className: 'font-mono whitespace-nowrap',
+            className: "font-mono whitespace-nowrap",
         },
-        { key: 'name', header: 'Name', cell: (visit) => visit.patient_name },
+        { key: "name", header: "Name", cell: (visit) => visit.patient_name },
         {
-            key: 'sex',
-            header: 'Sex',
+            key: "sex",
+            header: "Sex",
             cell: (visit) => (
                 <abbr title={visit.sex} className="no-underline">
                     {visit.sex.charAt(0)}
@@ -159,19 +164,19 @@ export default function RecordsVisits({
             ),
         },
         {
-            key: 'age',
-            header: 'Age',
+            key: "age",
+            header: "Age",
             cell: (visit) => visit.age,
-            align: 'right',
+            align: "right",
         },
         {
-            key: 'branch',
-            header: 'Branch / Rank',
+            key: "branch",
+            header: "Branch / Rank",
             cell: (visit) => `${visit.branch} · ${visit.rank}`,
         },
         {
-            key: 'diagnosis',
-            header: 'Diagnosis',
+            key: "diagnosis",
+            header: "Diagnosis",
             cell: (visit) => (
                 <>
                     {visit.diagnosis}
@@ -184,17 +189,17 @@ export default function RecordsVisits({
             ),
         },
         {
-            key: 'category',
-            header: 'Category',
+            key: "category",
+            header: "Category",
             cell: (visit) => <CategoryChip category={visit.category} />,
         },
         {
-            key: 'encoded_by',
-            header: 'Encoded by',
+            key: "encoded_by",
+            header: "Encoded by",
             cell: (visit) => visit.encoded_by,
         },
         {
-            key: 'actions',
+            key: "actions",
             header: <span className="sr-only">Actions</span>,
             cell: (visit) =>
                 visit.month_closed ? (
@@ -241,7 +246,7 @@ export default function RecordsVisits({
 
             <PageHeader
                 title="Patient Records"
-                description={`${formatCount(total)} ${total === 1 ? 'visit matches' : 'visits match'}. Deleted visits go to Trash and are left out of reports.`}
+                description={`${formatCount(total)} ${total === 1 ? "visit matches" : "visits match"}. Deleted visits go to Trash and are left out of reports.`}
             />
 
             <RecordsTabs current="visits" url={url} />
@@ -279,7 +284,7 @@ export default function RecordsVisits({
                             value={values.category}
                             onChange={(e) =>
                                 change({
-                                    category: e.target.value as Category | '',
+                                    category: e.target.value as Category | "",
                                 })
                             }
                         >
@@ -331,7 +336,7 @@ export default function RecordsVisits({
                         <EmptyState message="No visits match these filters." />
                     }
                     rowClassName={(visit) =>
-                        visit.id === trashing?.id ? 'bg-bad-soft' : undefined
+                        visit.id === trashing?.id ? "bg-bad-soft" : undefined
                     }
                     rowDetail={(visit) =>
                         visit.id === trashing?.id ? (
@@ -345,10 +350,19 @@ export default function RecordsVisits({
                         ) : null
                     }
                     footer={
-                        visits.meta.last_page > 1 ? (
+                        showsPaging(visits.meta) ? (
                             <Pagination
                                 meta={visits.meta}
-                                pageUrl={(page) => visitsUrl(filters, page)}
+                                pageUrl={(page) =>
+                                    visitsUrl(
+                                        filters,
+                                        page,
+                                        visits.meta.per_page,
+                                    )
+                                }
+                                perPageUrl={(size) =>
+                                    visitsUrl(filters, 1, size)
+                                }
                                 noun="visits"
                             />
                         ) : undefined
