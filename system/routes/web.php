@@ -12,6 +12,7 @@ use App\Http\Controllers\Records\VisitRecordController;
 use App\Http\Controllers\Reports\MonthController;
 use App\Http\Controllers\Reports\ReportController;
 use App\Http\Controllers\Reports\ReportExportController;
+use App\Http\Controllers\Reports\ReportPrintController;
 use App\Http\Controllers\Reports\SignatureController;
 use App\Http\Controllers\Settings\HospitalController;
 use App\Http\Controllers\Settings\ListController;
@@ -70,6 +71,8 @@ Route::middleware('auth')->group(function () {
     // --- Reports ------------------------------------------------ Admin, Viewer (CO)
     Route::middleware('role:admin,viewer')->group(function () {
         Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
+        // The page Print opens: this tab, or every category (?scope=all).
+        Route::get('reports/print', [ReportPrintController::class, 'show'])->name('reports.print');
         Route::get('reports/export/pdf', [ReportExportController::class, 'pdf'])->name('reports.export.pdf');
         Route::get('reports/export/excel', [ReportExportController::class, 'excel'])->name('reports.export.excel');
         // Signature pictures frozen when the month was closed (private disk).

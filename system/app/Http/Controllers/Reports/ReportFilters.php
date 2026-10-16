@@ -12,7 +12,12 @@ use Carbon\CarbonImmutable;
  *
  * Every value is checked here. A missing or bad value falls back to its
  * default instead of an error page, so a hand-typed or old link still opens
- * a report. With nothing chosen: last month, all categories.
+ * a report. With nothing chosen: last month, the ER tab.
+ *
+ * `category` is the tab: opd, er, admission or summary (any letter case,
+ * anything else is ER). It only chooses what is shown; the report itself
+ * always holds every category. `scope=all` (PDF and Print only) asks for
+ * every page: the summary and each category.
  *
  * Quarters and years are calendar periods. All dates are Asia/Manila (the
  * app time zone). `from` and `to` on this object are the first moment of
@@ -33,6 +38,11 @@ final class ReportFilters
 
     public const TYPES = [self::MONTHLY, self::QUARTERLY, self::ANNUAL, self::CUSTOM];
 
+    public const SUMMARY = 'summary';
+
+    /** The tab shown when none (or a bad one) is chosen. */
+    public const DEFAULT_TAB = 'er';
+
     private const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
     private function __construct(
@@ -42,7 +52,12 @@ final class ReportFilters
         public readonly int $year,
         public readonly string $customFrom,
         public readonly string $customTo,
+        /** The category of the tab, or null on the Summary tab. */
         public readonly ?Category $category,
+        /** The tab: opd, er, admission or summary. */
+        public readonly string $tab,
+        /** Every page (summary and each category), for the PDF and Print. */
+        public readonly bool $all,
         public readonly CarbonImmutable $from,
         public readonly CarbonImmutable $to,
         public readonly string $label,
@@ -72,7 +87,14 @@ final class ReportFilters
 
         $text = fn (string $key): string => is_string($input[$key] ?? null) ? trim($input[$key]) : '';
 
-        $category = Category::tryFrom($text('category'));
+        // Tab: opd, er, admission or summary, in any letter case. Else ER.
+        $tab = strtolower($text('category'));
+        $category = collect(Category::cases())->first(fn (Category $c): bool => strtolower($c->value) === $tab);
+        if ($category === null && $tab !== self::SUMMARY) {
+            $tab = self::DEFAULT_TAB;
+            $category = Category::ER;
+        }
+        $all = $text('scope') === 'all';
 
         // Month
         $month = $text('month');
@@ -139,7 +161,7 @@ final class ReportFilters
         return new self(
             $type, $month, $quarter, $year,
             $customFrom->format('Y-m-d'), $customTo->format('Y-m-d'),
-            $category, $from, $to, $label, $monthOptions, $yearOptions,
+            $category, $tab, $all, $from, $to, $label, $monthOptions, $yearOptions,
         );
     }
 
@@ -151,20 +173,41 @@ final class ReportFilters
 
     /**
      * The file name for an export, without the extension:
-     * census-report_2026-09_all, census-report_2026-Q3_er,
-     * census-report_2026_admission, census-report_2026-09-01_to_2026-09-30_all.
+     * census-report_2026-09_er, census-report_2026-Q3_summary,
+     * census-report_2026_all, census-report_2026-09-01_to_2026-09-30_all.
+     * The last part is the tab, or "all" for every page (and for Excel,
+     * which always holds every category: pass $everything).
      */
-    public function fileStem(): string
+    public function fileStem(bool $everything = false): string
     {
         $period = str_replace(' ', '_', $this->periodCode());
 
-        return 'census-report_'.$period.'_'.strtolower($this->category?->value ?? 'all');
+        return 'census-report_'.$period.'_'.($everything || $this->all ? 'all' : $this->tab);
     }
 
-    /** The category as written in the audit log: "All", "OPD", "ER" or "Admission". */
+    /**
+     * What was taken, as written in the audit log: "All" (every page),
+     * "Summary", "OPD", "ER" or "Admission".
+     */
     public function categoryName(): string
     {
-        return $this->category?->value ?? 'All';
+        return $this->all ? 'All' : ($this->category?->value ?? 'Summary');
+    }
+
+    /**
+     * The pages of a PDF or Print: the Summary and each category for
+     * "All categories", otherwise only the chosen tab. A page is "summary"
+     * or a category name.
+     *
+     * @return list<string>
+     */
+    public function pages(): array
+    {
+        if ($this->all) {
+            return [self::SUMMARY, ...Category::values()];
+        }
+
+        return [$this->category?->value ?? self::SUMMARY];
     }
 
     /**
@@ -195,7 +238,7 @@ final class ReportFilters
     /**
      * The choices as the screen shows them.
      *
-     * @return array{type: string, month: string, quarter: string, year: string, from: string, to: string, category: string}
+     * @return array{type: string, month: string, quarter: string, year: string, from: string, to: string, category: string} category is the tab: opd, er, admission or summary
      */
     public function toArray(): array
     {
@@ -206,7 +249,7 @@ final class ReportFilters
             'year' => (string) $this->year,
             'from' => $this->customFrom,
             'to' => $this->customTo,
-            'category' => $this->category?->value ?? '',
+            'category' => $this->tab,
         ];
     }
 

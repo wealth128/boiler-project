@@ -16,6 +16,10 @@ use Carbon\CarbonImmutable;
  * The choices come from the URL through ReportFilters (bad values fall back
  * to the defaults). A closed month gives its saved copy; every other
  * period is counted live by ReportBuilder.
+ *
+ * The report always holds every category: the tab (OPD, ER, Admission or
+ * Summary) only chooses what the screen, Print and PDF show, so the numbers
+ * are the same whichever tab is open.
  */
 class ReportSheetResolver
 {
@@ -35,8 +39,8 @@ class ReportSheetResolver
 
         $saved = $this->savedCopy($filters);
         $report = $saved !== null
-            ? $this->forCategory($saved['data'], $filters->category)
-            : $this->builder->build($filters->from, $filters->to, $filters->category);
+            ? $this->inCategoryOrder($saved['data'])
+            : $this->builder->build($filters->from, $filters->to);
 
         // Signature pictures only on a final report. Otherwise the names and
         // titles stay, over a blank line, with a note.
@@ -192,22 +196,17 @@ class ReportSheetResolver
     }
 
     /**
-     * Keep only the chosen category of a saved report. The grand totals of
-     * the saved copy are for all categories, so with one category chosen the
-     * totals are that category's own.
+     * A saved copy comes back from MySQL JSON with its categories in the
+     * database's own key order (ER, OPD, Admission). Put them in the usual
+     * order (OPD, ER, Admission) so the summary and the PDF pages read the
+     * same as for a live report. Only the order changes, never a number.
      *
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
-    private function forCategory(array $data, ?Category $category): array
+    private function inCategoryOrder(array $data): array
     {
-        if ($category === null) {
-            return $data;
-        }
-
-        $only = $data['categories'][$category->value];
-        $data['categories'] = [$category->value => $only];
-        $data['totals'] = ['patients' => $only['patients'], 'visits' => $only['visits']];
+        $data['categories'] = array_replace(array_flip(Category::values()), $data['categories']);
 
         return $data;
     }

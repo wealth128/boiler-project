@@ -36,6 +36,7 @@ dataset('protected routes', [
     'delete patient' => ['DELETE', '/patients/{patient}', ['admin']],
     // Reports: Admin, Viewer (CO)
     'reports page' => ['GET', '/reports', ['admin', 'viewer']],
+    'print page' => ['GET', '/reports/print', ['admin', 'viewer']],
     'export pdf' => ['GET', '/reports/export/pdf', ['admin', 'viewer']],
     'export excel' => ['GET', '/reports/export/excel', ['admin', 'viewer']],
     // Months: Admin

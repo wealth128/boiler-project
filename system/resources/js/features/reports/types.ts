@@ -7,7 +7,10 @@ import type { Category, DateTimeString } from '@/types';
 
 export type PeriodType = 'monthly' | 'quarterly' | 'annual' | 'custom';
 
-/** The choices, as they are in the URL. "" category = All. */
+/** The tab of the Reports screen, as it is in the URL (?category=er). */
+export type ReportTab = 'opd' | 'er' | 'admission' | 'summary';
+
+/** The choices, as they are in the URL. */
 export type ReportFilters = {
     type: PeriodType;
     /** "2026-09" */
@@ -18,7 +21,8 @@ export type ReportFilters = {
     /** "2026-09-01" */
     from: string;
     to: string;
-    category: Category | '';
+    /** The tab shown. */
+    category: ReportTab;
 };
 
 export type ReportOptions = {

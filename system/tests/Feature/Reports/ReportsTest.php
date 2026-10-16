@@ -375,7 +375,7 @@ it('shows a category with no patients as zero', function () {
 
 // --- The screen --------------------------------------------------------------
 
-it('opens with last month and all categories when nothing is chosen', function () {
+it('opens with last month and the ER tab when nothing is chosen', function () {
     census($this, '2026-09-10 09:00');
     census($this, '2026-10-02 09:00'); // this month: not in the default report
 
@@ -383,27 +383,27 @@ it('opens with last month and all categories when nothing is chosen', function (
 
     expect($props['filters'])->toBe([
         'type' => 'monthly', 'month' => '2026-09', 'quarter' => '3', 'year' => '2026',
-        'from' => '2026-09-01', 'to' => '2026-09-30', 'category' => '',
+        'from' => '2026-09-01', 'to' => '2026-09-30', 'category' => 'er',
     ])
         ->and($props['sheet']['period_label'])->toBe('September 2026')
         ->and($props['sheet']['title'])->toBe('Monthly Patient Census Report')
-        ->and($props['sheet']['category'])->toBeNull()
+        ->and($props['sheet']['category'])->toBe('ER')
         ->and(array_keys($props['report']['categories']))->toBe(['OPD', 'ER', 'Admission'])
         ->and($props['report']['totals'])->toBe(['patients' => 1, 'visits' => 1])
         ->and($props['month_status'])->toMatchArray(['closed' => false])
         ->and($props['snapshot'])->toBeNull();
 });
 
-it('shows only the chosen category', function () {
+it('opens the chosen tab and keeps the report the same (tabs only choose what is shown)', function () {
     census($this, '2026-09-10 09:00', category: 'ER');
     census($this, '2026-09-10 09:00', category: 'OPD');
 
     $props = $this->actingAs($this->admin)->get('/reports?category=ER')->inertiaProps();
 
-    expect(array_keys($props['report']['categories']))->toBe(['ER'])
+    expect(array_keys($props['report']['categories']))->toBe(['OPD', 'ER', 'Admission'])
         ->and($props['sheet']['category'])->toBe('ER')
-        ->and($props['filters']['category'])->toBe('ER')
-        ->and($props['report']['totals'])->toBe(['patients' => 1, 'visits' => 1]);
+        ->and($props['filters']['category'])->toBe('er')
+        ->and($props['report']['totals'])->toBe(['patients' => 2, 'visits' => 2]);
 });
 
 it('labels each period type', function (string $query, string $label, string $title) {
@@ -447,7 +447,7 @@ it('falls back to the defaults for bad URL values', function (string $query) {
 
     expect($props['filters'])->toBe([
         'type' => 'monthly', 'month' => '2026-09', 'quarter' => '3', 'year' => '2026',
-        'from' => '2026-09-01', 'to' => '2026-09-30', 'category' => '',
+        'from' => '2026-09-01', 'to' => '2026-09-30', 'category' => 'er',
     ])
         ->and($props['sheet']['period_label'])->toBe('September 2026');
 })->with([
@@ -552,15 +552,15 @@ it('shows the saved copy of a closed month, even after a diagnosis is renamed', 
         ->and(asMap($live['report']['categories']['ER']['diagnoses']))->toBe(['High blood pressure' => 2]);
 });
 
-it('shows one category of a saved copy with that category as its totals', function () {
+it('shows the whole saved copy whichever tab is open, with the tab as the sheet category', function () {
     census($this, '2026-09-10 09:00', category: 'ER');
     census($this, '2026-09-10 09:00', category: 'OPD');
     app(MonthService::class)->close('2026-09', $this->admin);
 
     $report = $this->actingAs($this->admin)->get('/reports?category=OPD&month=2026-09')->inertiaProps('report');
 
-    expect(array_keys($report['categories']))->toBe(['OPD'])
-        ->and($report['totals'])->toEqual(['patients' => 1, 'visits' => 1]);
+    expect(array_keys($report['categories']))->toBe(['OPD', 'ER', 'Admission'])
+        ->and($report['totals'])->toEqual(['patients' => 2, 'visits' => 2]);
 });
 
 it('counts a reopened month live again', function () {

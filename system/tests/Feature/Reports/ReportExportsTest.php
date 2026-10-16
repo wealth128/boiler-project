@@ -11,6 +11,7 @@ use App\Models\Visit;
 use App\Services\MonthService;
 use App\Services\ReportSheetResolver;
 use Illuminate\Support\Carbon;
+use Illuminate\Testing\TestResponse;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 
@@ -56,7 +57,7 @@ function exportVisit(object $test, string $when, array $attributes = [], string 
 }
 
 /** The Excel file of a response, read back. */
-function workbookOf(Illuminate\Testing\TestResponse $response): Spreadsheet
+function workbookOf(TestResponse $response): Spreadsheet
 {
     $path = tempnam(sys_get_temp_dir(), 'xlsx');
     file_put_contents($path, $response->getContent());
@@ -101,11 +102,14 @@ it('sends a PDF with the right type and file name', function (string $query, str
         ->and($response->headers->get('Content-Disposition'))->toBe('attachment; filename="'.$file.'.pdf"')
         ->and(substr($response->getContent(), 0, 5))->toBe('%PDF-');
 })->with([
-    'monthly' => ['type=monthly&month=2026-09', 'census-report_2026-09_all'],
+    // The last part is the tab (ER when none is chosen), or "all" for every page.
+    'monthly' => ['type=monthly&month=2026-09', 'census-report_2026-09_er'],
     'quarterly' => ['type=quarterly&quarter=3&year=2026&category=ER', 'census-report_2026-Q3_er'],
     'annual' => ['type=annual&year=2026&category=Admission', 'census-report_2026_admission'],
-    'custom' => ['type=custom&from=2026-09-01&to=2026-09-30', 'census-report_2026-09-01_to_2026-09-30_all'],
-    'nothing chosen' => ['', 'census-report_2026-09_all'],
+    'summary tab' => ['type=monthly&month=2026-09&category=summary', 'census-report_2026-09_summary'],
+    'every page' => ['type=monthly&month=2026-09&category=opd&scope=all', 'census-report_2026-09_all'],
+    'custom' => ['type=custom&from=2026-09-01&to=2026-09-30', 'census-report_2026-09-01_to_2026-09-30_er'],
+    'nothing chosen' => ['', 'census-report_2026-09_er'],
 ]);
 
 it('sends an Excel file with the right type and file name', function (string $query, string $file) {
@@ -117,9 +121,10 @@ it('sends an Excel file with the right type and file name', function (string $qu
         ->and($response->headers->get('Content-Disposition'))->toBe('attachment; filename="'.$file.'.xlsx"')
         ->and(substr($response->getContent(), 0, 2))->toBe('PK');
 })->with([
+    // Excel always holds every category, so its name always ends in "all".
     'monthly' => ['type=monthly&month=2026-09', 'census-report_2026-09_all'],
-    'quarterly' => ['type=quarterly&quarter=3&year=2026&category=ER', 'census-report_2026-Q3_er'],
-    'annual' => ['type=annual&year=2026&category=OPD', 'census-report_2026_opd'],
+    'quarterly' => ['type=quarterly&quarter=3&year=2026&category=ER', 'census-report_2026-Q3_all'],
+    'annual' => ['type=annual&year=2026&category=OPD', 'census-report_2026_all'],
     'custom' => ['type=custom&from=2026-09-01&to=2026-09-30', 'census-report_2026-09-01_to_2026-09-30_all'],
 ]);
 
@@ -166,14 +171,14 @@ it('has a Summary sheet and one sheet per category, with the same numbers as the
     expect($book->getSheetByName('ER')->getCell('B2')->getDataType())->toBe('n');
 });
 
-it('writes one sheet for a single category', function () {
+it('writes a Summary sheet and one sheet per category, whichever tab is open', function (string $tab) {
     exportVisit($this, '2026-09-05 09:00', category: 'ER');
 
-    $book = workbookOf($this->actingAs($this->admin)->get('/reports/export/excel?type=monthly&month=2026-09&category=ER'));
+    $book = workbookOf($this->actingAs($this->admin)->get('/reports/export/excel?type=monthly&month=2026-09&category='.$tab));
 
-    expect($book->getSheetNames())->toBe(['Summary', 'ER'])
-        ->and(sheetRows($book, 'Summary')[2][0])->toBe('September 2026 · ER only');
-});
+    expect($book->getSheetNames())->toBe(['Summary', 'OPD', 'ER', 'Admission'])
+        ->and(sheetRows($book, 'Summary')[2][0])->toBe('September 2026');
+})->with(['opd', 'er', 'admission', 'summary', 'nonsense']);
 
 it('lists every diagnosis in both files, not just ten', function () {
     foreach (range(1, 14) as $n) {

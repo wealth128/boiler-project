@@ -9,7 +9,7 @@ export type SheetHeading = {
     office: string;
     title: string;
     period_label: string;
-    /** Set when the report is for one category only. */
+    /** The category (or Summary) this page of the report is for. */
     category?: string | null;
     /** Address of the logo picture, or none. */
     logo_url?: string | null;
@@ -44,7 +44,7 @@ export function ReportHeader({ sheet }: { sheet: SheetHeading }) {
             <h2 className="mt-1 mb-0.5 text-lg font-semibold">{sheet.title}</h2>
             <div className="font-mono text-sm">
                 {sheet.period_label}
-                {sheet.category ? ` · ${sheet.category} only` : ''}
+                {sheet.category ? ` · ${sheet.category}` : ''}
             </div>
         </header>
     );

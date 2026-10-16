@@ -5,6 +5,12 @@ import { ExportButtons } from "@/features/reports/export-buttons";
 import { MonthBar } from "@/features/reports/month-bar";
 import { ReportControls } from "@/features/reports/report-controls";
 import { ReportSheet } from "@/features/reports/report-sheet";
+import {
+    REPORT_PANEL_ID,
+    ReportTabs,
+    pageOfTab,
+    tabId,
+} from "@/features/reports/report-tabs";
 import type {
     MonthStatus,
     Report,
@@ -75,7 +81,20 @@ export default function Reports({
                 )}
             </section>
 
-            <ReportSheet sheet={sheet} report={report} snapshot={snapshot} />
+            <ReportTabs filters={filters} />
+
+            <div
+                role="tabpanel"
+                id={REPORT_PANEL_ID}
+                aria-labelledby={tabId(filters.category)}
+            >
+                <ReportSheet
+                    page={pageOfTab(filters.category)}
+                    sheet={sheet}
+                    report={report}
+                    snapshot={snapshot}
+                />
+            </div>
         </>
     );
 }

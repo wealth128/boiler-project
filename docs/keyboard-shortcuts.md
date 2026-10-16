@@ -236,20 +236,31 @@ Nothing is counted until you press **Generate**. The choices are then kept in th
 
 | Key | What it does |
 |---|---|
-| **Tab** / **Shift + Tab** | Next / previous box. Order: Period type → Month (or Quarter and Year, or Year, or From and To) → Category → Generate |
-| Type the first letters, or **↑ / ↓** | Choose in Period type, Month, Quarter, Year or Category |
+| **Tab** / **Shift + Tab** | Next / previous box. Order: Period type → Month (or Quarter and Year, or Year, or From and To) → Generate → the open category tab → Print / PDF choice → Export PDF → Export Excel → Print |
+| Type the first letters, or **↑ / ↓** | Choose in Period type, Month, Quarter or Year |
 | **Alt + ↓** | Open a list |
 | **Enter** | Generate, from any box |
 | Type in From / To | Dates go day, month, year in the order your browser shows. **↑ / ↓** change the part the cursor is in. |
 
-### Export PDF, Export Excel and Print (Admin and Viewer)
-They use the report on the screen, so press **Generate** first if you changed a choice.
+### Category tabs: OPD | ER | Admission | Summary
+One category is shown at a time (ER when none is chosen). The tab is kept in the address bar with the period choices (`?category=er`), so Refresh and Back keep it. **Tab** goes to the open tab only; the arrow keys move between the tabs.
 
 | Key | What it does |
 |---|---|
-| **Tab** | After Generate: Export PDF → Export Excel → Print |
-| **Enter** / **Space** | Press the focused button. The PDF or Excel file is saved by the browser. |
-| **Ctrl + P** | Print the report, the same as the Print button (the menu, controls and buttons are left out, and the whole Diagnosis list is shown) |
+| **→** / **←** | Move the focus to the next / previous tab (from Summary to OPD and back) |
+| **Home** / **End** | Move the focus to the first (OPD) / last (Summary) tab |
+| **Enter** / **Space** | Open the tab that has the focus (the report loads again for that tab) |
+
+### Export PDF, Export Excel and Print (Admin and Viewer)
+They use the report on the screen, so press **Generate** first if you changed a choice. **Print / PDF** takes **This category** (the open tab) or **All categories** (the summary and each category, every one on a new page with its own header and signatures). Excel always has a Summary sheet and one sheet per category.
+
+| Key | What it does |
+|---|---|
+| **Tab** | After the tabs: Print / PDF choice → Export PDF → Export Excel → Print |
+| **←** / **→** or **↑** / **↓** (on the Print / PDF choice) | Switch between This category and All categories |
+| **Enter** / **Space** | Press the focused button. The PDF or Excel file is saved by the browser. Print opens the print view in a new tab and starts the Print dialog there. |
+| **Ctrl + P** | In the print view: print again. On the Reports screen: print the open tab only (the menu, controls and buttons are left out, and the whole Diagnosis list is shown) |
+| **Ctrl + W** | Close the print view tab |
 
 ### Close month, Reopen month and Delete month report (Admin, Monthly reports)
 | Key | What it does |
