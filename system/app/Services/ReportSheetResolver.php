@@ -44,7 +44,7 @@ class ReportSheetResolver
 
         // Signature pictures only on a final report. Otherwise the names and
         // titles stay, over a blank line, with a note.
-        $note = $this->notFinalNote($filters);
+        $note = $this->notFinalNote($filters, $saved !== null);
 
         $sheet = [
             'title' => $filters->title(),
@@ -55,9 +55,9 @@ class ReportSheetResolver
             'signature_note' => $note,
         ];
 
-        // A closed month shows the signature block it was closed with. A
-        // month closed before this was kept uses the current settings, and so
-        // do quarters and years.
+        // A closed month, and a quarter or year whose months are all closed,
+        // show the signature block saved with their snapshot. A month closed
+        // before the block was kept uses the current settings.
         $frozen = $note === null ? $this->frozenBlock($filters) : null;
 
         if ($frozen !== null) {
@@ -108,23 +108,38 @@ class ReportSheetResolver
     }
 
     /**
-     * The signature block saved when this (monthly, closed) report's month was
-     * closed, or null when it is not a closed month or was closed before the
-     * block was kept.
+     * The signature block saved with this report's snapshot (a closed month,
+     * or a quarter or year whose months are all closed), or null when the
+     * report has no snapshot or its month was closed before the block was
+     * kept. Only asked for when the report is final.
      *
      * @return array{period: string, block: array<string, string|null>}|null
      */
     private function frozenBlock(ReportFilters $filters): ?array
     {
-        $period = $filters->period();
+        $key = $this->spanKey($filters);
 
-        if ($period === null || ! MonthClosure::isClosed($period)) {
+        if ($key === null) {
             return null;
         }
 
-        $block = ReportSnapshot::query()->where('period', $period)->first()?->signature_block;
+        $block = ReportSnapshot::query()->where('period', $key)->first()?->signature_block;
 
-        return $block === null ? null : ['period' => $period, 'block' => $block];
+        return $block === null ? null : ['period' => $key, 'block' => $block];
+    }
+
+    /**
+     * The snapshot key of the report's period: the month ("2026-09"), the
+     * quarter ("2026-Q3") or the year ("2026"). A custom range has none.
+     */
+    private function spanKey(ReportFilters $filters): ?string
+    {
+        return match ($filters->type) {
+            ReportFilters::MONTHLY => $filters->month,
+            ReportFilters::QUARTERLY => "{$filters->year}-Q{$filters->quarter}",
+            ReportFilters::ANNUAL => (string) $filters->year,
+            default => null,
+        };
     }
 
     /**
@@ -150,11 +165,13 @@ class ReportSheetResolver
     }
 
     /**
-     * Why the report is not final, or null when it is. A report is final when
-     * every month in it is closed: a closed month, or a quarter or year whose
-     * months are all closed. A custom range is never final.
+     * Why the report is not final, or null when it is. A closed month is
+     * final. A quarter or year is final only when it has its snapshot, which
+     * is saved when its last month is closed (so some month still open, or
+     * months closed before snapshots of quarters and years existed, are not
+     * final). A custom range is never final.
      */
-    private function notFinalNote(ReportFilters $filters): ?string
+    private function notFinalNote(ReportFilters $filters, bool $hasSavedCopy): ?string
     {
         if ($filters->type === ReportFilters::CUSTOM) {
             return 'Not final – custom range';
@@ -167,18 +184,40 @@ class ReportSheetResolver
         }
 
         $closed = MonthClosure::query()->whereIn('period', $periods)->where('is_closed', true)->count();
+        $allClosed = $closed === count($periods);
 
-        return $closed === count($periods) ? null : 'Not final – month still open';
+        if ($filters->type === ReportFilters::MONTHLY) {
+            return $allClosed ? null : 'Not final – month still open';
+        }
+
+        if ($hasSavedCopy) {
+            return null;
+        }
+
+        return $allClosed ? 'Not final – no saved copy' : 'Not final – month still open';
     }
 
     /**
-     * The saved copy for a closed month, or null when the report is counted live.
-     * A copy in an older shape (before the full report was saved) is not used.
+     * The saved copy for a closed month, or for a quarter or year whose
+     * months are all closed, or null when the report is counted live. A copy
+     * in an older shape (before the full report was saved) is not used.
      *
      * @return array{data: array<string, mixed>, taken_at: CarbonImmutable}|null
      */
     private function savedCopy(ReportFilters $filters): ?array
     {
+        if (in_array($filters->type, [ReportFilters::QUARTERLY, ReportFilters::ANNUAL], true)) {
+            // Saved when the last month of the quarter or year was closed;
+            // reopening any of its months removes it.
+            $snapshot = ReportSnapshot::query()->where('period', $this->spanKey($filters))->first();
+
+            if ($snapshot === null || ($snapshot->data['version'] ?? null) !== ReportBuilder::VERSION) {
+                return null;
+            }
+
+            return ['data' => $snapshot->data, 'taken_at' => CarbonImmutable::instance($snapshot->created_at)];
+        }
+
         $period = $filters->period();
 
         if ($period === null) {

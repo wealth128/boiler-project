@@ -52,7 +52,7 @@ dataset('route map', [
     ['DELETE', 'settings/hospital/logo', 'hospital.logo.destroy'],
     ['GET', 'reports/print', 'reports.print'],
     ['GET', 'settings/hospital/signature/{who}', 'hospital.signature'],
-    ['GET', 'reports/signatures/{period}/{who}', 'reports.signature'],
+    ['GET', 'reports/signatures/{span}/{who}', 'reports.signature'],
     ['DELETE', 'settings/hospital/signature/{who}', 'hospital.signature.destroy'],
 ]);
 

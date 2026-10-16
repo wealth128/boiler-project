@@ -3,7 +3,7 @@ import type { KeyboardEvent, RefObject } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { formatDate } from '@/lib/dates';
-import { searchPatients } from './search-patients';
+import { SearchRateLimited, searchPatients } from './search-patients';
 import type { PatientMatch } from './types';
 
 /** Same as PatientSearchController::MIN_LENGTH. */
@@ -20,7 +20,7 @@ type PatientSearchProps = {
 type SearchState =
     | { status: 'idle' }
     | { status: 'done'; query: string; results: PatientMatch[] }
-    | { status: 'failed'; query: string };
+    | { status: 'failed'; query: string; limited: boolean };
 
 /**
  * "Find returning patient": type a last name or Patient ID, then pick the
@@ -58,7 +58,11 @@ export function PatientSearch({
             } catch (error) {
                 if (!controller.signal.aborted) {
                     console.error(error);
-                    setSearch({ status: 'failed', query: term });
+                    setSearch({
+                        status: 'failed',
+                        query: term,
+                        limited: error instanceof SearchRateLimited,
+                    });
                 }
             }
         }, DEBOUNCE_MS);
@@ -166,8 +170,9 @@ export function PatientSearch({
                 >
                     {search.status === 'failed' ? (
                         <p className="px-3 py-2.5 text-sm text-muted-foreground">
-                            Search isn't working right now. Try again, or fill
-                            in the form below.
+                            {search.limited
+                                ? 'Too many searches, wait a minute. You can also fill in the form below.'
+                                : "Search isn't working right now. Try again, or fill in the form below."}
                         </p>
                     ) : results.length === 0 ? (
                         <p className="px-3 py-2.5 text-sm text-muted-foreground">

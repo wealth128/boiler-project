@@ -8,8 +8,12 @@ use App\Http\Requests\Encode\UpdateVisitRequest;
 use App\Models\Patient;
 use App\Models\User;
 use App\Models\Visit;
+use Illuminate\Contracts\Cache\Lock;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 /**
@@ -30,25 +34,46 @@ class VisitController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        [$patient, $visit] = DB::transaction(function () use ($request, $user): array {
-            $patientId = $request->validated('patient_id');
+        $patientId = $request->validated('patient_id');
 
-            if ($patientId !== null) {
-                $patient = Patient::query()->lockForUpdate()->findOrFail($patientId);
-                $patient->update($request->patientAttributes());
-            } else {
-                $patient = Patient::create($request->patientAttributes());
-            }
+        // A new patient the encoder did not confirm as a different person
+        // ("save as new") goes through the duplicate guard. The guard in
+        // StoreVisitRequest runs before the save, so two encoders saving the
+        // same new patient at the same moment would both pass it. Saving runs
+        // under a lock for that name and birthdate and checks again inside,
+        // so the second one gets the same duplicate message.
+        $guarded = $patientId === null && ! $request->boolean('confirm_new_patient');
+        $lock = $guarded ? $this->lockNewPatient($request) : null;
 
-            $visit = Visit::create([
-                ...$request->visitAttributes(),
-                'patient_id' => $patient->id,
-                'visited_at' => now(),
-                'encoded_by' => $user->id,
-            ]);
+        try {
+            [$patient, $visit] = DB::transaction(function () use ($request, $user, $patientId, $guarded): array {
+                if ($patientId !== null) {
+                    $patient = Patient::query()->lockForUpdate()->findOrFail($patientId);
+                    $patient->update($request->patientAttributes());
+                } else {
+                    if ($guarded && Patient::identityExists(
+                        (string) $request->validated('last_name'),
+                        (string) $request->validated('first_name'),
+                        (string) $request->validated('birthdate'),
+                    )) {
+                        throw ValidationException::withMessages(['duplicate_patient' => StoreVisitRequest::DUPLICATE_MESSAGE]);
+                    }
 
-            return [$patient, $visit];
-        });
+                    $patient = Patient::create($request->patientAttributes());
+                }
+
+                $visit = Visit::create([
+                    ...$request->visitAttributes(),
+                    'patient_id' => $patient->id,
+                    'visited_at' => now(),
+                    'encoded_by' => $user->id,
+                ]);
+
+                return [$patient, $visit];
+            });
+        } finally {
+            $lock?->release();
+        }
 
         Inertia::flash('toast', [
             'type' => 'success',
@@ -56,6 +81,26 @@ class VisitController extends Controller
         ]);
 
         return to_route('encode.index');
+    }
+
+    /**
+     * Take the lock for a new patient's name and birthdate (case and extra
+     * spaces ignored), waiting a few seconds for another save of the same
+     * person. If it is still busy, the duplicate message is shown: the other
+     * save is very likely the same person.
+     */
+    private function lockNewPatient(StoreVisitRequest $request): Lock
+    {
+        $key = 'new-patient:'.sha1(mb_strtolower(trim((string) $request->validated('last_name')).'|'.trim((string) $request->validated('first_name')).'|'.(string) $request->validated('birthdate')));
+        $lock = Cache::lock($key, 30);
+
+        try {
+            $lock->block(5);
+        } catch (LockTimeoutException) {
+            throw ValidationException::withMessages(['duplicate_patient' => StoreVisitRequest::DUPLICATE_MESSAGE]);
+        }
+
+        return $lock;
     }
 
     /**

@@ -7,6 +7,7 @@ use App\Http\Requests\Users\ResetPasswordRequest;
 use App\Models\User;
 use App\Observers\AuditObserver;
 use App\Services\AuditLogger;
+use App\Services\UserSessions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -46,9 +47,10 @@ class UserAccountController extends Controller
 
     /**
      * Set a temporary password. It also clears a login lock: a user who
-     * forgot their password is often locked out too.
+     * forgot their password is often locked out too, and it signs the user
+     * out of every session they have.
      */
-    public function resetPassword(ResetPasswordRequest $request, User $user): RedirectResponse
+    public function resetPassword(ResetPasswordRequest $request, User $user, UserSessions $sessions): RedirectResponse
     {
         $wasLocked = $user->locked_at !== null;
 
@@ -58,6 +60,9 @@ class UserAccountController extends Controller
 
             $this->audit->log('user.password_reset', $user, ['unlocked' => $wasLocked, 'temporary' => true]);
         });
+
+        // Whoever held the old password is signed out everywhere, at once.
+        $sessions->endAll($user);
 
         return $this->done('success', "Password of {$user->username} reset".($wasLocked ? ' and account unlocked' : '').'. Give it to the user privately. They must choose their own when they log in.');
     }

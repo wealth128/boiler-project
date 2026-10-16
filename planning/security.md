@@ -1,6 +1,6 @@
 # Security Plan: AFP Hospital Patient Encoding & Reporting System
 
-_Last updated: 2026-10-14 · Applies to every build step and to deployment_
+_Last updated: 2026-10-18 · Applies to every build step and to deployment_
 
 The system holds patient names, birthdates and diagnoses, so it is treated as sensitive data (Philippine Data Privacy Act of 2012). It runs on the hospital LAN only, with no internet. The main risks are not outside hackers. They are: someone using another person's account, a user reaching data their role shouldn't see, records changed or deleted without a trace, data lost when the server PC fails, and the server PC itself being copied or stolen.
 
@@ -12,6 +12,11 @@ The system holds patient names, birthdates and diagnoses, so it is treated as se
 | Temporary passwords must be changed at first login | Step 5b |
 | Password rule: at least 8 characters, letters and numbers; stored hashed, never logged | Steps 3, 5b |
 | Deactivated, locked or deleted users are signed out on their next click | Step 5b |
+| **A new password ends other logins:** resetting a password (Admin, System Admin, or IT with `census:reset-admin-password`) signs that user out everywhere; changing your own password signs out your other sessions and keeps the current one. Needs `SESSION_DRIVER=database` | Step 6x |
+| **Request limits:** Print, PDF and Excel share 20 a minute per user, the patient search 60 a minute; a 429 shows "Too many requests, wait a minute" | Step 6x |
+| **Races:** Close month runs under a lock and re-checks "already closed" on the locked row; a new patient saved twice at the same moment is stopped by a lock and a second duplicate check (the same duplicate message) | Step 6x |
+| The Encode page and the patient search check the `encode-visits` Gate inside the controller as well as the route role | Step 6x |
+| The login says how many attempts are left before the account locks (kept on purpose, see project-history) | Step 3 |
 | Everyone signed out daily at 8:00 PM | Step 5 |
 | Every page checks the role on the server, twice (route group + controller/policy) | Step 4 onward |
 | Only one active Admin and one active System Admin; Admin account protected | Steps 5, 5b |
@@ -34,6 +39,8 @@ The system holds patient names, birthdates and diagnoses, so it is treated as se
 10. **Tests:** every new route gets a test for each role (allowed or 403).
 11. **No new packages** without asking.
 12. Delete reasons are picked from a fixed list per record type; Other needs at least 10 characters.
+13. **New password or reset = end the old sessions** (`App\Services\UserSessions`). Any new feature that sets or resets a password must call it.
+14. **Anything that can be pressed twice at once** (close, save a new record that must be unique) takes a lock for that record and checks the rule again inside it. Anything that builds a file or searches as the user types gets a named limiter in `AppServiceProvider::configureRateLimits()`.
 
 ## 3. Security Review (end of Phase 6, before the parallel run)
 A full check of the finished system, by Claude Code and then by me:

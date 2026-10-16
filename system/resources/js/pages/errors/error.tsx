@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import { home, login } from '@/routes';
 
-type ErrorStatus = 403 | 404 | 413 | 500 | 503;
+type ErrorStatus = 403 | 404 | 413 | 429 | 500 | 503;
 
 type ErrorPageProps = {
     status: ErrorStatus;
@@ -24,6 +24,10 @@ const TEXT: Record<ErrorStatus, { title: string; body: string }> = {
     413: {
         title: 'File too large',
         body: 'Nothing was saved from this last step. Choose a smaller file and try again.',
+    },
+    429: {
+        title: 'Too many requests',
+        body: 'Please wait a minute, then try again. Nothing was lost.',
     },
     500: {
         title: 'Something went wrong',

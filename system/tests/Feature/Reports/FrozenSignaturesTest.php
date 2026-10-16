@@ -222,7 +222,9 @@ it('uses the current settings for a month closed before the block was kept', fun
         ->and(frozenPdfHtml(SEPTEMBER))->toContain('BGEN New Person');
 });
 
-it('uses the current settings for a quarter with all months closed', function () {
+it('uses the block frozen with the quarter snapshot for a quarter with all months closed', function () {
+    // Step 6x: the quarter has its own snapshot, saved when its last month closed
+    // (PeriodSnapshotsTest covers it in full).
     closeMonthsFor($this, '2026-07', '2026-08', '2026-09');
 
     useSignatures($this, 'Ana Reyes', 'BGEN New Person', 200, 80);
@@ -230,9 +232,9 @@ it('uses the current settings for a quarter with all months closed', function ()
     $sheet = frozenSheet($this, 'type=quarterly&quarter=3&year=2026');
 
     expect($sheet['signatures_final'])->toBeTrue()
-        ->and($sheet['noted_by'])->toBe('BGEN New Person')
-        ->and($sheet['noted_signature_url'])->toStartWith('/settings/hospital/signature/noted?v=')
-        ->and(frozenPdfHtml('type=quarterly&quarter=3&year=2026'))->toContain('BGEN New Person')->not->toContain('COL Cruz');
+        ->and($sheet['noted_by'])->toBe('COL Cruz')
+        ->and($sheet['noted_signature_url'])->toStartWith('/reports/signatures/2026-Q3/noted?v=')
+        ->and(frozenPdfHtml('type=quarterly&quarter=3&year=2026'))->toContain('COL Cruz')->not->toContain('BGEN New Person');
 });
 
 it('shows the current names (no picture) on an open month and a custom range', function () {

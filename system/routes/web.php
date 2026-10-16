@@ -55,7 +55,7 @@ Route::middleware('auth')->group(function () {
     // --- Encode ------------------------------------------------- Encoder, Admin
     Route::middleware('role:encoder,admin')->group(function () {
         Route::get('encode', [EncodeController::class, 'index'])->name('encode.index');
-        Route::get('patients/search', PatientSearchController::class)->name('patients.search'); // JSON
+        Route::get('patients/search', PatientSearchController::class)->middleware('throttle:patient-search')->name('patients.search'); // JSON
         Route::post('visits', [VisitController::class, 'store'])->name('visits.store');
         Route::put('visits/{visit}', [VisitController::class, 'update'])->name('visits.update');
     });
@@ -72,11 +72,16 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:admin,viewer')->group(function () {
         Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
         // The page Print opens: this tab, or every category (?scope=all).
-        Route::get('reports/print', [ReportPrintController::class, 'show'])->name('reports.print');
-        Route::get('reports/export/pdf', [ReportExportController::class, 'pdf'])->name('reports.export.pdf');
-        Route::get('reports/export/excel', [ReportExportController::class, 'excel'])->name('reports.export.excel');
+        // Print, PDF and Excel share one limit (20 a minute per user).
+        Route::middleware('throttle:report-files')->group(function () {
+            Route::get('reports/print', [ReportPrintController::class, 'show'])->name('reports.print');
+            Route::get('reports/export/pdf', [ReportExportController::class, 'pdf'])->name('reports.export.pdf');
+            Route::get('reports/export/excel', [ReportExportController::class, 'excel'])->name('reports.export.excel');
+        });
         // Signature pictures frozen when the month was closed (private disk).
-        Route::get('reports/signatures/{period}/{who}', [SignatureController::class, 'show'])
+        // {span} is a month (2026-09), a quarter (2026-Q3) or a year (2026).
+        Route::get('reports/signatures/{span}/{who}', [SignatureController::class, 'show'])
+            ->where('span', '\d{4}(-(0[1-9]|1[0-2]|Q[1-4]))?')
             ->whereIn('who', ['prepared', 'noted'])
             ->name('reports.signature');
     });

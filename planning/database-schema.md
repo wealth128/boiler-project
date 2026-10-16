@@ -12,7 +12,7 @@ Laravel's standard tables (`sessions`, `cache`, `jobs`, `migrations`) are create
 | Encoding | `visits` | One row per visit: what gets counted in reports |
 | Dropdown lists | `branches`, `ranks`, `diagnoses`, `age_brackets` | Admin-maintained choices |
 | Control | `month_closures` | Which months are closed (locked) |
-| | `report_snapshots` | Saved copy of each closed month's report |
+| | `report_snapshots` | Saved copy of each closed month's report, and of each quarter and year whose months are all closed |
 | | `audit_logs` | Who did what, when |
 | | `backup_runs` | Result of each automatic or manual backup |
 | | `backup_marks` | Admin marked a USB copy or a test restore as done |
@@ -130,19 +130,21 @@ Laravel's standard tables (`sessions`, `cache`, `jobs`, `migrations`) are create
 | reopened_by / reopened_at | FK → users / datetime, null | |
 
 ### report_snapshots
-Saved copy of a month's report, taken when Admin closes the month. Closed months always show this copy, so submitted numbers never change.
+Saved copy of a month's report, taken when Admin closes the month. Closed months always show this copy, so submitted numbers never change. The same table also holds the saved copy of a **quarter** and of a **year**, taken when closing a month makes every month of that quarter (or year) closed (see "Snapshot keys" below).
 | Column | Type | Notes |
 |---|---|---|
 | id | PK | |
-| period | char(7) | e.g. `2026-09`. One current copy per month. |
+| period | char(7) | The snapshot key: a month `YYYY-MM` (e.g. `2026-09`), a quarter `YYYY-Qn` (e.g. `2026-Q3`) or a year `YYYY` (e.g. `2026`). Unique: one current copy per key. |
 | data | JSON | All counts for OPD, ER and Admission, with the bracket, diagnosis and rank labels as they were at closing |
 | signature_block | JSON, null | The signature block as it was at closing: `prepared_by`, `prepared_by_title`, `noted_by`, `noted_by_title`, and `prepared_signature` / `noted_signature` (file names inside the month's frozen folder, or null when no picture was set). Null for a month closed before this column existed: it then uses the current settings. |
 | created_by | FK → users | Admin who closed the month |
 | created_at | datetime | |
 
-On reopen, the copy is discarded together with its frozen signature pictures. Closing again saves a fresh copy and freezes the signature block again. Both actions go to the audit log.
+On reopen, the month's copy is discarded together with its frozen signature pictures, and so are the copies of its quarter and its year (they are no longer final). Closing again saves fresh copies and freezes the signature block again. Both actions go to the audit log (`month.closed` / `month.reopened` for the month; a quarter or year copy has no audit entry of its own).
 
-**Frozen signature pictures:** at closing, the two signature pictures in Settings are copied to `storage/app/private/frozen-signatures/{period}/prepared.png|jpg` and `noted.png|jpg` (the private `local` disk, never under `public/`). They are served only by `GET /reports/signatures/{period}/{who}` for a signed-in Admin or Viewer (CO), and only while the month is closed. Reopening deletes the month's folder. Only the closed month itself uses the frozen block; quarterly and annual reports (even with all months closed) use the current settings. The report numbers in `data` are not affected.
+**Snapshot keys:** `YYYY-MM` is a month, `YYYY-Qn` a quarter, `YYYY` a year. Only `MonthService` writes them, and only `ReportSheetResolver` and `SignatureController` read them. Nothing else lists or reads this table: the month picker and the closed-month checks use `month_closures`, Close, Reopen and Delete month report accept only `YYYY-MM`, and Trash, the audit log and backups never look at it (a test guards this). A quarter or year copy is counted by the same `ReportBuilder::build` call the live report uses, with the same `version`, so the saved copy of a closed month is not touched by it.
+
+**Frozen signature pictures:** at closing, the two signature pictures in Settings are copied to `storage/app/private/frozen-signatures/{key}/prepared.png|jpg` and `noted.png|jpg`, one folder per snapshot key (`2026-09`, `2026-Q3`, `2026`; the private `local` disk, never under `public/`). They are served only by `GET /reports/signatures/{span}/{who}` for a signed-in Admin or Viewer (CO), and only while that month is closed or that quarter or year has its copy. Reopening a month deletes its folder and the folders of its quarter and year. A closed month, and a quarter or year whose months are all closed, show their frozen block. A quarter or year with no copy (a month still open, or months closed before quarter and year copies existed) is counted live, shows "Not final" and has no signature pictures. The report numbers in `data` are not affected.
 
 ### audit_logs
 | Column | Type | Notes |

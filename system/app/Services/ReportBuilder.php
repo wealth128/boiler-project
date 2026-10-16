@@ -344,7 +344,10 @@ class ReportBuilder
      * Each branch that has patients, in branch order, with its total, then
      * its ranks with patients in seniority order (ranks.sort_order). "Other
      * (specify)" ranks show the typed text as their own lines, after the
-     * listed ranks.
+     * listed ranks. Typed text is cleaned of extra spaces and merged ignoring
+     * upper / lower case, and text that matches a listed rank of the same
+     * branch (including one in Trash) counts under that rank, the same way
+     * typed diagnoses are merged, so a branch never shows two lines for one rank.
      *
      * @return array<string, list<array{name: string, total: int, ranks: list<array{label: string, count: int}>}>>
      */
@@ -364,6 +367,13 @@ class ReportBuilder
             )
             ->get();
 
+        // Listed ranks by branch and name, including ones in Trash, to merge typed text into.
+        $listedRanks = [];
+
+        foreach (DB::table('ranks')->where('is_other', false)->get(['id', 'branch_id', 'name', 'sort_order']) as $listed) {
+            $listedRanks[$listed->branch_id][self::nameKey($listed->name)] = $listed;
+        }
+
         // category => branch id => {name, order, total, listed: [...], typed: [...]}
         $tree = [];
 
@@ -373,10 +383,16 @@ class ReportBuilder
             $branch ??= ['name' => $row->branch, 'order' => (int) $row->branch_order, 'total' => 0, 'listed' => [], 'typed' => []];
             $branch['total'] += $n;
 
-            if ($row->is_other) {
-                $text = trim((string) $row->rank_other);
+            $text = $row->is_other ? trim((string) preg_replace('/\s+/u', ' ', (string) $row->rank_other)) : '';
+            $match = $text !== '' ? ($listedRanks[$row->branch_id][self::nameKey($text)] ?? null) : null;
+
+            if ($match !== null) {
+                // Typed text that is a listed rank of this branch counts as that rank.
+                $branch['listed'][$match->id] ??= ['label' => $match->name, 'order' => (int) $match->sort_order, 'count' => 0];
+                $branch['listed'][$match->id]['count'] += $n;
+            } elseif ($row->is_other) {
                 $label = $text !== '' ? $text : $row->rank_name;
-                $key = mb_strtolower($label);
+                $key = self::nameKey($label);
                 $branch['typed'][$key] ??= ['label' => $label, 'count' => 0];
                 $branch['typed'][$key]['count'] += $n;
             } else {

@@ -82,12 +82,14 @@ class StoreVisitRequest extends VisitRequest
                     return;
                 }
 
-                // The database comparison ignores upper / lower case.
-                $exists = Patient::query()
-                    ->where('last_name', trim((string) $this->input('last_name')))
-                    ->where('first_name', trim((string) $this->input('first_name')))
-                    ->whereDate('birthdate', (string) $this->input('birthdate'))
-                    ->exists();
+                // The database comparison ignores upper / lower case. The save
+                // checks again under a lock (VisitController), for two encoders
+                // saving the same new patient at the same moment.
+                $exists = Patient::identityExists(
+                    (string) $this->input('last_name'),
+                    (string) $this->input('first_name'),
+                    (string) $this->input('birthdate'),
+                );
 
                 if ($exists) {
                     $errors->add('duplicate_patient', self::DUPLICATE_MESSAGE);
