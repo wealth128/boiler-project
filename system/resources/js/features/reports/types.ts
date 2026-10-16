@@ -64,6 +64,14 @@ export type Sheet = {
     prepared_by_title: string;
     noted_by: string;
     noted_by_title: string;
+    /** Address of the hospital logo, or null when none is set. */
+    logo_url: string | null;
+    prepared_signature_url: string | null;
+    noted_signature_url: string | null;
+    /** True when every month in the report is closed: signature pictures show. */
+    signatures_final: boolean;
+    /** Why the report is not final ("Not final – month still open"), or null. */
+    signature_note: string | null;
 };
 
 export type Snapshot = {

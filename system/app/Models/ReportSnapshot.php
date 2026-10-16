@@ -14,10 +14,11 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property string $period
  * @property array<string, mixed> $data
+ * @property array<string, string|null>|null $signature_block names, titles and signature picture files at close
  * @property int $created_by
  * @property Carbon $created_at
  */
-#[Fillable(['period', 'data', 'created_by'])]
+#[Fillable(['period', 'data', 'signature_block', 'created_by'])]
 class ReportSnapshot extends Model
 {
     public const UPDATED_AT = null;
@@ -26,6 +27,7 @@ class ReportSnapshot extends Model
     {
         return [
             'data' => 'array',
+            'signature_block' => 'array',
             'created_at' => 'datetime',
         ];
     }

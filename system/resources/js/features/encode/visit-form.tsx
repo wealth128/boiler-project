@@ -716,6 +716,7 @@ export function VisitForm({
                         <Button
                             type="button"
                             variant="outline"
+                            className="border-primary font-semibold text-primary hover:bg-navy-soft hover:text-primary"
                             onClick={startOver}
                             disabled={form.processing}
                         >

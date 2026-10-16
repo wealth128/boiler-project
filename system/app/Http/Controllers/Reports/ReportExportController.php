@@ -7,6 +7,7 @@ use App\Exports\Reports\ReportWorkbook;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\AuditLogger;
+use App\Services\HospitalSettings;
 use App\Services\ReportSheetResolver;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -28,7 +29,7 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class ReportExportController extends Controller
 {
-    public function pdf(Request $request, ReportSheetResolver $resolver, AuditLogger $audit): Response
+    public function pdf(Request $request, ReportSheetResolver $resolver, AuditLogger $audit, HospitalSettings $hospital): Response
     {
         Gate::authorize(Permission::ViewReports->value);
 
@@ -38,7 +39,14 @@ class ReportExportController extends Controller
 
         $pdf = Pdf::setOption(['defaultFont' => 'DejaVu Sans', 'isRemoteEnabled' => false, 'isPhpEnabled' => false])
             ->setPaper('a4', 'portrait')
-            ->loadView('reports.pdf', [...$data, 'generatedAt' => $generatedAt]);
+            ->loadView('reports.pdf', [
+                ...$data,
+                'generatedAt' => $generatedAt,
+                'logoData' => $hospital->imageDataUri('logo'),
+                // Signature pictures only on a final report (every month closed);
+                // a closed month uses the copies frozen when it was closed.
+                'signatureData' => $resolver->signatureData($data),
+            ]);
 
         $this->addFooter($pdf, 'Generated '.$generatedAt->format('d-M-Y H:i'));
 

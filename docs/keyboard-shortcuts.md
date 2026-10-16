@@ -269,3 +269,33 @@ Shows 10 diagnoses at a time. A longer list scrolls inside its box, and the Tota
 | **↑ / ↓** | Scroll one line |
 | **Page Up / Page Down** | Scroll one page |
 | **Home / End** | Go to the top / bottom |
+
+---
+
+## Hospital Settings (Admin)
+
+Use **Tab** and **Shift + Tab** to move between the boxes, the file buttons, **Remove logo** / **Remove signature** and **Save settings**. **Enter** in a text box saves the form.
+
+### Crop dialog (logo and signatures)
+Opens after you choose a picture file. **Tab** goes through: crop area → Zoom slider → Rotate 90° → Remove white background (signatures) → Cancel → Save.
+
+| Key | What it does |
+|---|---|
+| **Arrow keys** (in the crop area) | Move the picture |
+| **+** / **-** (in the crop area) | Zoom in / out |
+| **← / →** (on the Zoom slider) | Zoom a little |
+| **Home / End** (on the Zoom slider) | Smallest / largest zoom |
+| **Enter** or **Space** (on Rotate 90°) | Turn the picture a quarter turn |
+| **Space** (on Remove white background) | Tick / untick |
+| **Esc** | Close the dialog and keep nothing (same as Cancel) |
+
+---
+
+## Menu (sidebar, all roles with a heading)
+
+| Key | What it does |
+|---|---|
+| **Tab** to the **ADMINISTRATION** heading | Put the cursor on it |
+| **Enter** or **Space** | Hide / show the links under it (the arrow shows which). Your choice is remembered on this PC. |
+
+The group opens by itself when you go to one of its pages. On a narrow screen there are no headings and every link is always shown.

@@ -12,6 +12,8 @@ use App\Http\Controllers\Records\VisitRecordController;
 use App\Http\Controllers\Reports\MonthController;
 use App\Http\Controllers\Reports\ReportController;
 use App\Http\Controllers\Reports\ReportExportController;
+use App\Http\Controllers\Reports\SignatureController;
+use App\Http\Controllers\Settings\HospitalController;
 use App\Http\Controllers\Settings\ListController;
 use App\Http\Controllers\Trash\TrashController;
 use App\Http\Controllers\Users\UserAccountController;
@@ -70,6 +72,10 @@ Route::middleware('auth')->group(function () {
         Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
         Route::get('reports/export/pdf', [ReportExportController::class, 'pdf'])->name('reports.export.pdf');
         Route::get('reports/export/excel', [ReportExportController::class, 'excel'])->name('reports.export.excel');
+        // Signature pictures frozen when the month was closed (private disk).
+        Route::get('reports/signatures/{period}/{who}', [SignatureController::class, 'show'])
+            ->whereIn('who', ['prepared', 'noted'])
+            ->name('reports.signature');
     });
 
     // --- Months (close / reopen / delete) ----------------------- Admin
@@ -89,6 +95,25 @@ Route::middleware('auth')->group(function () {
         });
         // Move up / Move down (rank seniority order).
         Route::put('settings/ranks/{id}/move', [ListController::class, 'move'])->whereNumber('id')->name('lists.ranks.move');
+    });
+
+    // --- Hospital settings -------------------------------------- Admin
+    Route::middleware('role:admin')->group(function () {
+        Route::get('settings/hospital', [HospitalController::class, 'edit'])->name('hospital.edit');
+        Route::put('settings/hospital', [HospitalController::class, 'update'])->name('hospital.update');
+        Route::delete('settings/hospital/logo', [HospitalController::class, 'destroyLogo'])->name('hospital.logo.destroy');
+        Route::delete('settings/hospital/signature/{who}', [HospitalController::class, 'destroySignature'])
+            ->whereIn('who', ['prepared', 'noted'])
+            ->name('hospital.signature.destroy');
+    });
+
+    // The logo and signature pictures: signed-in Admin and Viewer (CO), who see
+    // them on the report. They are kept outside public/ and only ever served here.
+    Route::middleware('role:admin,viewer')->group(function () {
+        Route::get('settings/hospital/logo', [HospitalController::class, 'logo'])->name('hospital.logo');
+        Route::get('settings/hospital/signature/{who}', [HospitalController::class, 'signature'])
+            ->whereIn('who', ['prepared', 'noted'])
+            ->name('hospital.signature');
     });
 
     // --- Users -------------------------------------------------- Admin, System Admin

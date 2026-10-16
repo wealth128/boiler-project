@@ -82,7 +82,7 @@ export default function ChoosePassword({ passwordRules }: Props) {
                             href={logout()}
                             as="button"
                             onClick={() => router.flushAll()}
-                            className="cursor-pointer text-xs text-muted-foreground underline-offset-4 hover:underline"
+                            className="cursor-pointer rounded-md border border-bad px-3 py-1.5 text-sm font-semibold text-bad hover:bg-bad-soft"
                             data-test="logout-button"
                         >
                             Log out

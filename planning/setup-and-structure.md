@@ -89,6 +89,11 @@ With Inertia there's no separate API. Each URL below is a Laravel route. **GET**
 | Lists | GET | `/settings/lists` | Diagnoses, ranks, age brackets | Admin |
 | | POST / PUT / DELETE | `/settings/{list}` · `/settings/{list}/{id}` | Add / edit / delete item | Admin |
 | | PUT | `/settings/ranks/{id}/move` | Move a rank up / down (seniority order) | Admin |
+| Hospital settings | GET / PUT | `/settings/hospital` | Hospital name, office line, signatories, logo | Admin |
+| | DELETE | `/settings/hospital/logo` | Remove the logo | Admin |
+| | DELETE | `/settings/hospital/signature/{who}` | Remove a signature picture (`prepared` or `noted`) | Admin |
+| | GET | `/settings/hospital/logo` · `/settings/hospital/signature/{who}` | The logo / signature picture (private disk, signed-in only) | Admin, CO |
+| | GET | `/reports/signatures/{period}/{who}` | The signature picture frozen when that month was closed | Admin, CO |
 | Users | GET / POST | `/users` | List / add account | Admin, System Admin |
 | | PUT · DELETE | `/users/{user}` | Edit / move to Trash | Admin, System Admin |
 | | POST | `/users/{user}/unlock` · `/reset-password` · `/toggle-active` | Account actions | Admin, System Admin |

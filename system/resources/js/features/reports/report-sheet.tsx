@@ -1,5 +1,9 @@
 import type { ReactNode } from "react";
 import { CategoryChip } from "@/components/shared/category-chip";
+import {
+    ReportHeader,
+    ReportSignatures,
+} from "@/components/shared/report-sheet-parts";
 import type {
     CategoryReport,
     CountLine,
@@ -51,18 +55,7 @@ export function ReportSheet({ sheet, report, snapshot }: ReportSheetProps) {
                 // across two pages.
                 className="max-w-[980px] rounded-lg border bg-card px-4 pt-5 pb-8 sm:px-7 sm:pt-7 print:max-w-none print:rounded-none print:border-0 print:p-0 print:[&_tr]:break-inside-avoid"
             >
-                <header className="mb-4 border-b-2 border-foreground pb-3 text-center">
-                    <div className="text-xs tracking-[0.12em] text-muted-foreground uppercase">
-                        {sheet.hospital_name} · {sheet.office}
-                    </div>
-                    <h2 className="mt-1 mb-0.5 text-lg font-semibold">
-                        {sheet.title}
-                    </h2>
-                    <div className="font-mono text-sm">
-                        {sheet.period_label}
-                        {sheet.category ? ` · ${sheet.category} only` : ""}
-                    </div>
-                </header>
+                <ReportHeader sheet={sheet} />
 
                 {!sheet.category && (
                     <Totals
@@ -87,16 +80,7 @@ export function ReportSheet({ sheet, report, snapshot }: ReportSheetProps) {
                     <CategorySection key={name} name={name} data={data} />
                 ))}
 
-                <div className="mt-9 grid gap-10 break-inside-avoid sm:grid-cols-2">
-                    <Signature
-                        name={sheet.prepared_by}
-                        caption={`Prepared by · ${sheet.prepared_by_title}`}
-                    />
-                    <Signature
-                        name={sheet.noted_by}
-                        caption={`Noted by · ${sheet.noted_by_title}`}
-                    />
-                </div>
+                <ReportSignatures sheet={sheet} />
 
                 <p className="mt-4 text-xs text-muted-foreground print:break-inside-avoid">
                     {snapshot
@@ -315,14 +299,5 @@ function BranchRows({
                 </tr>
             ))}
         </>
-    );
-}
-
-function Signature({ name, caption }: { name: string; caption: string }) {
-    return (
-        <div className="border-t border-foreground pt-1.5 text-xs text-muted-foreground">
-            <b className="block min-h-5 text-sm text-foreground">{name}</b>
-            {caption}
-        </div>
     );
 }

@@ -1,6 +1,6 @@
 # Project History & Handover: AFP Hospital Patient Encoding & Reporting System
 
-_Last updated: 2026-10-16 (Step 6g done) · Read this first in any new Claude conversation about this project._
+_Last updated: 2026-10-18 (Step 6h done) · Read this first in any new Claude conversation about this project._
 
 This file carries over what was discussed in the first planning-and-review conversation (Oct 3–15, 2026), so a new conversation can continue without starting over. The official rules are still in `CLAUDE.md` and the other `planning/` files. This file explains **what was decided, why, where we are, and how to work with me.**
 
@@ -9,11 +9,11 @@ This file carries over what was discussed in the first planning-and-review conve
 ## 0. Quick Start (read this first; it may be all you need)
 | | |
 |---|---|
-| **Current step** | 6h Settings (6g Backup screen is done and merged) |
-| **Next step** | Security review (`planning/security.md` section 3), after 6h (start a **new conversation** for each step) |
-| **Next prompt file** | Not written yet (6h Settings). Last prompt: `planning/Prompts/prompt-6g.md` |
-| **Last merged commit** | Step 6g Backup screen merge into main (2026-10-16, not pushed yet; hash: see `git log -1`) |
-| **Open decisions** | HTTPS vs HTTP on the hospital LAN (Phase 8) |
+| **Current step** | 6h Settings is done and merged (2026-10-18) |
+| **Next step** | **6d-4 Reports split by category**, then **6i** (include the logo and signature files in the daily backup), then the Security review (`planning/security.md` section 3). Start a **new conversation** for each step. |
+| **Next prompt file** | Not written yet (6d-4). Last prompt: `planning/Prompts/prompt-6h.md` |
+| **Last merged commit** | Step 6h Settings merge into main (2026-10-18, not pushed yet; hash: see `git log -1`) |
+| **Open decisions** | HTTPS vs HTTP on the hospital LAN (Phase 8). The logo and signature files are not backed up yet (fix in 6i, see section 8). |
 
 **Token-saving rules (agreed 2026-10-16):**
 - Start a **new conversation for each major step** (6f, 6g, 6h, security review…). Give it only this file plus the step's prompt; read other files or chat history only when I say so.
@@ -104,10 +104,17 @@ This file carries over what was discussed in the first planning-and-review conve
 - **Audit log labels (6f):** list items have **separate labels** ("Diagnosis added", "Rank / type added", "Age bracket added") instead of one "List item added", so the Action dropdown has no duplicates. **One Trash action group** holds every "moved to Trash", "restored" and "deleted permanently" action for all record types; the Visits, Patients and Lists groups hold only add and edit actions. A system sign-out is labelled by its reason (e.g. "Signed out (account deactivated)").
 - **Audit log detail-line order (6f):** MySQL stores JSON keys in its own order, so the detail lines come in a **fixed order** (known fields in the order of `AuditRows::FIELDS`, the rest by name).
 - **Audit log index (6f):** a new migration adds an index on `audit_logs (user_id, created_at)`; `created_at` was already indexed.
+- **Settings (6h, built 2026-10-18):** `GET/PUT /settings/hospital`, Admin only (`manage-settings` Gate plus `role:admin`); Encoder, Viewer and System Admin get 403. Sidebar item "Hospital settings". One form saves the six report texts (Hospital name 2–150 characters, Office line 150, names and titles 100; text is trimmed; an empty office line or title is saved as its default) plus the logo and two signature pictures. Every save writes `settings.updated` with old → new for each changed field only; picture changes write `settings.logo_changed`, `settings.signature_changed`, `settings.logo_removed`, `settings.signature_removed` (no image data). Labels are in `AuditActions` (new "Settings" group). The log subject is the signed-in Admin, because settings keys are words, not IDs.
+- **Pictures (6h):** the logo and each signature are optional PNG or JPG, 1 MB at most and 1000 × 1000 px at most. The real file type is checked (SVG and renamed files are refused), and the server **saves the picture again** with GD, so anything hidden in the file is dropped. Stored on the private `local` disk under fixed names (never the uploaded name), outside `public/`, and served only by signed-in routes. **The Viewer (CO) may load the pictures** because the Reports screen shows them (my decision, instead of the 403 first asked for); Encoder and System Admin get 403. Each picture has a Remove button (logo: `settings.logo_removed`; signature: `settings.signature_removed`). A file too big for the server shows a friendly "File too large" page (413) and the browser checks the size first.
+- **Crop before upload (6h): built-in canvas cropper, no package** (`react-easy-crop` was tried and removed on 2026-10-18; do not add a crop library). Drag, zoom slider, Rotate 90°, preview, Save, Cancel, Esc, arrow keys to move and + / - to zoom. Logo crop is square (saved 600 × 600), signature crop is a 3:1 strip (900 × 300). Signatures have a **"Remove white background"** checkbox (near-white pixels become transparent, saved as PNG). If the PNG would be over 1 MB it is drawn smaller, as a last step saved as JPG.
+- **Signature pictures only on final reports (6h):** a closed month, and a quarterly or annual report only when every month in it is closed (screen, Print and PDF). Open months and custom ranges show names and titles over a blank signature line with a small note, "Not final – month still open" or "Not final – custom range" (the note shows even when no picture is uploaded). **Excel never has pictures.** The live preview on Hospital settings always shows the pictures.
+- **Signature block frozen at close (6h):** closing a month saves the Prepared by / Noted by names and titles and copies of the two signature pictures with the month's snapshot (`report_snapshots.signature_block`, pictures in `storage/app/private/frozen-signatures/{period}/`). The closed month's screen, Print, PDF and Excel names use the frozen copy, even after Settings change. Reopening removes the copy with the snapshot; closing again freezes the new block. Months closed before this change, and quarterly and annual reports, use the current settings. Report numbers are not touched. Frozen pictures are served by `GET /reports/signatures/{period}/{who}` (Admin and Viewer only). Details are in `planning/database-schema.md`.
+- **Sidebar (6h):** the "ADMINISTRATION" heading is a collapsible group (button with an arrow icon, Enter / Space, `aria-expanded`). Open or closed is remembered per browser in localStorage (default open, wrapped in try/catch) and the group opens by itself when you are on one of its pages. The app has no icon-only sidebar; on a narrow screen the menu is one row with no headings, so all links are always shown there.
+- **Button visibility (6h):** Log out in the sidebar is a red outlined button, the Encode "Clear" button and the logo file button are solid or outlined in navy, so they read as clickable.
 - **Security plan:** `planning/security.md`. Every step follows its section 2. HTTPS vs HTTP on the LAN is **still to decide** with hospital IT/CO (Phase 8).
 - **Documentation phase 7.5** added: developer guide, database guide, how-to, learning path, operations guide, user manual, keyboard shortcuts (collected in `docs/keyboard-shortcuts.md` as each screen is built).
 
-## 5. Where We Are (2026-10-16)
+## 5. Where We Are (2026-10-18)
 | Step | Status |
 |---|---|
 | 1–5, 5b, 5c (foundation, login, RBAC, audit, Trash service, backup, temp passwords) | Done, merged |
@@ -118,7 +125,9 @@ This file carries over what was discussed in the first planning-and-review conve
 | 6e Trash (restore, delete permanently, Empty Trash) | Done, merged (2026-10-16, not pushed) |
 | 6f Audit log (+ rows per page 10 / 20 / 50 on Records, Trash, Audit log) | Done, merged (2026-10-16, not pushed) |
 | 6g Backup screen (status, history, run now, USB copy / test restore reminders) | Done, merged (2026-10-16, not pushed) |
-| **6h Settings** | **Next** |
+| 6h Settings (hospital name, office line, signatories, logo, signature pictures; crop; frozen signature block) | Done, merged (2026-10-18, not pushed) |
+| **6d-4 Reports split by category** | **Next** |
+| 6i (include the logo and signature files in the daily backup) | After 6d-4 |
 | Security review (`planning/security.md` section 3) | End of Phase 6 |
 | Phase 7 parallel run (1 month beside Google Sheets) · 7.5 Docs · 8 Deploy · 9 Training | Later |
 
@@ -128,7 +137,7 @@ This file carries over what was discussed in the first planning-and-review conve
 - Sections: totals, sex, age brackets (with a "No bracket" line if an age fits none), diagnosis per visit (every diagnosis by name, no Top 10, no Others line, total equals Visits), Branch × Rank in the Lists seniority order.
 - Closed months show the saved snapshot. Close / Reopen / Delete month report are Admin only.
 - Exports: PDF (dompdf), Excel (maatwebsite), Print. Same permission as the screen; Excel cells starting with = + - @ written as text.
-- Hospital name/logo and signatories come from Settings (6h); use the settings table values / placeholders for now.
+- Hospital name/logo and signatories come from Settings (6h, done): see the 6h notes in section 4.
 - **Agreed 2026-10-15: Reports is split into three prompts**, each built, reviewed and committed on its own: 6d-1 counts on screen (`planning/Prompts/prompt-6d-1.md`, written), 6d-2 close/reopen/delete month, 6d-3 PDF/Excel/Print.
 - Tests should use small known data sets and exact expected numbers.
 - 6d-3: Print, PDF and Excel must show the full Diagnosis list (the 10-row scroll box is screen only).
@@ -152,6 +161,8 @@ This file carries over what was discussed in the first planning-and-review conve
 - `storage/` (and `bootstrap/cache/`) must be **writable** by the web server: dompdf font cache, logs and backups live there.
 - PDF exports run with remote resources and PHP execution switched off (`isRemoteEnabled` and `isPhpEnabled` false), so the server needs no outside access for them.
 - **Set `'serve' => false` in `config/filesystems.php`** (the `local` disk) so Laravel's `storage/{path}` route is not registered (also in `planning/security.md` section 4). Backups are not under that disk, but the route should not exist on the server.
+- **PHP upload limits:** set `upload_max_filesize` and `post_max_size` to **at least 2 MB** (the default `upload_max_filesize` is 2M, `post_max_size` 8M). The logo and signature pictures are saved at 1 MB at most; a smaller limit would refuse a valid picture.
+- **Backups cover the database only (open item, fix in 6i):** the logo and signature picture files in `storage/app/private` (`logo.*`, `signature-*.*` and the `frozen-signatures/` folder) are **not backed up yet**. If that folder is lost, the database still names the files but the pictures are gone. In 6i, include that folder in the daily backup (and in the restore notes).
 - **Backup folder:** set `BACKUP_PATH` in `.env` to the shared folder on the **second PC** (e.g. `//BACKUP-PC/census-backups`, forward slashes). The default `storage/app/backups` is on the same disk as the database, so it is for testing only. The server's Windows account needs write access, and `MYSQLDUMP_PATH` must point to the real `mysqldump.exe`.
 
 ## 9. Lessons Learned

@@ -64,6 +64,12 @@ final class AuditRows
         'is_other' => 'Is "Other (specify)"',
         'is_active' => 'Active',
         'name' => 'Name',
+        'hospital_name' => 'Hospital name',
+        'report_office' => 'Office line',
+        'prepared_by' => 'Prepared by (name)',
+        'prepared_by_title' => 'Prepared by (title)',
+        'noted_by' => 'Noted by (name)',
+        'noted_by_title' => 'Noted by (title)',
     ];
 
     /** Keys in the saved changes that the Record column already shows. */

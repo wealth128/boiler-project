@@ -23,8 +23,10 @@ final class AuditActions
 
     public const BACKUPS = 'Backups';
 
+    public const SETTINGS = 'Settings';
+
     /** Order of the groups in the Action filter. */
-    public const GROUPS = [self::VISITS, self::PATIENTS, self::MONTHS, self::LISTS, self::USERS, self::TRASH, self::BACKUPS];
+    public const GROUPS = [self::VISITS, self::PATIENTS, self::MONTHS, self::LISTS, self::USERS, self::TRASH, self::BACKUPS, self::SETTINGS];
 
     /**
      * Code => [label, group].
@@ -64,6 +66,12 @@ final class AuditActions
         'backup.run_manual' => ['Backup run manually', self::BACKUPS],
         'backup.usb_copy_marked' => ['USB copy marked as done', self::BACKUPS],
         'backup.test_restore_marked' => ['Test restore marked as done', self::BACKUPS],
+
+        'settings.updated' => ['Hospital settings saved', self::SETTINGS],
+        'settings.logo_changed' => ['Hospital logo changed', self::SETTINGS],
+        'settings.logo_removed' => ['Hospital logo removed', self::SETTINGS],
+        'settings.signature_changed' => ['Signature picture changed', self::SETTINGS],
+        'settings.signature_removed' => ['Signature picture removed', self::SETTINGS],
 
         'visit.deleted' => ['Visit moved to Trash', self::TRASH],
         'visit.restored' => ['Visit restored', self::TRASH],
