@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\BackupMonitor;
 use Illuminate\Support\Facades\Schedule;
 
 /*
@@ -9,5 +10,5 @@ use Illuminate\Support\Facades\Schedule;
 
 // Daily database backup at 2:00 AM (Asia/Manila).
 Schedule::command('backup:run')
-    ->dailyAt('02:00')
+    ->dailyAt(BackupMonitor::DAILY_AT)
     ->withoutOverlapping();

@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Enums\Permission;
 use App\Http\Middleware\EndSessionAtDailyCutoff;
 use App\Models\AgeBracket;
+use App\Models\BackupMark;
 use App\Models\BackupRun;
 use App\Models\Branch;
 use App\Models\Diagnosis;
@@ -120,6 +121,7 @@ class AppServiceProvider extends ServiceProvider
             'month_deletions' => MonthDeletion::class,
             'report_snapshots' => ReportSnapshot::class,
             'backup_runs' => BackupRun::class,
+            'backup_marks' => BackupMark::class,
             'settings' => Setting::class,
         ]);
 

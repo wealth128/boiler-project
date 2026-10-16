@@ -21,8 +21,10 @@ final class AuditActions
 
     public const TRASH = 'Trash';
 
+    public const BACKUPS = 'Backups';
+
     /** Order of the groups in the Action filter. */
-    public const GROUPS = [self::VISITS, self::PATIENTS, self::MONTHS, self::LISTS, self::USERS, self::TRASH];
+    public const GROUPS = [self::VISITS, self::PATIENTS, self::MONTHS, self::LISTS, self::USERS, self::TRASH, self::BACKUPS];
 
     /**
      * Code => [label, group].
@@ -58,6 +60,10 @@ final class AuditActions
         'user.password_changed' => ['Password changed', self::USERS],
         'user.activated' => ['Account activated', self::USERS],
         'user.deactivated' => ['Account deactivated', self::USERS],
+
+        'backup.run_manual' => ['Backup run manually', self::BACKUPS],
+        'backup.usb_copy_marked' => ['USB copy marked as done', self::BACKUPS],
+        'backup.test_restore_marked' => ['Test restore marked as done', self::BACKUPS],
 
         'visit.deleted' => ['Visit moved to Trash', self::TRASH],
         'visit.restored' => ['Visit restored', self::TRASH],

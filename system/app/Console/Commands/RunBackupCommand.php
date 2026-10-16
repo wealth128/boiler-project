@@ -21,7 +21,13 @@ class RunBackupCommand extends Command
 
     public function handle(BackupService $backups): int
     {
-        $run = $backups->run();
+        $run = $backups->runIfIdle();
+
+        if ($run === null) {
+            $this->error('A backup is already running.');
+
+            return self::FAILURE;
+        }
 
         if ($run->status === BackupStatus::Failed) {
             $this->error('Backup failed: '.$run->message);

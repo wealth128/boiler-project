@@ -1,3 +1,4 @@
+import type { BackupAlert } from '@/features/backups/types';
 import type { Auth, Hospital } from '@/types/auth';
 
 declare module 'react' {
@@ -13,6 +14,8 @@ declare module '@inertiajs/core' {
             auth: Auth;
             hospital: Hospital;
             sidebarOpen: boolean;
+            /** Backup warnings, Admin only (empty for everyone else). */
+            backupAlerts: BackupAlert[];
             [key: string]: unknown;
         };
     }

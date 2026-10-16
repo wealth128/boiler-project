@@ -5,6 +5,7 @@ use App\Models\Patient;
 use App\Models\Rank;
 use App\Models\User;
 use App\Models\Visit;
+use Illuminate\Support\Facades\Process;
 use Inertia\Testing\AssertableInertia as Assert;
 
 /*
@@ -63,6 +64,8 @@ dataset('protected routes', [
     'empty trash' => ['DELETE', '/trash', ['admin']],
     'backups page' => ['GET', '/backups', ['admin']],
     'run backup' => ['POST', '/backups/run', ['admin']],
+    'mark usb copy' => ['POST', '/backups/marks/usb-copy', ['admin']],
+    'mark test restore' => ['POST', '/backups/marks/test-restore', ['admin']],
     // Own account pages: everyone signed in
     'profile' => ['GET', '/settings/profile', ALL_ROLES],
     'password' => ['GET', '/settings/security', ALL_ROLES],
@@ -70,6 +73,10 @@ dataset('protected routes', [
 ]);
 
 it('lets each role reach only the routes rbac.md allows', function (string $method, string $uri, array $allowed, string $role) {
+    // POST /backups/run must never start a real mysqldump from a test.
+    Process::fake();
+    config(['census.backup.path' => storage_path('framework/testing/role-access-backups')]);
+
     $actor = userWithRole($role);
     $visit = Visit::factory()->create(['encoded_by' => $actor->id, 'visited_at' => now()]);
     $patient = Patient::factory()->create();

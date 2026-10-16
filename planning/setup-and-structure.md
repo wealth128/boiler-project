@@ -97,6 +97,7 @@ With Inertia there's no separate API. Each URL below is a Laravel route. **GET**
 | | POST | `/trash/{type}/{id}/restore` | Restore | Admin |
 | | DELETE | `/trash/{type}/{id}` · `/trash` | Delete permanently / Empty Trash | Admin |
 | Backup | GET · POST | `/backups` · `/backups/run` | Last backup status / run now | Admin |
+| | POST | `/backups/marks/{type}` | Mark the weekly USB copy / monthly test restore as done (`{type}` = `usb-copy` or `test-restore`) | Admin |
 
 Every route goes through `auth` plus a `role:` middleware. The detailed rules (same-day edit, closed month) are checked in Policies.
 
@@ -108,14 +109,14 @@ system/
 ├─ app/
 │  ├─ Enums/            Role, Office, Category (fixed value lists)
 │  ├─ Models/           User, Patient, Visit, Branch, Rank, Diagnosis, AgeBracket,
-│  │                    MonthClosure, ReportSnapshot, MonthDeletion, AuditLog, BackupRun, Setting
+│  │                    MonthClosure, ReportSnapshot, MonthDeletion, AuditLog, BackupRun, BackupMark, Setting
 │  ├─ Http/
 │  │  ├─ Controllers/   one folder per feature: Auth/, Encode/, Records/, Reports/,
 │  │  │                 Settings/, Users/, Audit/, Trash/, Backup/
 │  │  ├─ Requests/      form validation, one per form
 │  │  └─ Middleware/    EnsureRole.php (role:admin,encoder…)
 │  ├─ Policies/         VisitPolicy, PatientPolicy, UserPolicy, TrashPolicy
-│  ├─ Services/         ★ shared backend logic: AuditLogger, ReportBuilder, TrashService, BackupService
+│  ├─ Services/         ★ shared backend logic: AuditLogger, ReportBuilder, TrashService, BackupService, BackupMonitor
 │  ├─ Observers/        auto-write audit log on create/update/delete/restore
 │  └─ Console/Commands/ BackupRun.php
 ├─ database/

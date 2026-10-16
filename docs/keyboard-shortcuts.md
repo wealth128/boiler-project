@@ -215,6 +215,21 @@ The filters stay in the address, so **F5 (Refresh)** and **Alt + ← (Back)** ke
 
 ---
 
+## Backups (Admin)
+
+No new shortcuts. The screen uses the standard keys: **Tab** / **Shift + Tab** to move, **Enter** / **Space** to press a button.
+
+| Key | What it does |
+|---|---|
+| **Tab** / **Shift + Tab** | Next / previous. Order: **Run backup now** → **Mark USB copy done** → **Mark test restore done** → page numbers |
+| **Enter** / **Space** | Press the focused button, which opens a question |
+| **Enter** | In the question ("Run a backup now?", "Mark ... as done?"): confirm. The confirm button is selected first. |
+| **Esc** | Cancel the question |
+
+Pages: **Tab** to **Previous**, a page number or **Next**, then **Enter** (10 backups per page unless you change it). **Tab** to **Rows per page** and choose 10, 20 or 50; the choice stays in the address.
+
+---
+
 ## Reports
 
 Nothing is counted until you press **Generate**. The choices are then kept in the address bar, so Refresh and Back keep them.

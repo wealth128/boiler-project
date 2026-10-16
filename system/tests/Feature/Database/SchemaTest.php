@@ -19,6 +19,7 @@ dataset('tables', [
     'report_snapshots' => ['report_snapshots', ['id', 'period', 'data', 'created_by', 'created_at']],
     'audit_logs' => ['audit_logs', ['id', 'user_id', 'action', 'subject_type', 'subject_id', 'changes', 'ip_address', 'created_at']],
     'backup_runs' => ['backup_runs', ['id', 'started_at', 'finished_at', 'status', 'file_name', 'size_bytes', 'message']],
+    'backup_marks' => ['backup_marks', ['id', 'type', 'marked_by', 'marked_at']],
     'settings' => ['settings', ['key', 'value']],
 ]);
 

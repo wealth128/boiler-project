@@ -14,7 +14,8 @@ Laravel's standard tables (`sessions`, `cache`, `jobs`, `migrations`) are create
 | Control | `month_closures` | Which months are closed (locked) |
 | | `report_snapshots` | Saved copy of each closed month's report |
 | | `audit_logs` | Who did what, when |
-| | `backup_runs` | Result of each automatic backup |
+| | `backup_runs` | Result of each automatic or manual backup |
+| | `backup_marks` | Admin marked a USB copy or a test restore as done |
 | | `settings` | Hospital name, logo, report signatories |
 
 ## 2. Tables
@@ -159,6 +160,18 @@ On reopen, the copy is discarded. Closing again saves a fresh copy. Both actions
 | status | enum('success','failed') | Failures show on the Admin screen |
 | file_name / size_bytes | varchar / bigint | |
 | message | text, null | Error detail |
+
+### backup_marks
+Admin's manual backup safety steps (added in Step 6g). A **reminder only**: nothing is ever blocked by these rows.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | PK | |
+| type | enum('usb_copy','test_restore') | Weekly USB copy, monthly test restore |
+| marked_by | FK → users | Restrict on delete. A user with marks also has audit entries, so can't be deleted permanently |
+| marked_at | datetime | When Admin marked it done. Index on (type, marked_at) |
+
+Overdue = no mark in the last **8 days** (USB copy) or **35 days** (test restore). Never marked counts as overdue.
 
 ### settings
 | Column | Type | Notes |
