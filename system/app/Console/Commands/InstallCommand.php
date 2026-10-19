@@ -160,7 +160,7 @@ class InstallCommand extends Command
         $results[] = [
             'label' => 'MySQL can be reached',
             'ok' => $mysql->reachable(),
-            'fix' => 'Start MySQL (Laragon: Start All) and check DB_HOST and DB_PORT, then try again.',
+            'fix' => 'Start MySQL and check DB_HOST and DB_PORT, then try again. First install: in Laragon click Start All. After install.bat: start the Windows service CensusMySQL (never use Start All).',
         ];
 
         $failed = false;
@@ -187,6 +187,65 @@ class InstallCommand extends Command
         return ! $failed;
     }
 
+    // --- Root password -----------------------------------------------------
+
+    public const NEW_ROOT_PROMPT = 'New MySQL root password (at least 12 characters, typed hidden)';
+
+    public const NEW_ROOT_AGAIN = 'Type the new MySQL root password again';
+
+    private const MIN_ROOT_PASSWORD = 12;
+
+    /**
+     * MySQL root has no password: ask for a new one twice (hidden, at least
+     * 12 characters) and set it before the install goes on. The password is
+     * only kept in memory and is never written to .env, the log or the audit
+     * log. Three tries, then the install stops with nothing changed.
+     */
+    private function requireRootPassword(MysqlAdmin $mysql): bool
+    {
+        $this->newLine();
+        $this->warn('MySQL has no root password, so anyone on this PC could open the database. A new one must be set now, before the install goes on.');
+
+        for ($try = 1; $try <= 3; $try++) {
+            $password = (string) $this->secret(self::NEW_ROOT_PROMPT);
+            $again = (string) $this->secret(self::NEW_ROOT_AGAIN);
+            $this->secrets[] = $password;
+            $this->secrets[] = $again;
+
+            if (mb_strlen($password) < self::MIN_ROOT_PASSWORD) {
+                $this->error('The password must be at least '.self::MIN_ROOT_PASSWORD.' characters.');
+
+                continue;
+            }
+
+            if ($password !== $again) {
+                $this->error('The two passwords do not match.');
+
+                continue;
+            }
+
+            try {
+                $mysql->setRootPassword($password);
+                $mysql->connect($password);
+            } catch (Throwable $e) {
+                $this->error('The MySQL root password could not be set: '.$this->scrub($e->getMessage()));
+                $this->note('Stopped: the MySQL root password could not be set.');
+
+                return false;
+            }
+
+            $this->info('The MySQL root password is set. Write this in the sealed envelope.');
+            $this->note('MySQL root had no password: a new one was set (not recorded here).');
+
+            return true;
+        }
+
+        $this->error('No valid password was entered. Nothing was changed.');
+        $this->note('Stopped: no valid MySQL root password was entered.');
+
+        return false;
+    }
+
     // --- Install ---------------------------------------------------------
 
     private function install(MysqlAdmin $mysql, AppMaintenance $maintenance, AuditLogger $audit): int
@@ -196,6 +255,11 @@ class InstallCommand extends Command
 
         // 1. Everything we need to ask, before anything is changed.
         if (! $this->loginAsRoot($mysql)) {
+            return self::FAILURE;
+        }
+
+        // A new Laragon has root with no password: set one before anything else.
+        if ($this->rootPasswordWasEmpty && ! $this->requireRootPassword($mysql)) {
             return self::FAILURE;
         }
 

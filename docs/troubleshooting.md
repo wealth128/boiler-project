@@ -68,7 +68,7 @@ Running `php artisan schedule:run` once is not enough: it clears the bar for onl
 
 Check these in order:
 
-1. **Is the terminal still open and printing the line every minute?** If it stopped or shows an error, read the error. A database error means MySQL is not running (start it in Laragon).
+1. **Is the terminal still open and printing the line every minute?** If it stopped or shows an error, read the error. A database error means MySQL is not running (on a dev PC, start it in Laragon; on the hospital server see section 6).
 2. **Did you reload the page?** Press F5 on the page, not only in the sidebar.
 3. **Is it the same project?** Run the command from the same `system` folder that the browser is using (the one with the `.env` for `patient_census`).
 4. **Same database?** The "last ran" time is saved in the cache table of the database in `.env`. If the web page and the terminal use different `.env` files or databases, the bar never clears.
@@ -88,8 +88,8 @@ php artisan schedule:run
 ```
 
 Check, in this order:
-1. Task Scheduler: the task exists, is enabled and its last result is "0x0" (success).
-2. The task uses the same PHP as Laragon (full path to `php.exe`) and starts in the `system` folder.
+1. Task Scheduler: the task "Census - Scheduler" exists, is enabled and its last result is "0x0" (success). If it is missing, run `install.bat` again (Run as administrator): it re-creates the task and changes no data.
+2. The task runs `systemscriptswindowsun-scheduler.bat`, which uses the PHP found by `install.bat`.
 3. The Windows account that runs it can write to `storage/`.
 4. Run `php artisan schedule:run` by hand, then `php artisan census:health`. The scheduler line should now be OK.
 
@@ -113,6 +113,20 @@ Check, in this order:
 
 On a dev PC the daily 02:00 backup only runs while `schedule:work` is running, so an old note there is normal after a day without it.
 
+### Backups fail after a Windows password change
+
+**What you see:** the red note "The last backup failed" starts on the day someone changed the password of the Windows account that runs the task "Census - Scheduler". Usually the backup folder is on another PC (`\BACKUP-PC\...`). `health.bat` shows the backup as a Problem.
+
+**Why:** the task "Census - Scheduler" runs as a Windows account so it can write to the backup PC. Windows saved the old password inside the task. After the password changes, the task can no longer sign in, so no backup (and no 8 PM sign-out) runs.
+
+**Fix (on the server PC):**
+1. Right-click `system\scripts\windows\install.bat`. Choose **Run as administrator**.
+2. It re-checks the system and changes no data. When it asks for the Windows account, type the same account and the **new password**.
+3. At the end it runs one real backup through the task. It must say "The task ran a real backup and it worked."
+
+**To avoid it:** use an account whose password never expires, made only for this job.
+
+
 ---
 
 ## 4. System health says "MySQL program (for restore)": Warning
@@ -134,6 +148,25 @@ The backup file is in `BACKUP_PATH`, named like `patient_census_2026-10-19_11071
 
 ---
 
-## 6. Still stuck
+## 6. After a restart the site does not open (database or web server service)
+
+On the hospital server, MySQL and Apache are Windows services made by `install.bat`: **CensusMySQL** and **CensusApache**. They start by themselves when Windows starts, with nobody logged in, and Windows restarts them by itself after a crash (3 tries, one minute apart).
+
+**Never click "Start All" in Laragon on this server.** Laragon would try to start its own copy and fight with the services for the same ports. If someone did, click **Stop All**, close Laragon (Exit), then restart the services below.
+
+**Check:**
+1. Double-click `health.bat` (Run as administrator).
+2. Open the Windows **Services** app. Look for CensusMySQL and CensusApache. Both must say Running and Automatic (Delayed Start).
+3. If one is stopped, right-click it and choose Start. If it stops again, open Windows Event Viewer, Windows Logs, Application.
+
+**Common causes:**
+- Another program uses port 80 (IIS, Skype, another web server). Apache cannot start. Stop that program.
+- Laragon was opened and Start All was clicked. See above.
+- The services are missing (someone ran `uninstall-tasks.bat`). Run `install.bat` again. It is safe and changes no data.
+- The page shows an Apache error and not the login page: run `install.bat` again. It rewrites the site file and checks that `http://localhost/` shows the login page.
+
+---
+
+## 7. Still stuck
 
 Write down the exact message, the time, and what you clicked. Check `storage/logs/laravel-<date>.log` (no passwords are written there) and, for setup problems, `storage/logs/install.log`. Then tell the developer or hospital IT.

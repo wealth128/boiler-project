@@ -23,7 +23,7 @@ Install the same versions as the office PC:
 
 | Tool | Version | Check with |
 |---|---|---|
-| PHP | 8.3 (extensions: pdo_mysql, mbstring, intl, zip, gd, fileinfo, openssl) | `php -v` |
+| PHP | 8.4.1 or newer (extensions: pdo_mysql, mbstring, intl, zip, gd, fileinfo, openssl) | `php -v` |
 | Composer | latest | `composer -V` |
 | Node.js | 20 or higher | `node -v` |
 | MySQL | 8.x | `mysql --version` |

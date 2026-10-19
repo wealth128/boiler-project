@@ -22,7 +22,7 @@ You have PHP, Composer, Node and MySQL, so Laragon is **not needed for developme
 
 **a. Check versions** (in Command Prompt or PowerShell):
 ```
-php -v          (needs 8.3 or higher)
+php -v          (needs 8.4.1 or higher)
 composer -V
 node -v         (needs 20 or higher)
 mysql --version

@@ -42,3 +42,6 @@ yarn-error.log
 /boost.json
 /opencode.json
 /opencode.jsonc
+
+# Windows scripts: remembered php.exe path of this server
+/scripts/windows/php-path.txt

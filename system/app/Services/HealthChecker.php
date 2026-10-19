@@ -27,7 +27,7 @@ class HealthChecker
 
     public const PROBLEM = 'problem';
 
-    public const MIN_PHP = '8.3.0';
+    public const MIN_PHP = '8.4.1';
 
     /** Free disk space: a warning below 10 GB, a problem below 2 GB. */
     private const WARN_BYTES = 10 * 1024 ** 3;
@@ -58,6 +58,7 @@ class HealthChecker
             $this->uploadLimits(),
             $this->php(),
             $this->mysqlClient(),
+            $this->mysqlRoot(),
             $this->version(),
         ];
     }
@@ -264,7 +265,7 @@ class HealthChecker
         $version = $this->phpVersion();
 
         if (version_compare($version, self::MIN_PHP, '<')) {
-            return $this->row('php', 'PHP version', self::PROBLEM, "PHP {$version} is too old.", 'Tell IT: install PHP 8.3 or newer.');
+            return $this->row('php', 'PHP version', self::PROBLEM, "PHP {$version} is too old.", 'Tell IT: install PHP 8.4.1 or newer.');
         }
 
         return $this->row('php', 'PHP version', self::OK, "PHP {$version}.", 'Nothing to do.');
@@ -288,6 +289,24 @@ class HealthChecker
         return $this->row('mysql_client', $label, self::OK, 'Found.', 'Nothing to do.');
     }
 
+    /**
+     * MySQL root must have a password. The web app only holds the census_app login,
+     * so it cannot read the account list. It tries one root login with an empty
+     * password instead, which stores nothing.
+     *
+     * @return array{key: string, label: string, status: string, detail: string, todo: string}
+     */
+    private function mysqlRoot(): array
+    {
+        $label = 'MySQL root password';
+
+        if ($this->safely(fn () => $this->rootHasNoPassword()) === true) {
+            return $this->row('mysql_root', $label, self::PROBLEM, 'MySQL lets root in with no password, so anyone on this PC can open the database.', 'Tell IT: set a MySQL root password of at least 12 characters and write it in the sealed envelope (docs/requirements.md, "MySQL root password").');
+        }
+
+        return $this->row('mysql_root', $label, self::OK, 'Root needs a password.', 'Nothing to do.');
+    }
+
     /** @return array{key: string, label: string, status: string, detail: string, todo: string} */
     private function version(): array
     {
@@ -299,6 +318,12 @@ class HealthChecker
     {
         DB::connection()->getPdo();
         DB::select('select 1');
+    }
+
+    /** One root login with an empty password. */
+    protected function rootHasNoPassword(): bool
+    {
+        return app(MysqlAdmin::class)->rootHasNoPassword();
     }
 
     /** Runs "mysql --version". */
