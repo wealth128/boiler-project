@@ -12,6 +12,9 @@ use App\Services\AuditLogger;
 use App\Services\BackupMonitor;
 use App\Services\BackupService;
 use App\Services\TablePaging;
+use App\Services\TestRestoreService;
+use App\Services\UsbCopyFailed;
+use App\Services\UsbCopyService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -24,8 +27,10 @@ use Inertia\Response;
  *
  * The screen shows the status, the history and two reminders. Running a
  * backup and the backup logic live in BackupService, the warnings in
- * BackupMonitor. There is no download and no restore here: backup files
- * hold all patient data, so IT copies them from the backup folder.
+ * BackupMonitor, the USB copy in UsbCopyService and the test restore in
+ * TestRestoreService. There is no download and no restore of the live data
+ * here: backup files hold all patient data. The server copies them to a USB
+ * drive plugged into the server itself.
  *
  * Nothing on this page shows the database login: error text goes through
  * BackupMonitor::scrub() first.
@@ -35,6 +40,7 @@ class BackupController extends Controller
     public function __construct(
         private readonly BackupMonitor $monitor,
         private readonly AuditLogger $audit,
+        private readonly UsbCopyService $usb,
     ) {}
 
     public function index(Request $request): Response|RedirectResponse
@@ -65,7 +71,16 @@ class BackupController extends Controller
                 'keep_days' => (int) config('census.backup.keep_days'),
                 'folder' => (string) config('census.backup.path'),
                 'problem' => $this->monitor->problem()['message'] ?? null,
+                'test_restore_problem' => $this->monitor->testRestoreProblem()['message'] ?? null,
             ],
+            'testRestore' => $this->testRestoreInfo(),
+            // Asked for when the Copy to USB window opens: listing the drives takes a moment.
+            'drives' => Inertia::optional(fn (): array => collect($this->usb->drives())->map(fn (array $drive): array => [
+                'letter' => $drive['letter'],
+                'label' => $drive['label'],
+                'free_mb' => (int) round($drive['free_bytes'] / 1048576),
+                'size_mb' => (int) round($drive['size_bytes'] / 1048576),
+            ])->all()),
             'marks' => collect(BackupMarkType::cases())->map(fn (BackupMarkType $type): array => $this->markRow($type))->all(),
             'runs' => [
                 'data' => $page->getCollection()->map(fn (BackupRun $run): array => [
@@ -119,6 +134,56 @@ class BackupController extends Controller
     }
 
     /**
+     * Copy the latest backup to a USB drive plugged into the SERVER. Nothing
+     * is downloaded. One at a time: it shares the backup lock.
+     */
+    public function usbCopy(Request $request): RedirectResponse
+    {
+        Gate::authorize(Permission::ViewBackups->value);
+
+        $drive = (string) $request->validate([
+            'drive' => ['required', 'string', 'regex:/^[A-Za-z]:?$/'],
+        ], ['drive.required' => 'Choose a USB drive.', 'drive.regex' => 'Choose a USB drive.'])['drive'];
+
+        set_time_limit(0);
+
+        try {
+            $done = $this->usb->copyLatestIfIdle($drive, $request->user());
+        } catch (UsbCopyFailed $e) {
+            return $this->toast('error', $e->getMessage());
+        }
+
+        if ($done === null) {
+            return $this->toast('error', 'A backup or a test restore is running. Try again in a few minutes.');
+        }
+
+        return $this->toast('success', $done['message']);
+    }
+
+    /**
+     * Test the latest backup now: load it into the scratch database and
+     * compare the counts. One at a time: it shares the backup lock.
+     */
+    public function testRestore(Request $request, TestRestoreService $tests): RedirectResponse
+    {
+        Gate::authorize(Permission::ViewBackups->value);
+
+        set_time_limit(0);
+
+        $run = $tests->runIfIdle('manual', $request->user());
+
+        if ($run === null) {
+            return $this->toast('error', 'A backup or a test restore is already running.');
+        }
+
+        if ($run->status === BackupStatus::Failed) {
+            return $this->toast('error', 'Test restore failed: '.$this->monitor->shortError($run->message));
+        }
+
+        return $this->toast('success', 'Test restore passed: the latest backup loads and the record counts match.');
+    }
+
+    /**
      * Mark the weekly USB copy or the monthly test restore as done. Only a
      * reminder: it blocks nothing.
      */
@@ -150,8 +215,27 @@ class BackupController extends Controller
             'type' => $type->slug(),
             'label' => $type->label(),
             'last_at' => $state['last']?->marked_at->toIso8601String(),
-            'by' => $state['last']?->user?->name,
+            'by' => BackupMonitor::markedBy($state['last']),
             'overdue' => $state['overdue'],
+        ];
+    }
+
+    /**
+     * @return array{at: string, result: string, trigger: string, error: string|null}|null
+     */
+    private function testRestoreInfo(): ?array
+    {
+        $last = $this->monitor->lastTestRestore();
+
+        if ($last === null) {
+            return null;
+        }
+
+        return [
+            'at' => $last->started_at->toIso8601String(),
+            'result' => $last->status->value,
+            'trigger' => $last->trigger,
+            'error' => $last->status === BackupStatus::Failed ? $this->monitor->shortError($last->message) : null,
         ];
     }
 

@@ -18,9 +18,13 @@ use Illuminate\Support\Carbon;
  * @property int|null $size_bytes
  * @property string|null $zip_name
  * @property int|null $zip_size_bytes
+ * @property int|null $patients_count
+ * @property int|null $visits_count
+ * @property int|null $users_count
+ * @property int|null $closed_months_count
  * @property string|null $message
  */
-#[Fillable(['started_at', 'finished_at', 'status', 'file_name', 'size_bytes', 'zip_name', 'zip_size_bytes', 'message'])]
+#[Fillable(['started_at', 'finished_at', 'status', 'file_name', 'size_bytes', 'zip_name', 'zip_size_bytes', 'patients_count', 'visits_count', 'users_count', 'closed_months_count', 'patients_count_max', 'visits_count_max', 'users_count_max', 'closed_months_count_max', 'message'])]
 class BackupRun extends Model
 {
     public $timestamps = false;

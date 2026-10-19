@@ -15,6 +15,26 @@ export type BackupStatusInfo = {
     folder: string;
     /** Red warning in full, or null when backups are fine. */
     problem: string | null;
+    /** Red warning when the latest test restore failed, or null. */
+    test_restore_problem: string | null;
+};
+
+/** The latest test restore (automatic or by Admin), or null if none yet. */
+export type TestRestoreInfo = {
+    at: string;
+    result: 'success' | 'failed';
+    trigger: 'automatic' | 'manual';
+    /** Short plain-text error of a failed run. */
+    error: string | null;
+};
+
+/** A removable drive plugged into the server PC. */
+export type UsbDrive = {
+    /** "E:" */
+    letter: string;
+    label: string;
+    free_mb: number;
+    size_mb: number;
 };
 
 /** The weekly USB copy or the monthly test restore. */
@@ -23,6 +43,7 @@ export type BackupMarkInfo = {
     type: string;
     label: string;
     last_at: string | null;
+    /** A person's name, or "System (automatic)". */
     by: string | null;
     overdue: boolean;
 };

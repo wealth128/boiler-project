@@ -107,6 +107,67 @@ class FakeMysqlAdmin extends MysqlAdmin
         $this->provisioned = compact('database', 'user', 'password');
     }
 
+    /** The password given to census_restore_test. */
+    public ?string $scratchPassword = null;
+
+    public function provisionScratchUser(string $password): void
+    {
+        SetupLog::add('provision-scratch', ['user' => self::SCRATCH_USER, 'database' => self::SCRATCH_DATABASE]);
+        $this->scratchPassword = $password;
+    }
+
+    // --- The scratch database of the test restore --------------------------
+
+    /** Is the census_restore_test password set? */
+    public bool $scratchReady = true;
+
+    /** What the restored copy "holds", or null to make loading fail. */
+    public ?array $restoredCounts = ['patients' => 0, 'visits' => 0, 'users' => 0, 'closed_months' => 0];
+
+    public bool $loadFails = false;
+
+    public function scratchConfigured(): bool
+    {
+        return $this->scratchReady;
+    }
+
+    public function resetScratchDatabase(string $database): void
+    {
+        $this->onlyScratch($database);
+        SetupLog::add('scratch-reset', ['database' => $database]);
+    }
+
+    public function loadScratchDump(string $dumpPath, string $database): void
+    {
+        $this->onlyScratch($database);
+        SetupLog::add('scratch-load', ['database' => $database, 'file' => basename($dumpPath)]);
+
+        if ($this->loadFails) {
+            throw new RuntimeException('ERROR 1064 (42000) at line 12: You have an error in your SQL syntax');
+        }
+    }
+
+    public function scratchCounts(string $database): array
+    {
+        $this->onlyScratch($database);
+        SetupLog::add('scratch-counts', ['database' => $database]);
+
+        return $this->restoredCounts;
+    }
+
+    public function dropScratchDatabase(string $database): void
+    {
+        $this->onlyScratch($database);
+        SetupLog::add('scratch-drop', ['database' => $database]);
+    }
+
+    private function onlyScratch(string $database): void
+    {
+        if ($database !== self::SCRATCH_DATABASE) {
+            throw new RuntimeException('The test restore may only use the database '.self::SCRATCH_DATABASE.'.');
+        }
+    }
+
     public function migrate(): int
     {
         SetupLog::add('migrate');

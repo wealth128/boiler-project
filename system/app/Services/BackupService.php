@@ -6,6 +6,7 @@ use App\Enums\BackupStatus;
 use App\Models\BackupRun;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 use RuntimeException;
@@ -24,7 +25,8 @@ use Throwable;
  *    zips) older than 30 days from that folder. Other files are never
  *    touched, and nothing is deleted after a failed run, so old copies
  *    survive a broken backup.
- * 4. Records the run in backup_runs: success, or failed with the error.
+ * 4. Records the run in backup_runs: success (with the patient, visit, user and
+ *    closed-month counts, for the test restore), or failed with the error.
  *    Failures also go to the Laravel log. Admin sees the last run.
  *
  * The database password goes to mysqldump in a temporary option file
@@ -42,14 +44,26 @@ class BackupService
     /** Name of the lock that keeps two backups from running together. */
     public const LOCK = 'backup-run';
 
+    /** The longest the mysqldump or mysql program may run (backup and test restore). */
+    public const PROCESS_TIMEOUT = 3600;
+
+    /**
+     * How long the lock is held before it frees itself after a crash. The
+     * backup, the test restore and the USB copy all use it, so it must outlast
+     * the longest of them: a program run (PROCESS_TIMEOUT) plus counting,
+     * zipping or unzipping and a safety margin. Twice the timeout leaves an
+     * hour for everything else. A longer lock only matters after a crash.
+     */
+    public const LOCK_SECONDS = 2 * self::PROCESS_TIMEOUT;
+
     /**
      * Run a backup unless one is already running (from the scheduler, the
      * command or the Backups screen). Returns null when it is busy.
      */
     public function runIfIdle(bool $prune = true): ?BackupRun
     {
-        // Longer than the mysqldump timeout, so a crash frees the lock by itself.
-        $lock = Cache::lock(self::LOCK, 3700);
+        // Longer than the longest run (see LOCK_SECONDS), so a crash frees the lock by itself.
+        $lock = Cache::lock(self::LOCK, self::LOCK_SECONDS);
 
         if (! $lock->get()) {
             return null;
@@ -93,7 +107,12 @@ class BackupService
 
             $optionFile = $this->writeOptionFile();
 
-            $result = Process::timeout(3600)
+            // Counted just before and just after the dump. mysqldump reads one
+            // snapshot taken somewhere in between, so a visit encoded meanwhile
+            // can only move a count between these two numbers.
+            $before = BackupCounts::forConnection(DB::connection());
+
+            $result = Process::timeout(self::PROCESS_TIMEOUT)
                 ->env(self::windowsEnvironment())
                 ->run($this->command($optionFile, $file));
 
@@ -102,6 +121,8 @@ class BackupService
 
                 throw new RuntimeException($error !== '' ? $error : 'mysqldump stopped with exit code '.$result->exitCode().'.');
             }
+
+            $counts = BackupCounts::range($before, BackupCounts::forConnection(DB::connection()));
 
             clearstatcache(true, $file);
 
@@ -124,7 +145,7 @@ class BackupService
 
             return $this->record($startedAt, BackupStatus::Success, $fileName, $size,
                 $removed > 0 ? "Removed {$removed} old backup file(s) older than ".config('census.backup.keep_days').' days.' : null,
-                $zipName, $zipSize);
+                $zipName, $zipSize, $counts);
         } catch (Throwable $e) {
             // Never leave half a backup behind: both files go, or neither stays.
             foreach ([$file, $zipFile] as $partial) {
@@ -182,30 +203,19 @@ class BackupService
     }
 
     /**
-     * Temporary MySQL option file with the login, readable only by this user.
+     * Temporary MySQL option file with the login, readable only by this user
+     * (see LoginFile, which also removes leftovers of crashed runs).
      */
     private function writeOptionFile(): string
     {
         $db = $this->connection();
-        $quote = fn (mixed $value): string => '"'.addcslashes((string) $value, '"\\').'"';
 
-        $path = tempnam(sys_get_temp_dir(), 'census-backup-');
-
-        if ($path === false) {
-            throw new RuntimeException('Could not create a temporary file for the database login.');
-        }
-
-        chmod($path, 0600);
-        file_put_contents($path, implode(PHP_EOL, [
-            '[client]',
-            'host='.$quote($db['host'] ?? '127.0.0.1'),
-            'port='.(int) ($db['port'] ?? 3306),
-            'user='.$quote($db['username'] ?? ''),
-            'password='.$quote($db['password'] ?? ''),
-            '',
-        ]));
-
-        return $path;
+        return LoginFile::create(sys_get_temp_dir(), [
+            'host' => (string) ($db['host'] ?? '127.0.0.1'),
+            'port' => (int) ($db['port'] ?? 3306),
+            'user' => (string) ($db['username'] ?? ''),
+            'password' => (string) ($db['password'] ?? ''),
+        ]);
     }
 
     /**
@@ -232,7 +242,7 @@ class BackupService
         return $removed;
     }
 
-    private function record(CarbonImmutable $startedAt, BackupStatus $status, ?string $fileName, ?int $size, ?string $message, ?string $zipName = null, ?int $zipSize = null): BackupRun
+    private function record(CarbonImmutable $startedAt, BackupStatus $status, ?string $fileName, ?int $size, ?string $message, ?string $zipName = null, ?int $zipSize = null, ?array $counts = null): BackupRun
     {
         return BackupRun::create([
             'started_at' => $startedAt,
@@ -242,6 +252,14 @@ class BackupService
             'size_bytes' => $size,
             'zip_name' => $zipName,
             'zip_size_bytes' => $zipSize,
+            'patients_count' => $counts['patients'][0] ?? null,
+            'patients_count_max' => $counts['patients'][1] ?? null,
+            'visits_count' => $counts['visits'][0] ?? null,
+            'visits_count_max' => $counts['visits'][1] ?? null,
+            'users_count' => $counts['users'][0] ?? null,
+            'users_count_max' => $counts['users'][1] ?? null,
+            'closed_months_count' => $counts['closed_months'][0] ?? null,
+            'closed_months_count_max' => $counts['closed_months'][1] ?? null,
             'message' => $message,
         ]);
     }

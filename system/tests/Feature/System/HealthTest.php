@@ -1,7 +1,10 @@
 <?php
 
 use App\Enums\BackupStatus;
+use App\Enums\BackupMarkType;
+use App\Models\BackupMark;
 use App\Models\BackupRun;
+use App\Models\TestRestoreRun;
 use App\Services\BackupMonitor;
 use App\Services\HealthChecker;
 use App\Services\SchedulerHeartbeat;
@@ -48,6 +51,14 @@ function healthyServer(object $test, array $fake = []): void
     config(['app.debug' => false]);
     app(SchedulerHeartbeat::class)->beat();
     backupWith($test, 2, zip: true);
+
+    // The USB copy and the test restore were done recently.
+    BackupMark::query()->delete();
+    TestRestoreRun::query()->delete();
+
+    foreach (BackupMarkType::cases() as $type) {
+        BackupMark::create(['type' => $type, 'marked_by' => null, 'marked_at' => now()->subDay()]);
+    }
 
     $fake += ['free_server' => 100 * GB, 'free_backup' => 100 * GB, 'upload' => '2M', 'post' => '8M', 'php' => '8.4.5', 'database_down' => false, 'storage_writable' => true, 'mysql' => true, 'root_open' => false];
     $folder = $test->folder;
@@ -150,12 +161,12 @@ it('lists every check with a result and one "what to do" line', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->component('system/health')
             ->where('overall', 'ok')
-            ->has('checks', 13)
+            ->has('checks', 15)
             ->where('checks.0.key', 'database')
             ->where('checks.0.status', 'ok')
             ->where('checks.10.key', 'mysql_client')
-            ->where('checks.12.key', 'version')
-            ->where('checks.12.detail', '1.2.3.')
+            ->where('checks.14.key', 'version')
+            ->where('checks.14.detail', '1.2.3.')
             ->has('checks.0.todo'));
 });
 
@@ -408,4 +419,85 @@ it('mysql program: OK when found, only a Warning when it is missing', function (
 
     // A warning is not a problem: census:health still exits 0.
     $this->artisan('census:health')->expectsOutputToContain('WARNING  MySQL program (for restore)')->assertExitCode(0);
+});
+
+// --- Test restore and Copy to USB (Step 6i-3) ---------------------------------------
+
+/** A test restore that started $daysAgo days ago. */
+function testRestoreRunAgo(float $daysAgo, string $status): TestRestoreRun
+{
+    $at = now()->subMinutes((int) ($daysAgo * 1440));
+
+    return TestRestoreRun::create([
+        'trigger' => 'automatic',
+        'status' => $status,
+        'started_at' => $at,
+        'finished_at' => $at->copy()->addMinutes(2),
+        'message' => $status === 'failed' ? "The restored copy does not match the backup (visits: backup 40, restored 39)\nsecond line" : null,
+    ]);
+}
+
+function setMark(BackupMarkType $type, ?float $daysAgo): void
+{
+    BackupMark::query()->where('type', $type)->delete();
+
+    if ($daysAgo !== null) {
+        BackupMark::create(['type' => $type, 'marked_by' => null, 'marked_at' => now()->subMinutes((int) ($daysAgo * 1440))]);
+    }
+}
+
+it('test restore: OK within 35 days of a good one', function () {
+    setMark(BackupMarkType::TestRestore, 34);
+
+    expect(check('test_restore'))->toMatchArray(['status' => 'ok', 'key' => 'test_restore'])
+        ->and(check('test_restore')['detail'])->toBe('Last good test restore: 05-Sep-2026.');
+});
+
+it('test restore: Warning when none passed in the last 35 days or ever', function () {
+    setMark(BackupMarkType::TestRestore, 36);
+    expect(check('test_restore')['status'])->toBe('warning')
+        ->and(check('test_restore')['todo'])->toContain('Run test restore now');
+
+    setMark(BackupMarkType::TestRestore, null);
+    expect(check('test_restore'))->toMatchArray(['status' => 'warning', 'detail' => 'No test restore has been done yet.']);
+});
+
+it('test restore: Problem when the last one failed, with a short error, and OK again after a good one', function () {
+    setMark(BackupMarkType::TestRestore, 3);
+    testRestoreRunAgo(1, 'failed');
+
+    $row = check('test_restore');
+    expect($row['status'])->toBe('problem')
+        ->and($row['detail'])->toBe('The last test restore failed on 08-Oct-2026 14:00: The restored copy does not match the backup (visits: backup 40, restored 39).')
+        ->and($row['todo'])->toContain('operations guide');
+
+    testRestoreRunAgo(0.5, 'success');
+    expect(check('test_restore')['status'])->toBe('ok');
+});
+
+it('a failed test restore makes census:health fail and the page show a Problem', function () {
+    testRestoreRunAgo(1, 'failed');
+
+    $this->artisan('census:health')->expectsOutputToContain('PROBLEM  Test restore of backups')->assertExitCode(1);
+
+    $this->actingAs(userWithRole('admin'))->get('/system/health')
+        ->assertInertia(fn (Assert $page) => $page->where('overall', 'problem'));
+});
+
+it('copy to USB: OK within 8 days, Warning after 8 days or when never done', function () {
+    setMark(BackupMarkType::UsbCopy, 7.9);
+    expect(check('usb_copy'))->toMatchArray(['status' => 'ok']);
+
+    setMark(BackupMarkType::UsbCopy, 8.1);
+    expect(check('usb_copy')['status'])->toBe('warning')
+        ->and(check('usb_copy')['todo'])->toContain('Plug the USB drive into the server PC');
+
+    setMark(BackupMarkType::UsbCopy, null);
+    expect(check('usb_copy'))->toMatchArray(['status' => 'warning', 'detail' => 'No backup has been copied to a USB drive yet.']);
+});
+
+it('an overdue USB copy is only a Warning: census:health still exits 0', function () {
+    setMark(BackupMarkType::UsbCopy, 30);
+
+    $this->artisan('census:health')->expectsOutputToContain('WARNING  Copy to USB')->assertExitCode(0);
 });

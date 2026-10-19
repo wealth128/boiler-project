@@ -57,8 +57,9 @@ All software used is free/open source (Laravel, React, MySQL Community, Laragon)
 |---|---|---|
 | Daily 02:00 | Automatic backup to the backup PC, kept 30 days: the database dump **and** the picture zip | System |
 | Every morning | Check for the red bars (backup failed, or automatic tasks not running) and the **System health** page | Admin |
-| Weekly | Copy the latest backup to the USB drive, store it in another room, click "Mark USB copy done" | Admin |
-| Monthly | Test restore on a spare PC with `php artisan census:restore <file>`, compare record counts, click "Mark test restore done" | IT |
+| Weekly | Plug the USB drive into the **server PC**, open **Backups**, click **Copy to USB**, choose the drive and confirm. The server copies both files, checks the sizes, keeps the newest 8 and marks it done. Store the USB in another room | Admin / custodian |
+| Monthly (1st, 03:00) | **Automatic test restore**: the system loads the latest backup into a scratch database and compares the counts. Check on **Backups** that "Test restore" says Passed (a red bar means it failed: see troubleshooting). **Run test restore now** if the yellow reminder shows | System; Admin checks |
+| Yearly, or when moving servers | Practice restore on a spare PC with `restore.bat` | IT |
 | Before any system update | Nothing extra: `php artisan census:update` takes a backup first and stops if it fails | IT |
 | Any time | `php artisan census:health` (exit code 1 means a Problem) | IT |
 
@@ -84,8 +85,8 @@ All software used is free/open source (Laravel, React, MySQL Community, Laragon)
 | How often | Task | Who |
 |---|---|---|
 | Daily | Automatic backup; Admin checks for warnings | System / Admin |
-| Weekly | USB copy | Admin |
-| Monthly | Test restore; review user list (deactivate leavers); skim the audit log for unusual deletes; check disk space | IT / Admin |
+| Weekly | **Copy to USB** (a button: USB plugged into the server, click, confirm) | Admin / custodian |
+| Monthly | Test restore is **automatic** (1st at 03:00): check it is green on Backups. Review user list (deactivate leavers); skim the audit log for unusual deletes; check disk space | System / Admin / IT |
 | Quarterly | Windows updates on the server (after a backup); check the UPS | IT |
 | Yearly | Review lists (diagnoses, ranks, brackets) with the office; review this plan and the security plan | Admin / IT |
 | On any staff change | Create, deactivate or move accounts the same day | Admin / System Admin |

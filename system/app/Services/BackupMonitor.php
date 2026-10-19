@@ -6,6 +6,7 @@ use App\Enums\BackupMarkType;
 use App\Enums\BackupStatus;
 use App\Models\BackupMark;
 use App\Models\BackupRun;
+use App\Models\TestRestoreRun;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Number;
 use Illuminate\Support\Str;
@@ -22,6 +23,9 @@ class BackupMonitor
 {
     /** When the scheduler runs the daily backup (routes/console.php). */
     public const DAILY_AT = '02:00';
+
+    /** When the scheduler runs the automatic test restore, on the 1st of each month. */
+    public const TEST_RESTORE_AT = '03:00';
 
     /** No successful backup for this long is a warning. */
     public const STALE_HOURS = 26;
@@ -49,6 +53,45 @@ class BackupMonitor
             ->where('type', $type)
             ->orderByDesc('marked_at')->orderByDesc('id')
             ->first();
+    }
+
+    /** The latest test restore, good or failed. */
+    public function lastTestRestore(): ?TestRestoreRun
+    {
+        return TestRestoreRun::query()->orderByDesc('started_at')->orderByDesc('id')->first();
+    }
+
+    /** Who a mark is "by": a person, or the system for an automatic test restore. */
+    public static function markedBy(?BackupMark $mark): ?string
+    {
+        if ($mark === null) {
+            return null;
+        }
+
+        return $mark->marked_by === null ? 'System (automatic)' : $mark->user?->name;
+    }
+
+    /**
+     * The red warning about the test restore, or null. It shows while the
+     * latest test restore failed and clears when a later one passes.
+     *
+     * @return array{message: string, short: string}|null
+     */
+    public function testRestoreProblem(): ?array
+    {
+        $latest = $this->lastTestRestore();
+
+        if ($latest === null || $latest->status !== BackupStatus::Failed) {
+            return null;
+        }
+
+        $what = $latest->isAutomatic() ? 'The automatic test restore' : 'The test restore';
+        $error = $this->shortError($latest->message);
+
+        return [
+            'message' => "{$what} failed on {$this->when($latest->started_at)}: {$error}. Tell IT / see the operations guide.",
+            'short' => "{$what} failed. Tell IT.",
+        ];
     }
 
     /** The next daily run: today at 02:00, or tomorrow once that has passed. */
@@ -120,13 +163,13 @@ class BackupMonitor
         $usb = $this->mark(BackupMarkType::UsbCopy);
 
         if ($usb['overdue']) {
-            $messages[] = 'The weekly USB copy is overdue (last: '.$this->day($usb['last']).'). Copy the latest backup to the USB drive.';
+            $messages[] = 'The weekly USB copy is overdue (last: '.$this->day($usb['last']).'). Plug the USB into the server and click "Copy to USB" on Backups.';
         }
 
         $restore = $this->mark(BackupMarkType::TestRestore);
 
         if ($restore['overdue']) {
-            $messages[] = 'The monthly test restore is overdue (last: '.$this->day($restore['last']).'). Ask IT to test a restore.';
+            $messages[] = 'The monthly test restore is overdue (last: '.$this->day($restore['last']).'). Open Backups and click "Run test restore now".';
         }
 
         return $messages;
@@ -142,6 +185,10 @@ class BackupMonitor
         $alerts = [];
 
         if ($problem = $this->problem()) {
+            $alerts[] = ['level' => 'error', 'message' => $problem['short']];
+        }
+
+        if ($problem = $this->testRestoreProblem()) {
             $alerts[] = ['level' => 'error', 'message' => $problem['short']];
         }
 

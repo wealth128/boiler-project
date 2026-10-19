@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/shared/empty-state';
 import { PageHeader } from '@/components/shared/page-header';
 import { Pagination } from '@/components/shared/pagination';
 import { Button } from '@/components/ui/button';
+import { CarePanel } from '@/features/backups/care-panel';
 import { ConfirmDialog } from '@/features/backups/confirm-dialog';
 import { StatusPanel } from '@/features/backups/status-panel';
 import type {
@@ -14,6 +15,8 @@ import type {
     BackupRunRow,
     BackupRuns,
     BackupStatusInfo,
+    TestRestoreInfo,
+    UsbDrive,
 } from '@/features/backups/types';
 import { formatDateTime } from '@/lib/dates';
 import { formatCount } from '@/lib/format';
@@ -24,6 +27,9 @@ type Props = {
     status: BackupStatusInfo;
     marks: BackupMarkInfo[];
     runs: BackupRuns;
+    testRestore: TestRestoreInfo | null;
+    /** Loaded when the Copy to USB window opens. */
+    drives?: UsbDrive[];
 };
 
 function backupsUrl(page = 1, perPage = DEFAULT_PER_PAGE): string {
@@ -34,10 +40,17 @@ function backupsUrl(page = 1, perPage = DEFAULT_PER_PAGE): string {
 
 /**
  * Backups (Admin only). Status and reminders on top, then every backup run,
- * newest first. "Run backup now" asks first and runs one backup. There is no
- * download or restore here: the files stay in the backup folder.
+ * newest first. "Run backup now" asks first and runs one backup. "Backup care"
+ * has the test restore and Copy to USB. There is no download or restore of
+ * the live data here: the files stay in the backup folder and on the USB.
  */
-export default function BackupsIndex({ status, marks, runs }: Props) {
+export default function BackupsIndex({
+    status,
+    marks,
+    runs,
+    testRestore,
+    drives,
+}: Props) {
     const [asking, setAsking] = useState(false);
     const [running, setRunning] = useState(false);
 
@@ -144,6 +157,12 @@ export default function BackupsIndex({ status, marks, runs }: Props) {
             />
 
             <StatusPanel status={status} marks={marks} />
+
+            <CarePanel
+                testRestore={testRestore}
+                drives={drives}
+                hasBackup={status.last_success !== null}
+            />
 
             <section className="rounded-lg border bg-card">
                 <div className="border-b px-4 py-3">

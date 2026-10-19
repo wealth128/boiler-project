@@ -13,6 +13,11 @@ export type AuthUser = Pick<
 export type Auth = {
     /** The signed-in account. Pages behind login always have one. */
     user: AuthUser;
+    /**
+     * New on every sign-in (null when signed out). A closed red warning bar
+     * stays hidden only while this value is the same.
+     */
+    loginAt: string | null;
 };
 
 /** Hospital header text from the settings table, shared with every page. */

@@ -34,6 +34,14 @@ return [
         'mysql_path' => env('MYSQL_PATH') ?: null,
     ],
 
+    // The automatic test restore (planning/architecture.md section 4) loads the
+    // latest backup into a scratch database, patient_census_restore_test, as
+    // the MySQL account census_restore_test (rights on that database only).
+    // census:install creates the account and writes its password here.
+    'restore_test' => [
+        'password' => env('RESTORE_TEST_PASSWORD'),
+    ],
+
     // Shown on the System health page and saved in the audit log by
     // census:update. Change it with each release.
     'version' => '1.0.0',

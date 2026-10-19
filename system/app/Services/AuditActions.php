@@ -66,6 +66,8 @@ final class AuditActions
         'user.deactivated' => ['Account deactivated', self::USERS],
 
         'backup.run_manual' => ['Backup run manually', self::BACKUPS],
+        'backup.test_restore' => ['Test restore of a backup', self::BACKUPS],
+        'backup.usb_copy' => ['Backup copied to USB', self::BACKUPS],
         'backup.usb_copy_marked' => ['USB copy marked as done', self::BACKUPS],
         'backup.test_restore_marked' => ['Test restore marked as done', self::BACKUPS],
 

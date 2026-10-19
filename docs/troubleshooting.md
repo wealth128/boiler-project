@@ -167,6 +167,41 @@ On the hospital server, MySQL and Apache are Windows services made by `install.b
 
 ---
 
-## 7. Still stuck
+## 7. Red bar: "The automatic test restore failed on ..."
+
+**What it is:** on the 1st of every month at 03:00 (and when Admin clicks **Run test restore now** on **Backups**), the server loads the latest backup into a scratch database, `patient_census_restore_test`, and compares the number of patients, visits, users and closed months with the numbers saved when the backup was made. The live database is never touched. The red bar stays until a later test restore passes. It also shows on **Backups** and as a Problem on **System health** ("Test restore of backups").
+
+| The message says | Why | Do this |
+|---|---|---|
+| "There is no successful backup to test." | No backup has worked yet | Click **Run backup now**, then **Run test restore now**. |
+| "The latest backup has no saved record counts" | The latest backup was made before this feature existed | Click **Run backup now**, then **Run test restore now**. |
+| "The test restore account is not set up" | An older server has no `census_restore_test` account | Right-click `install.bat`, **Run as administrator**. It repairs the settings and asks for the MySQL root password once. Then click **Run test restore now**. |
+| "This backup file is incomplete" or "The picture zip ... cannot be opened" | The backup file is damaged (disk full, copy stopped) | Click **Run backup now**, check free space on the backup PC, then **Run test restore now**. |
+| "The restored copy does not match the backup (visits: backup 40, restored 39 ...)" | A real difference, or someone encoded while the backup was being made | Click **Run test restore now** once more. If it fails again, **do not ignore it**: tell the developer. The backups may not be good. |
+| "A backup was still running at the scheduled time" | The 02:00 backup took more than an hour | Click **Run test restore now** later in the day. |
+| Anything about "Access denied" or a MySQL error | The `census_restore_test` account or its password in `.env` is wrong | Run `php artisan census:install --repair` (or `install.bat`). If `RESTORE_TEST_PASSWORD` in `.env` is wrong, empty it first and run the repair again. |
+
+If a test restore was stopped by a power cut, the scratch database may still exist. It is dropped at the start of the next test. It never holds anything the live system needs.
+
+---
+
+## 8. Copy to USB says it cannot copy
+
+The **Copy to USB** button on **Backups** makes the **server** copy the latest backup to a folder `census-backups` on a USB drive. **The USB drive must be plugged into the server PC**, not into the office PC where you are clicking.
+
+| The message says | Why | Do this |
+|---|---|---|
+| "No USB drive found" / "is not a removable USB drive plugged into the server" | The drive is in the wrong PC, not ready yet, or Windows calls it a fixed disk | Plug it into the server PC, wait a few seconds, click **Look again**. Some external hard disks and a few sticks show up as fixed disks and are never listed: use an ordinary USB stick. |
+| "The USB drive is full" | Not enough free space for the two files | Delete old files you no longer need from the stick, or use a bigger one. Only files in `census-backups` named like a census backup are ever deleted by the system. |
+| "... is not the same size as the original" | The stick is faulty or was pulled out | Nothing was kept on it. Try again; if it repeats, use another stick. |
+| "The folder census-backups could not be created" | The stick is write-protected | Slide the write-protect switch, or use another stick. |
+| "The latest backup files are missing" or "damaged" | The backup folder changed or the last backup is bad | Click **Run backup now**, then **Copy to USB** again. |
+| "A backup or a test restore is running" | Only one of these runs at a time | Wait a few minutes and try again. |
+
+A failed copy does not mark the weekly USB copy as done, so the yellow reminder stays. The stick keeps the newest 8 backups.
+
+---
+
+## 9. Still stuck
 
 Write down the exact message, the time, and what you clicked. Check `storage/logs/laravel-<date>.log` (no passwords are written there) and, for setup problems, `storage/logs/install.log`. Then tell the developer or hospital IT.

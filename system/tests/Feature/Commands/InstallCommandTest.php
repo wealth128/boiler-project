@@ -87,7 +87,7 @@ it('installs: database, .env, tables, lists and the two first accounts', functio
         ->and(MysqlAdmin::APP_GRANTS)->toBe(['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'LOCK TABLES', 'SHOW VIEW', 'TRIGGER']);
 
     // Steps in order: log in, create, migrate, seed with root, caches.
-    expect(SetupLog::names())->toBe(['connect', 'provision', 'migrate', 'with-root', 'clear-caches', 'rebuild-caches']);
+    expect(SetupLog::names())->toBe(['connect', 'provision', 'provision-scratch', 'migrate', 'with-root', 'clear-caches', 'rebuild-caches']);
 
     // Only the two accounts, with temporary passwords. No dev users.
     $users = User::query()->orderBy('id')->get();
@@ -166,7 +166,7 @@ it('requires a new MySQL root password when root has none, before anything else'
         ->assertSuccessful();
 
     // Set first, then logged in again with it, then the usual steps.
-    expect(SetupLog::names())->toBe(['connect', 'set-root-password', 'connect', 'provision', 'migrate', 'with-root', 'clear-caches', 'rebuild-caches'])
+    expect(SetupLog::names())->toBe(['connect', 'set-root-password', 'connect', 'provision', 'provision-scratch', 'migrate', 'with-root', 'clear-caches', 'rebuild-caches'])
         ->and($this->mysql->rootPassword)->toBe('a-strong-new-root-1');
 });
 
@@ -328,7 +328,8 @@ it('--repair adds missing .env keys, rebuilds the caches and changes no data', f
 
     $this->artisan('census:install', ['--repair' => true])
         ->expectsQuestion('Backup folder', $this->backupDir)
-        ->expectsOutputToContain('Added the missing .env keys: APP_DEBUG, LOG_STACK, MYSQLDUMP_PATH, MYSQL_PATH, BACKUP_PATH.')
+        ->expectsQuestion(InstallCommand::ROOT_PROMPT, 'root-secret-Pw1')
+        ->expectsOutputToContain('Added the missing .env keys: APP_DEBUG, LOG_STACK, MYSQLDUMP_PATH, MYSQL_PATH, BACKUP_PATH, RESTORE_TEST_PASSWORD.')
         ->assertSuccessful();
 
     $env = new EnvFile($this->envPath);
@@ -337,20 +338,21 @@ it('--repair adds missing .env keys, rebuilds the caches and changes no data', f
         ->and($env->get('MYSQLDUMP_PATH'))->toBe('C:/fake/mysqldump.exe')
         ->and($env->get('MYSQL_PATH'))->toBe('C:/fake/mysql.exe')
         ->and($env->get('BACKUP_PATH'))->toBe(str_replace('\\', '/', $this->backupDir))
+        ->and($env->get('RESTORE_TEST_PASSWORD'))->toBe($this->mysql->scratchPassword)
         // What was there stays exactly as it was.
         ->and($env->get('APP_KEY'))->toBe('base64:keepthiskey')
         ->and($env->get('DB_PASSWORD'))->toBe('keep-me')
         ->and($env->get('APP_NAME'))->toBe('Census');
 
-    // No database work, no new accounts, no data changed.
-    expect(SetupLog::names())->toBe(['clear-caches', 'rebuild-caches'])
+    // Only the test restore account is made with the root login. No new user accounts, no data changed.
+    expect(SetupLog::names())->toBe(['connect', 'provision-scratch', 'clear-caches', 'rebuild-caches'])
         ->and(['users' => User::count(), 'branches' => Branch::count(), 'settings' => Setting::count(), 'audit' => AuditLog::count()])->toBe($before)
         ->and(User::first()->password)->toBe($password);
 });
 
 it('--repair leaves a .env that is complete alone', function () {
     userWithRole('admin', ['username' => 'admin']);
-    $text = "APP_KEY=base64:k\nDB_PASSWORD=x\nAPP_ENV=production\nAPP_DEBUG=false\nLOG_STACK=daily\nMYSQLDUMP_PATH=C:/fake/mysqldump.exe\nMYSQL_PATH=C:/m2\nBACKUP_PATH=C:/b\n";
+    $text = "APP_KEY=base64:k\nDB_PASSWORD=x\nAPP_ENV=production\nAPP_DEBUG=false\nLOG_STACK=daily\nMYSQLDUMP_PATH=C:/fake/mysqldump.exe\nMYSQL_PATH=C:/m2\nBACKUP_PATH=C:/b\nRESTORE_TEST_PASSWORD=r\n";
     file_put_contents($this->envPath, $text);
 
     $this->artisan('census:install', ['--repair' => true])
@@ -362,7 +364,7 @@ it('--repair leaves a .env that is complete alone', function () {
 
 it('--repair warns about a debug or non-production .env but does not change it', function () {
     userWithRole('admin', ['username' => 'admin']);
-    file_put_contents($this->envPath, "APP_KEY=base64:k\nDB_PASSWORD=x\nAPP_ENV=local\nAPP_DEBUG=true\nLOG_STACK=daily\nMYSQLDUMP_PATH=C:/m\nMYSQL_PATH=C:/m2\nBACKUP_PATH=C:/b\n");
+    file_put_contents($this->envPath, "APP_KEY=base64:k\nDB_PASSWORD=x\nAPP_ENV=local\nAPP_DEBUG=true\nLOG_STACK=daily\nMYSQLDUMP_PATH=C:/m\nMYSQL_PATH=C:/m2\nBACKUP_PATH=C:/b\nRESTORE_TEST_PASSWORD=r\n");
 
     $this->artisan('census:install', ['--repair' => true])
         ->expectsOutputToContain('APP_DEBUG is "true", not "false"')
@@ -373,7 +375,7 @@ it('--repair warns about a debug or non-production .env but does not change it',
 
 it('--repair never makes a new key and never creates accounts', function () {
     userWithRole('admin', ['username' => 'admin']);
-    file_put_contents($this->envPath, "APP_KEY=\nDB_PASSWORD=x\nAPP_ENV=production\nAPP_DEBUG=false\nLOG_STACK=daily\nMYSQLDUMP_PATH=C:/m\nMYSQL_PATH=C:/m2\nBACKUP_PATH=C:/b\n");
+    file_put_contents($this->envPath, "APP_KEY=\nDB_PASSWORD=x\nAPP_ENV=production\nAPP_DEBUG=false\nLOG_STACK=daily\nMYSQLDUMP_PATH=C:/m\nMYSQL_PATH=C:/m2\nBACKUP_PATH=C:/b\nRESTORE_TEST_PASSWORD=r\n");
 
     $this->artisan('census:install', ['--repair' => true])
         ->expectsOutputToContain('APP_KEY is empty')
@@ -554,6 +556,7 @@ LOG_STACK=daily
 MYSQLDUMP_PATH=C:/m
 MYSQL_PATH=C:/m2
 BACKUP_PATH=C:/b
+RESTORE_TEST_PASSWORD=r
 ');
 
     $this->artisan('census:install', ['--repair' => true])

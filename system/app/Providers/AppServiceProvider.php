@@ -5,7 +5,9 @@ namespace App\Providers;
 use App\Enums\Permission;
 use App\Http\Middleware\EndSessionAtDailyCutoff;
 use App\Models\AgeBracket;
+use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\BackupMark;
+use App\Models\TestRestoreRun;
 use App\Models\BackupRun;
 use App\Models\Branch;
 use App\Models\Diagnosis;
@@ -62,10 +64,14 @@ class AppServiceProvider extends ServiceProvider
      * - report-files: Print, PDF and Excel together (20). Each one counts
      *   every report, so this stops a stuck button or script, not normal use.
      * - patient-search: the Encode search box (60). It searches while typing.
+     * - backup-actions: Run backup now, Run test restore now and Copy to USB
+     *   share 6 a minute per user. Each is heavy (mysqldump, a restore, a copy),
+     *   so a stuck button or a script must not queue them up.
      */
     protected function configureRateLimits(): void
     {
         RateLimiter::for('report-files', fn (Request $request): Limit => Limit::perMinute(20)->by($request->user()?->id ?? $request->ip()));
+        RateLimiter::for('backup-actions', fn (Request $request): Limit => Limit::perMinute(6)->by($request->user()?->id ?? $request->ip()));
         RateLimiter::for('patient-search', fn (Request $request): Limit => Limit::perMinute(60)->by($request->user()?->id ?? $request->ip()));
     }
 
@@ -102,10 +108,13 @@ class AppServiceProvider extends ServiceProvider
             $model::observe(AuditObserver::class);
         }
 
-        // Login time, for the daily sign-out (EndSessionAtDailyCutoff).
+        // Login time, for the daily sign-out (EndSessionAtDailyCutoff), and a
+        // value that is new on every login (shared as auth.loginAt: it brings
+        // a closed red warning bar back at the next sign-in).
         Event::listen(function (Login $event): void {
             if (request()->hasSession()) {
                 request()->session()->put(EndSessionAtDailyCutoff::SESSION_KEY, now()->getTimestamp());
+                request()->session()->put(HandleInertiaRequests::LOGIN_AT_KEY, HandleInertiaRequests::newLoginAt());
             }
         });
 
@@ -138,6 +147,7 @@ class AppServiceProvider extends ServiceProvider
             'report_snapshots' => ReportSnapshot::class,
             'backup_runs' => BackupRun::class,
             'backup_marks' => BackupMark::class,
+            'test_restore_runs' => TestRestoreRun::class,
             'settings' => Setting::class,
         ]);
 
