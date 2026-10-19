@@ -13,7 +13,7 @@ This file carries over what was discussed in the first planning-and-review conve
 | **Next step** | **6i-3 Automatic test restore and "Copy to USB"** (both prompts are in `planning/Prompts/prompt-6i.md`), then the Security review (`planning/security.md` section 3). Start a **new conversation** for each step. |
 | **Still to prove** | `census:install`, `census:update` and `census:restore` were only tested with fakes (no real MySQL root login, no real restore). **They need a real test on a spare PC** before handover. The `.bat` files and the Laragon service setup were also written without a real Laragon at hand: `docs/windows-scripts-manual-test.md` is the test list (install, run again, services, reboot with no one logged in, crash restart, firewall, backup, update, restore). |
 | **Next prompt file** | 6i-2 and 6i-3: `planning/Prompts/prompt-6i.md`. Last prompt used: 6i-2 (in the same file) |
-| **Last merged commit** | d9e23fc (Step 6i-1-fix merge, 2026-10-19) |
+| **Last merged commit** | 72f0c52 (Step 6i-2 merge, 2026-10-19; step commit 3129ffa) |
 | **Open decisions** | HTTPS vs HTTP on the hospital LAN (Phase 8). (none about PHP: the minimum is decided, see the decisions log). |
 | **Open item (blocks Phase 8)** | **Spare-PC test of 6i-1 and 6i-2 is still required before Phase 8:** a fresh Windows PC with only the `docs/requirements.md` items, then `docs/windows-scripts-manual-test.md` from section 0 to the end. Fill in the installer versions in `docs/requirements.md` at the same time. |
 
