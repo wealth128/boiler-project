@@ -16,6 +16,7 @@ This file carries over what was discussed in the first planning-and-review conve
 | **Last merged commit** | 72f0c52 (Step 6i-2 merge, 2026-10-19; step commit 3129ffa) |
 | **Open decisions** | HTTPS vs HTTP on the hospital LAN (Phase 8). (none about PHP: the minimum is decided, see the decisions log). |
 | **Open item (blocks Phase 8)** | **Spare-PC test of 6i-1 and 6i-2 is still required before Phase 8:** a fresh Windows PC with only the `docs/requirements.md` items, then `docs/windows-scripts-manual-test.md` from section 0 to the end. Fill in the installer versions in `docs/requirements.md` at the same time. |
+| **Notes and passwords** | Personal notes: planning/my-project-notes.md. Passwords: _private/credentials.md (never committed). |
 
 **Token-saving rules (agreed 2026-10-16):**
 - Start a **new conversation for each major step** (6f, 6g, 6h, security review…). Give it only this file plus the step's prompt; read other files or chat history only when I say so.
