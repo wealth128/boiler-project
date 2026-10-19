@@ -35,7 +35,9 @@ use Throwable;
  * Safe to run again: once the system is installed (APP_KEY set and users
  * exist) it refuses. "--repair" only re-checks the PC, fills in .env keys
  * that are missing and rebuilds the caches. It never deletes data and never
- * creates accounts.
+ * creates user accounts. The one thing it can add with the MySQL root login
+ * is the census_restore_test account for the automatic test restore (when
+ * RESTORE_TEST_PASSWORD is missing from .env).
  *
  * The MySQL root password is typed hidden, kept in memory only, and never
  * written to .env, the install log, any other log or the audit log. The
@@ -288,6 +290,14 @@ class InstallCommand extends Command
         $this->info('Database '.MysqlAdmin::DATABASE.' and the user '.MysqlAdmin::APP_USER.' are ready.');
         $this->note('Database and the '.MysqlAdmin::APP_USER.' account created or updated (rights: '.implode(', ', MysqlAdmin::APP_GRANTS).').');
 
+        // The account for the automatic test restore: rights on one scratch database only.
+        $restorePassword = $this->randomPassword(32);
+        $this->secrets[] = $restorePassword;
+
+        $mysql->provisionScratchUser($restorePassword);
+        $this->info('The test restore account '.MysqlAdmin::SCRATCH_USER.' is ready (rights on '.MysqlAdmin::SCRATCH_DATABASE.' only).');
+        $this->note('The '.MysqlAdmin::SCRATCH_USER.' account created or updated (rights: ALL on '.MysqlAdmin::SCRATCH_DATABASE.'.* only).');
+
         // 3. .env for production.
         $env = EnvFile::fromExample((string) config('census.paths.env_example'), $envPath);
         $db = (array) config('database.connections.'.config('database.default'));
@@ -306,6 +316,7 @@ class InstallCommand extends Command
             'MYSQLDUMP_PATH' => $mysqldump,
             'MYSQL_PATH' => $mysqlClient,
             'BACKUP_PATH' => $backupPath,
+            'RESTORE_TEST_PASSWORD' => $restorePassword,
         ] as $key => $value) {
             $env->set($key, $value);
         }
@@ -397,6 +408,18 @@ class InstallCommand extends Command
             $fixed[] = 'BACKUP_PATH';
         }
 
+        // Older installs have no test restore account: make it with the root login (asked now, never saved).
+        if (! $env->filled('RESTORE_TEST_PASSWORD')) {
+            $password = $this->createScratchAccount(app(MysqlAdmin::class));
+
+            if ($password === null) {
+                return self::FAILURE;
+            }
+
+            $env->set('RESTORE_TEST_PASSWORD', $password);
+            $fixed[] = 'RESTORE_TEST_PASSWORD';
+        }
+
         if (! $env->filled('APP_KEY')) {
             $this->error('APP_KEY is empty. It is never replaced here: a new key would make saved data unreadable. Ask IT to restore .env from the backup.');
 
@@ -430,6 +453,38 @@ class InstallCommand extends Command
     }
 
     // --- Pieces ------------------------------------------------------------
+
+    /**
+     * Repair only: create census_restore_test (rights on the scratch database
+     * only) and return its new password, or null after saying why it failed.
+     */
+    private function createScratchAccount(MysqlAdmin $mysql): ?string
+    {
+        $this->line('The test restore account '.MysqlAdmin::SCRATCH_USER.' is missing. It is created now.');
+
+        if (! $this->loginAsRoot($mysql)) {
+            $this->note('Stopped: no MySQL root login for the test restore account.');
+
+            return null;
+        }
+
+        $password = $this->randomPassword(32);
+        $this->secrets[] = $password;
+
+        try {
+            $mysql->provisionScratchUser($password);
+        } catch (Throwable $e) {
+            $this->error('The test restore account could not be created: '.$this->scrub($e->getMessage()));
+            $this->note('Stopped: the '.MysqlAdmin::SCRATCH_USER.' account could not be created.');
+
+            return null;
+        }
+
+        $this->info('The test restore account '.MysqlAdmin::SCRATCH_USER.' is ready (rights on '.MysqlAdmin::SCRATCH_DATABASE.' only).');
+        $this->note('The '.MysqlAdmin::SCRATCH_USER.' account created (rights: ALL on '.MysqlAdmin::SCRATCH_DATABASE.'.* only).');
+
+        return $password;
+    }
 
     private function rebuildCaches(AppMaintenance $maintenance, EnvFile $env): bool
     {

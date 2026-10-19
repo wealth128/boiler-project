@@ -60,6 +60,15 @@ export function StatusPanel({ status, marks }: StatusPanelProps) {
                 </p>
             )}
 
+            {status.test_restore_problem && (
+                <p
+                    role="alert"
+                    className="m-4 rounded-md border border-bad bg-bad-soft px-3 py-2 text-sm font-medium text-bad"
+                >
+                    {status.test_restore_problem}
+                </p>
+            )}
+
             <dl className="grid gap-x-6 gap-y-3 p-4 text-sm sm:grid-cols-2">
                 <Item label="Last successful backup">
                     {last ? (
@@ -111,9 +120,9 @@ export function StatusPanel({ status, marks }: StatusPanelProps) {
 
             <p className="border-t px-4 py-3 text-sm text-muted-foreground">
                 Backup files hold all patient data, so they can&apos;t be
-                downloaded or restored here. IT copies them from the backup
-                folder. Copy the latest backup to the USB drive every week.
-                Test a restore once a month.
+                downloaded here. Every week, plug the USB drive into the
+                server PC and click &quot;Copy to USB&quot;. Once a month,
+                check that the test restore is green.
             </p>
 
             <ConfirmDialog
@@ -122,8 +131,8 @@ export function StatusPanel({ status, marks }: StatusPanelProps) {
                 title={`Mark ${asking ? noun(asking) : ''} as done?`}
                 description={
                     asking?.type === 'usb-copy'
-                        ? 'Confirm the latest backup was copied to the USB drive today.'
-                        : 'Confirm a backup was restored on a spare PC and the records matched.'
+                        ? 'Only use this if you copied the latest backup to a USB drive by another way. "Copy to USB" marks it for you.'
+                        : 'Only use this if a backup was restored and checked by another way. The automatic test restore marks it for you.'
                 }
                 confirmLabel={`Mark ${asking ? noun(asking) : ''} done`}
                 processing={processing}

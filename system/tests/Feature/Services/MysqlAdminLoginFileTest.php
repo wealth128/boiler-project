@@ -93,13 +93,13 @@ it('deletes the login file when the backup file cannot be opened', function () {
 
     expect(fn () => @app(MysqlAdmin::class)->importDump($this->dump.'.missing', 'patient_census'))->toThrow(RuntimeException::class);
 
-    expect(glob(sys_get_temp_dir().DIRECTORY_SEPARATOR.'census-restore-*'))->toBe([]);
+    expect(glob(sys_get_temp_dir().DIRECTORY_SEPARATOR.'census-login-*'))->toBe([]);
 });
 
 it('refuses to write the login file inside the private storage folder', function () {
     $private = storage_path('app/private');
     File::ensureDirectoryExists($private);
-    $before = glob($private.'/census-restore-*') ?: [];
+    $before = glob($private.'/census-login-*') ?: [];
     fakeMysqlClient($this);
 
     $admin = new class extends MysqlAdmin
@@ -113,6 +113,47 @@ it('refuses to write the login file inside the private storage folder', function
     expect(fn () => $admin->importDump($this->dump, 'patient_census'))
         ->toThrow(RuntimeException::class, 'inside the private storage folder');
 
-    expect(glob($private.'/census-restore-*') ?: [])->toBe($before)
+    expect(glob($private.'/census-login-*') ?: [])->toBe($before)
         ->and($this->seen)->toBe([]); // mysql never started
+});
+
+// --- Leftover login files (a crashed run) ---------------------------------------------------
+
+it('deletes login files older than 1 hour at the start of a run, and only ours', function () {
+    fakeMysqlClient($this);
+    $temp = sys_get_temp_dir().DIRECTORY_SEPARATOR;
+
+    $old = $temp.'census-login-'.uniqid().'.cnf';
+    $recent = $temp.'census-login-'.uniqid().'.cnf';
+    $lookalike = $temp.'census-notes-'.uniqid().'.cnf';
+    $other = $temp.'census-login-'.uniqid().'.txt';
+    $threeLetters = $temp.'cen'.substr(uniqid(), -4).'.tmp'; // what tempnam() would make on Windows
+
+    foreach ([$old, $recent, $lookalike, $other, $threeLetters] as $file) {
+        file_put_contents($file, 'password="leaked"');
+    }
+
+    foreach ([$old, $lookalike, $other, $threeLetters] as $file) {
+        touch($file, time() - 7200);
+    }
+
+    try {
+        app(MysqlAdmin::class)->importDump($this->dump, 'patient_census');
+
+        expect(file_exists($old))->toBeFalse()
+            ->and(file_exists($recent))->toBeTrue()      // might still be in use
+            ->and(file_exists($lookalike))->toBeTrue()   // not our name pattern
+            ->and(file_exists($other))->toBeTrue()
+            ->and(file_exists($threeLetters))->toBeTrue();
+    } finally {
+        array_map('unlink', array_filter([$old, $recent, $lookalike, $other, $threeLetters], 'file_exists'));
+    }
+});
+
+it('names the login file census-login-<random>.cnf', function () {
+    fakeMysqlClient($this);
+
+    app(MysqlAdmin::class)->importDump($this->dump, 'patient_census');
+
+    expect(basename($this->seen['path']))->toMatch('/^census-login-[0-9a-f]{16}\.cnf$/');
 });

@@ -215,16 +215,30 @@ The filters stay in the address, so **F5 (Refresh)** and **Alt + ← (Back)** ke
 
 ---
 
+## Warning bars at the top of Admin pages
+
+Red and yellow bars (scheduler stopped, backup failed, USB copy or test restore overdue) have an **x** at the right.
+
+| Key | What it does |
+|---|---|
+| **Tab** | Move to the **x** of a bar ("Close this warning"). It has a visible outline. Bars come before the page content in the Tab order, after the menu. |
+| **Enter** / **Space** | Close the bar |
+
+The x only hides the warning in this browser. Nothing on the server changes. A yellow bar comes back tomorrow, a red bar at your next sign-in, and any bar at once if its text changes. The Backups and System health pages always show the full status and have no x.
+
+---
+
 ## Backups (Admin)
 
 No new shortcuts. The screen uses the standard keys: **Tab** / **Shift + Tab** to move, **Enter** / **Space** to press a button.
 
 | Key | What it does |
 |---|---|
-| **Tab** / **Shift + Tab** | Next / previous. Order: **Run backup now** → **Mark USB copy done** → **Mark test restore done** → page numbers |
+| **Tab** / **Shift + Tab** | Next / previous. Order: **Run backup now** → **Mark USB copy done** → **Mark test restore done** → **Run test restore now** → **Copy to USB** → page numbers |
 | **Enter** / **Space** | Press the focused button, which opens a question |
-| **Enter** | In the question ("Run a backup now?", "Mark ... as done?"): confirm. The confirm button is selected first. |
+| **Enter** | In the question ("Run a backup now?", "Run a test restore now?", "Mark ... as done?"): confirm. The confirm button is selected first. |
 | **Esc** | Cancel the question |
+| **↑ / ↓** | In the "Copy the latest backup to USB?" window: choose the USB drive in the list (type its letter to jump to it). **Tab** to **Look again** or **Copy to USB**, then **Enter**. |
 
 Pages: **Tab** to **Previous**, a page number or **Next**, then **Enter** (10 backups per page unless you change it). **Tab** to **Rows per page** and choose 10, 20 or 50; the choice stays in the address.
 

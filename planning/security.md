@@ -29,7 +29,8 @@ The system holds patient names, birthdates and diagnoses, so it is treated as se
 | `census:restore` checks everything before it drops anything (dump readable and complete, mysql program starts, picture zip opens), then clears sessions, cache and locks after loading | Step 6i-1-fix |
 | `census:install` refuses on a server that already has the system (`.env` with an `APP_KEY`, users, or the database) unless `--force` and the typed words `INSTALL OVER` | Step 6i-1-fix |
 | `census:install`, `census:update`, `census:restore`: root password typed hidden, never stored or logged; restore needs `RESTORE` typed, takes a safety backup first and refuses files outside `BACKUP_PATH` | Step 6i-1 |
-| Pages share only the user's id, name, username, role and office | Step 2.5 |
+| **Automatic test restore and Copy to USB:** scratch database with its own account (`census_restore_test`, rights on that database only, fixed name), USB copy to removable drives only with `.part` files and size checks, the three heavy Backups buttons limited to 6 a minute per user, MySQL login files cleaned up after a crash | Step 6i-3 |
+| Pages share only the user's id, name, username, role, office and a per-login value (`loginAt`) | Step 2.5, 6i-3 |
 | AFP serial number not collected | Phase 1 |
 
 ## 2. Rules for Every New Screen (Claude Code follows these)
@@ -69,6 +70,10 @@ A full check of the finished system, by Claude Code and then by me:
 **MySQL**
 - Listens on `127.0.0.1` only (not reachable from other PCs).
 - `census_app` gets only these rights, on `patient_census` only (created by `php artisan census:install`, step 6i-1): **SELECT, INSERT, UPDATE, DELETE** for daily use, plus the least `mysqldump` needs for the backup: **LOCK TABLES, SHOW VIEW, TRIGGER**. No CREATE, ALTER, DROP, GRANT or global rights. Its password is random (32 letters and numbers) and lives only in `.env`.
+- `census_restore_test@localhost` (Step 6i-3, for the automatic test restore) has **ALL privileges on `patient_census_restore_test.*` only**: it can create and drop that one scratch database and nothing else (no rights on `patient_census`, no global rights). Created by `census:install`, or `census:install --repair` on an older server (asks for the root password once). Its random password (32 letters and numbers) is `RESTORE_TEST_PASSWORD` in `.env` only, never in a log or the audit log, and is scrubbed from stored error messages. **The test restore never touches `patient_census`:** the database name is a constant and `MysqlAdmin` throws on any other name.
+- **MySQL login files** (loading or dumping a backup): named `census-login-<random>.cnf`, owner-only, in the system temp folder (never under `storage/app/private`), deleted in a `finally` block. At the start of every run, leftovers of that exact name pattern older than 1 hour (a crashed run) are deleted; nothing else in the temp folder is touched.
+- **Copy to USB** writes only to a removable drive that Windows reports itself (the drive letter sent by the browser is checked against that list again), only inside `census-backups`, and deletes only census backup file names there. Nothing is downloaded to a browser. Run backup now, Run test restore now and Copy to USB are Admin only (403 for everyone else) and limited to 6 a minute per user.
+- **Warning bars:** the x on an Admin warning bar only hides it in that browser (localStorage, per user and message). It changes nothing on the server. Yellow bars come back the next day (Asia/Manila), red bars at the next sign-in (`auth.loginAt`, new on every login), and any bar when its text changes.
 - Migrations run with `root` during `census:install`, `census:update` and `census:restore`. The `root` password is strong and kept by IT only. The commands ask for it with hidden typing and keep it in memory only: it is never written to `.env`, a log, the audit log or the config cache. (Loading a backup needs a temporary MySQL login file with owner-only rights, deleted right after.)
 
 **Windows server PC**
@@ -81,7 +86,8 @@ A full check of the finished system, by Claude Code and then by me:
 **Backups**
 - Copied to a second location (another PC or external drive) daily, not only the server's own disk.
 - Backup folder is not shared on the network for everyone.
-- A test restore is done monthly and recorded.
+- A test restore is done monthly **automatically** (1st at 03:00) and recorded; a failure shows a red bar for Admin.
+- A weekly **Copy to USB** (button on the Backups page, USB plugged into the server) puts the newest 8 backups on a drive kept in another room.
 
 ## 5. People and Routine (Phase 9 handover)
 - One account per person. No shared logins, no passwords on sticky notes.

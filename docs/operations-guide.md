@@ -1,6 +1,6 @@
 # Operations Guide
 
-_Version: DRAFT (Step 6i-2) · Matches system: Step 6i-2 · Phase 7.5 will finish this guide, add screenshots and have it tested by someone who did not write it._
+_Version: DRAFT (Step 6i-3) · Matches system: Step 6i-3 · Phase 7.5 will finish this guide, add screenshots and have it tested by someone who did not write it._
 
 This guide is for the person who looks after the server PC. You do not need to type commands. Everything is a file you double-click.
 
@@ -63,14 +63,29 @@ Running `install.bat` again on a server that already works is safe. It only re-c
 ### 2. Daily and weekly checks
 
 **Every morning (Admin, 1 minute):**
-1. Log in. Look for a red bar at the top. A red bar means the last backup failed, or automatic tasks are not running. Tell IT the same day.
+1. Log in. Look for a red bar at the top. A red bar means the last backup or the test restore failed, or automatic tasks are not running. Tell IT the same day. A yellow bar means the weekly USB copy or the monthly test restore is overdue.
+
+   **The x only hides a warning. It comes back tomorrow (yellow) or at your next sign-in (red) until the problem is fixed.** Closing a bar never fixes or marks anything. The **Backups** and **System health** pages always show the full status.
 2. Open **System health** (left menu, under Administration). Every line should say OK.
 
-**Every week (Admin):**
-1. Copy the latest backup to the USB drive. Keep the drive in another room.
-2. On the **Backups** page, record that the USB copy was done.
+**The custodian's three tasks in one place** (the one-page card will copy this):
+- **Daily:** log in, look for a red bar, open **System health**. The x on a bar only hides it until tomorrow (yellow) or your next sign-in (red).
+- **Weekly:** plug the USB into the **server PC**, click **Copy to USB** on **Backups**.
+- **Monthly:** check that **Test restore** on **Backups** is green (Passed).
 
-**Every month (IT):** restore the latest backup on a spare PC (section 4), compare the record counts, and record the test restore on the **Backups** page. Check free disk space on the server and the backup PC.
+**Every week (Admin or custodian, 2 minutes):**
+1. Go to the **server PC** and plug the USB drive into it. It must be the server, not your office PC.
+2. On your own PC, open **Backups** and click **Copy to USB**. Choose the drive, click **Copy to USB** again.
+3. Wait for the green message: "Copied ... to E: (... MB). Store the USB in another room." The weekly USB copy is marked as done by itself.
+4. Unplug the drive and keep it in another room or a locked cabinet.
+
+If it says "No USB drive found", the drive is in the wrong PC or is not ready. Plug it into the server, wait a few seconds and click **Look again**. Other messages are in `docs/troubleshooting.md`, section 8. The USB keeps the newest 8 backups. Nothing is downloaded to the office PC.
+
+**Every month (Admin or custodian, 1 minute):** the system tests the latest backup **by itself** on the 1st at 03:00. It loads the backup into a scratch database and compares the number of patients, visits, users and closed months. Open **Backups**. Under **Backup care**, "Test restore" must say **Passed** with a date in the last month. A yellow reminder "The monthly test restore is overdue" means it has not passed for 35 days: click **Run test restore now**. A red bar "The automatic test restore failed" means call IT and see `docs/troubleshooting.md`, section 7. The **System health** line "Test restore of backups" shows the same.
+
+**Every month (IT):** check free disk space on the server and the backup PC. A restore on a spare PC (section 4) is now only needed to practise, for example once a year or after moving to a new server.
+
+**After updating from an older version:** run `install.bat` once as administrator. It creates the MySQL account `census_restore_test` (rights on the scratch database `patient_census_restore_test` only) and saves its password in `.env`. It asks for the MySQL root password once. Until then, the test restore says "The test restore account is not set up".
 
 ### 3. Update to a new version
 
@@ -146,4 +161,4 @@ The System Admin can reset other people's passwords in the system. Only this fil
 
 - Screenshots for every step.
 - A tested recovery guide for a technician who has never seen the system.
-- The weekly USB copy and the monthly test restore will become automatic and button-driven in Step 6i-3. This guide will be updated then.
+- The one-page custodian card (daily: no red bar; weekly: Copy to USB; monthly: test restore is green). The tasks are written in section 2 now.

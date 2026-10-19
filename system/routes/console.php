@@ -14,6 +14,12 @@ Schedule::command('backup:run')
     ->dailyAt(BackupMonitor::DAILY_AT)
     ->withoutOverlapping();
 
+// Automatic test restore on the 1st of each month at 3:00 AM, after the 2:00 AM
+// backup. Loads the latest backup into a scratch database and compares the counts.
+Schedule::command('backup:test-restore')
+    ->monthlyOn(1, BackupMonitor::TEST_RESTORE_AT)
+    ->withoutOverlapping();
+
 // Heartbeat: proves the scheduler itself is running. Admin sees a red bar
 // when it is more than 5 minutes old (App\Services\SchedulerHeartbeat).
 Schedule::call(fn () => app(SchedulerHeartbeat::class)->beat())

@@ -314,6 +314,8 @@ it('has no route that serves or restores a backup file', function () {
         'GET backups',
         'POST backups/marks/{type}',
         'POST backups/run',
+        'POST backups/test-restore',
+        'POST backups/usb-copy',
     ]);
 
     fakeDump();
@@ -360,8 +362,8 @@ it('shows "never" and the yellow warnings before anything is marked', function (
     ]);
 
     expect(alertsFor($this, $this->admin, '/encode'))->toBe([
-        ['level' => 'warning', 'message' => 'The weekly USB copy is overdue (last: never). Copy the latest backup to the USB drive.'],
-        ['level' => 'warning', 'message' => 'The monthly test restore is overdue (last: never). Ask IT to test a restore.'],
+        ['level' => 'warning', 'message' => 'The weekly USB copy is overdue (last: never). Plug the USB into the server and click "Copy to USB" on Backups.'],
+        ['level' => 'warning', 'message' => 'The monthly test restore is overdue (last: never). Open Backups and click "Run test restore now".'],
     ]);
 });
 
@@ -399,8 +401,8 @@ it('turns the USB copy warning on after 8 days and the test restore warning afte
     backupRunAgo(1);
 
     expect(alertsFor($this, $this->admin, '/encode'))->toBe([
-        ['level' => 'warning', 'message' => 'The weekly USB copy is overdue (last: 01-Oct-2026). Copy the latest backup to the USB drive.'],
-        ['level' => 'warning', 'message' => 'The monthly test restore is overdue (last: 04-Sep-2026). Ask IT to test a restore.'],
+        ['level' => 'warning', 'message' => 'The weekly USB copy is overdue (last: 01-Oct-2026). Plug the USB into the server and click "Copy to USB" on Backups.'],
+        ['level' => 'warning', 'message' => 'The monthly test restore is overdue (last: 04-Sep-2026). Open Backups and click "Run test restore now".'],
     ]);
 });
 

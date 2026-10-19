@@ -154,7 +154,11 @@ Route::middleware('auth')->group(function () {
     // --- Backups ------------------------------------------------ Admin
     Route::middleware('role:admin')->group(function () {
         Route::get('backups', [BackupController::class, 'index'])->name('backups.index');
-        Route::post('backups/run', [BackupController::class, 'run'])->name('backups.run');
+        // The three heavy actions share one limit (6 a minute per user).
+        Route::post('backups/run', [BackupController::class, 'run'])->middleware('throttle:backup-actions')->name('backups.run');
+        // Copy the latest backup to a USB drive plugged into the server, and test it by loading it into a scratch database.
+        Route::post('backups/usb-copy', [BackupController::class, 'usbCopy'])->middleware('throttle:backup-actions')->name('backups.usb-copy');
+        Route::post('backups/test-restore', [BackupController::class, 'testRestore'])->middleware('throttle:backup-actions')->name('backups.test-restore');
         // Mark the weekly USB copy / monthly test restore as done (a reminder only).
         Route::post('backups/marks/{type}', [BackupController::class, 'mark'])
             ->whereIn('type', ['usb-copy', 'test-restore'])

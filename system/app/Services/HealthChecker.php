@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Enums\BackupMarkType;
+use App\Enums\BackupStatus;
 use App\Services\Setup\MysqlAdmin;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Number;
@@ -59,6 +61,8 @@ class HealthChecker
             $this->php(),
             $this->mysqlClient(),
             $this->mysqlRoot(),
+            $this->testRestore(),
+            $this->usbCopy(),
             $this->version(),
         ];
     }
@@ -305,6 +309,55 @@ class HealthChecker
         }
 
         return $this->row('mysql_root', $label, self::OK, 'Root needs a password.', 'Nothing to do.');
+    }
+
+    /**
+     * The monthly automatic test restore: OK when one passed in the last 35
+     * days, Problem when the latest one failed, Warning when none passed in time.
+     *
+     * @return array{key: string, label: string, status: string, detail: string, todo: string}
+     */
+    private function testRestore(): array
+    {
+        $label = 'Test restore of backups';
+        $latest = $this->safely(fn () => $this->backups->lastTestRestore());
+
+        if ($latest?->status === BackupStatus::Failed) {
+            $why = $this->backups->shortError($latest->message);
+
+            return $this->row('test_restore', $label, self::PROBLEM,
+                'The last test restore failed on '.$latest->started_at->format('d-M-Y H:i').': '.$why.'.',
+                'Tell IT: see the operations guide, then open Backups and click "Run test restore now".');
+        }
+
+        $mark = $this->safely(fn () => $this->backups->mark(BackupMarkType::TestRestore));
+
+        if ($mark === null || $mark['overdue']) {
+            $last = $mark['last'] ?? null;
+
+            return $this->row('test_restore', $label, self::WARNING,
+                $last === null ? 'No test restore has been done yet.' : 'The last good test restore was on '.$last->marked_at->format('d-M-Y').', more than '.BackupMarkType::TestRestore->overdueAfterDays().' days ago.',
+                'Open Backups and click "Run test restore now". It also runs by itself on the 1st of each month.');
+        }
+
+        return $this->row('test_restore', $label, self::OK, 'Last good test restore: '.$mark['last']->marked_at->format('d-M-Y').'.', 'Nothing to do.');
+    }
+
+    /** @return array{key: string, label: string, status: string, detail: string, todo: string} */
+    private function usbCopy(): array
+    {
+        $label = 'Copy to USB';
+        $mark = $this->safely(fn () => $this->backups->mark(BackupMarkType::UsbCopy));
+
+        if ($mark === null || $mark['overdue']) {
+            $last = $mark['last'] ?? null;
+
+            return $this->row('usb_copy', $label, self::WARNING,
+                $last === null ? 'No backup has been copied to a USB drive yet.' : 'The last copy to USB was on '.$last->marked_at->format('d-M-Y').', more than '.BackupMarkType::UsbCopy->overdueAfterDays().' days ago.',
+                'Plug the USB drive into the server PC, open Backups and click "Copy to USB".');
+        }
+
+        return $this->row('usb_copy', $label, self::OK, 'Last copy to USB: '.$mark['last']->marked_at->format('d-M-Y').'.', 'Nothing to do.');
     }
 
     /** @return array{key: string, label: string, status: string, detail: string, todo: string} */

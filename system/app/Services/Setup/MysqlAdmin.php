@@ -2,7 +2,10 @@
 
 namespace App\Services\Setup;
 
+use App\Services\BackupCounts;
 use App\Services\BackupService;
+use App\Services\LoginFile;
+use Illuminate\Database\Connection;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Process;
@@ -39,6 +42,17 @@ class MysqlAdmin
      * @var list<string>
      */
     public const APP_GRANTS = ['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'LOCK TABLES', 'SHOW VIEW', 'TRIGGER'];
+
+    /**
+     * The test restore (planning/architecture.md section 4): a scratch
+     * database with a fixed name and an account that has rights on that
+     * database only. Nothing else may ever be created or dropped by it.
+     */
+    public const SCRATCH_DATABASE = 'patient_census_restore_test';
+
+    public const SCRATCH_USER = 'census_restore_test';
+
+    public const SCRATCH_CONNECTION = 'restore_test';
 
     /** Can this PC reach MySQL at the host and port in the settings? */
     public function reachable(): bool
@@ -220,33 +234,36 @@ class MysqlAdmin
     public function importDump(string $dumpPath, string $database): void
     {
         $db = (array) config('database.connections.'.self::CONNECTION);
-        $optionFile = tempnam($this->tempFolder(), 'census-restore-');
-        $handle = null;
 
-        if ($optionFile === false) {
-            throw new RuntimeException('Could not create a temporary file for the MySQL login.');
-        }
+        $this->loadDump($dumpPath, $database, 'root', (string) ($db['password'] ?? ''));
+    }
+
+    /**
+     * The same load with any MySQL login. The test restore loads into its
+     * scratch database as census_restore_test, never as root.
+     */
+    protected function loadDump(string $dumpPath, string $database, string $user, string $password): void
+    {
+        $db = (array) config('database.connections.'.config('database.default'));
+        $folder = $this->tempFolder();
+        $handle = null;
+        $optionFile = null;
 
         // Never inside storage/app/private: that folder is zipped into every backup.
         $private = realpath(storage_path('app/private'));
 
-        if ($private !== false && str_starts_with((string) realpath($optionFile), $private)) {
-            @unlink($optionFile);
-
+        if ($private !== false && str_starts_with((string) realpath($folder), $private)) {
             throw new RuntimeException('The system temp folder is inside the private storage folder. Ask IT to set a different TEMP folder.');
         }
 
         try {
-            chmod($optionFile, 0600);
-            $quote = fn (mixed $value): string => '"'.addcslashes((string) $value, '"\\').'"';
-            file_put_contents($optionFile, implode(PHP_EOL, [
-                '[client]',
-                'host='.$quote($db['host'] ?? '127.0.0.1'),
-                'port='.(int) ($db['port'] ?? 3306),
-                'user="root"',
-                'password='.$quote($db['password'] ?? ''),
-                '',
-            ]));
+            // Also deletes login files an earlier crashed run left behind (older than 1 hour).
+            $optionFile = LoginFile::create($folder, [
+                'host' => (string) ($db['host'] ?? '127.0.0.1'),
+                'port' => (int) ($db['port'] ?? 3306),
+                'user' => $user,
+                'password' => $password,
+            ]);
 
             $handle = fopen($dumpPath, 'rb');
 
@@ -254,7 +271,7 @@ class MysqlAdmin
                 throw new RuntimeException('The backup file could not be opened.');
             }
 
-            $result = Process::timeout(3600)
+            $result = Process::timeout(BackupService::PROCESS_TIMEOUT)
                 ->env(BackupService::windowsEnvironment())
                 ->input($handle)
                 ->run([
@@ -274,10 +291,90 @@ class MysqlAdmin
                 fclose($handle);
             }
 
-            if (is_file($optionFile)) {
+            if ($optionFile !== null && is_file($optionFile)) {
                 @unlink($optionFile);
             }
         }
+    }
+
+    /**
+     * Create (or reset the password of) census_restore_test with ALL rights on
+     * patient_census_restore_test.* and on nothing else. Needs the root login.
+     */
+    public function provisionScratchUser(string $password): void
+    {
+        $root = DB::connection(self::CONNECTION);
+        $secret = $root->getPdo()->quote($password);
+        $account = "'".self::SCRATCH_USER."'@'localhost'";
+
+        $root->statement("CREATE USER IF NOT EXISTS {$account} IDENTIFIED BY {$secret}");
+        $root->statement("ALTER USER {$account} IDENTIFIED BY {$secret}");
+        $root->statement('GRANT ALL ON `'.self::SCRATCH_DATABASE."`.* TO {$account}");
+        $root->statement('FLUSH PRIVILEGES');
+    }
+
+    /** Is the scratch account's password set in .env? */
+    public function scratchConfigured(): bool
+    {
+        return (string) config('census.restore_test.password') !== '';
+    }
+
+    /** Drop the scratch database if it is there and make it again, empty. */
+    public function resetScratchDatabase(string $database): void
+    {
+        $this->assertScratch($database);
+
+        $connection = $this->scratchConnection(null);
+        $connection->statement("DROP DATABASE IF EXISTS `{$database}`");
+        $connection->statement("CREATE DATABASE `{$database}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+    }
+
+    public function dropScratchDatabase(string $database): void
+    {
+        $this->assertScratch($database);
+
+        $this->scratchConnection(null)->statement("DROP DATABASE IF EXISTS `{$database}`");
+        DB::purge(self::SCRATCH_CONNECTION);
+    }
+
+    public function loadScratchDump(string $dumpPath, string $database): void
+    {
+        $this->assertScratch($database);
+
+        $this->loadDump($dumpPath, $database, self::SCRATCH_USER, (string) config('census.restore_test.password'));
+    }
+
+    /**
+     * What the restored copy holds: patients, visits, users, closed months.
+     *
+     * @return array{patients: int, visits: int, users: int, closed_months: int}
+     */
+    public function scratchCounts(string $database): array
+    {
+        $this->assertScratch($database);
+
+        return BackupCounts::forConnection($this->scratchConnection($database));
+    }
+
+    /** The only name the test restore may touch. */
+    private function assertScratch(string $database): void
+    {
+        if ($database !== self::SCRATCH_DATABASE) {
+            throw new RuntimeException('The test restore may only use the database '.self::SCRATCH_DATABASE.'.');
+        }
+    }
+
+    private function scratchConnection(?string $database): Connection
+    {
+        config(['database.connections.'.self::SCRATCH_CONNECTION => array_merge($this->baseConfig(), [
+            'username' => self::SCRATCH_USER,
+            'password' => (string) config('census.restore_test.password'),
+            'database' => $database,
+        ])]);
+
+        DB::purge(self::SCRATCH_CONNECTION);
+
+        return DB::connection(self::SCRATCH_CONNECTION);
     }
 
     /**

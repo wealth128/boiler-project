@@ -1,0 +1,5 @@
+Visit Date,Visit Time,Patient ID,Last Name,First Name,M.I.,Sex,Birthdate,Age,Branch,Rank / Type,Rank Other (specify),Diagnosis,Diagnosis Other (specify),Category,Remarks,Written by
+2026-11-03,08:15,,DELA CRUZ,JUAN,R,Male,1988-05-14,,Army,SGT,,Hypertension,,ER,BP 160/100 on arrival,Nurse A. Ramos
+2026-11-03,09:40,P-000012,SANTOS,MARIA,L,Female,1975-02-02,,Others,Dependent,,Other (specify),Migraine,ER,,Nurse A. Ramos
+2026-11-03,14:05,,REYES,PEDRO,,Male,1960-11-30,,Others,Other (specify),Retired PNP,Dengue Fever,,Admission,"From ER, admitted to ward",Nurse B. Cruz
+2026-11-04,02:30,,GARCIA,ANA,M,Female,2019-07-21,,Others,Dependent,,Acute Gastroenteritis,,ER,Child of PO2 Garcia (Navy),Nurse B. Cruz

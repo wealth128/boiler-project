@@ -13,7 +13,7 @@ use Illuminate\Support\Carbon;
  *
  * @property int $id
  * @property BackupMarkType $type
- * @property int $marked_by
+ * @property int|null $marked_by null when the system did it (automatic test restore)
  * @property Carbon $marked_at
  */
 #[Fillable(['type', 'marked_by', 'marked_at'])]

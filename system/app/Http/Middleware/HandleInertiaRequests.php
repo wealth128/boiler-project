@@ -8,10 +8,14 @@ use App\Models\User;
 use App\Services\BackupMonitor;
 use App\Services\SchedulerHeartbeat;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
 {
+    /** Session key of the value shared as auth.loginAt. */
+    public const LOGIN_AT_KEY = 'login_at';
+
     /**
      * The root template that's loaded on the first page visit.
      *
@@ -45,6 +49,7 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'auth' => [
                 'user' => $this->authUser($request),
+                'loginAt' => $this->loginAt($request),
             ],
             'hospital' => fn (): array => $this->hospital(),
             // Backup warnings at the top of every page: Admin only.
@@ -53,6 +58,33 @@ class HandleInertiaRequests extends Middleware
             'schedulerAlert' => fn (): ?string => $request->user()?->role === Role::Admin ? app(SchedulerHeartbeat::class)->alert() : null,
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
+    }
+
+    /** The sign-in time with a random tail, so two sign-ins never share a value. */
+    public static function newLoginAt(): string
+    {
+        return now()->format('Y-m-d\TH:i:s.u').'-'.Str::lower(Str::random(6));
+    }
+
+    /**
+     * A value that is new on every sign-in, or null when nobody is signed in.
+     * The browser stores it with a closed red warning bar: a different value
+     * means a new sign-in, so the bar shows again. A session that began
+     * before this existed gets its first value now.
+     */
+    private function loginAt(Request $request): ?string
+    {
+        if ($request->user() === null || ! $request->hasSession()) {
+            return null;
+        }
+
+        $session = $request->session();
+
+        if (! $session->has(self::LOGIN_AT_KEY)) {
+            $session->put(self::LOGIN_AT_KEY, self::newLoginAt());
+        }
+
+        return (string) $session->get(self::LOGIN_AT_KEY);
     }
 
     /**
