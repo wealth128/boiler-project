@@ -103,6 +103,12 @@ class MysqlAdmin
         $this->useDatabase($database);
     }
 
+    /** Is there already a database with this name? Needs the root login. */
+    public function databaseExists(string $database): bool
+    {
+        return DB::connection(self::CONNECTION)->select('SHOW DATABASES LIKE ?', [$database]) !== [];
+    }
+
     /** Point the root connection at the database (after it exists). */
     public function useDatabase(string $database): void
     {
@@ -276,9 +282,49 @@ class MysqlAdmin
         return sys_get_temp_dir();
     }
 
-    /** The mysql program that sits next to the configured mysqldump. */
-    private function mysqlClientPath(): string
+    /**
+     * The mysql program in the same folder as mysqldump (they come together),
+     * or null when that file is not there. census:install saves it as MYSQL_PATH.
+     */
+    public function findMysqlClient(string $mysqldumpPath): ?string
     {
+        $dump = str_replace('\\', '/', $mysqldumpPath);
+        $client = preg_replace('/mysqldump(\.exe)?$/i', 'mysql$1', $dump);
+
+        return is_string($client) && $client !== $dump && is_file($client) ? $client : null;
+    }
+
+    /**
+     * Run "mysql --version": proves the program is there and starts. Used
+     * by census:restore before it drops anything.
+     */
+    public function clientWorks(?string $path = null): bool
+    {
+        try {
+            return Process::timeout(30)
+                ->env(BackupService::windowsEnvironment())
+                ->run([$path ?? $this->mysqlClientPath(), '--version'])
+                ->successful();
+        } catch (Throwable) {
+            return false;
+        }
+    }
+
+    /** Use this mysql program from now on in this run (when the usual one was not found). */
+    public function useClient(string $path): void
+    {
+        config(['census.backup.mysql_path' => $path]);
+    }
+
+    /** The mysql program: set by useClient(), else the one next to the configured mysqldump. */
+    public function mysqlClientPath(): string
+    {
+        $set = config('census.backup.mysql_path');
+
+        if (is_string($set) && $set !== '') {
+            return $set;
+        }
+
         $dump = (string) config('census.backup.mysqldump_path');
         $client = preg_replace('/mysqldump(\.exe)?$/i', 'mysql$1', $dump);
 

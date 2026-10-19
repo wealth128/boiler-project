@@ -12,6 +12,7 @@ use App\Services\BackupMonitor;
 use App\Services\BackupService;
 use App\Services\FolderZipper;
 use App\Services\Setup\AppMaintenance;
+use App\Services\Setup\BackupFileChecker;
 use App\Services\Setup\EnvFile;
 use App\Services\Setup\Installation;
 use App\Services\Setup\MysqlAdmin;
@@ -49,6 +50,7 @@ class RestoreCommand extends Command
         BackupService $backups,
         BackupMonitor $monitor,
         FolderZipper $zipper,
+        BackupFileChecker $checker,
         MysqlAdmin $mysql,
         AppMaintenance $maintenance,
         AuditLogger $audit,
@@ -75,6 +77,15 @@ class RestoreCommand extends Command
         $this->line('Size        : '.Number::fileSize((int) filesize($dump)));
         $this->line('Pictures    : '.($hasZip ? basename($zip).' ('.Number::fileSize((int) filesize($zip)).')' : 'no picture zip found'));
         $this->newLine();
+
+        // Everything is checked now, while nothing has been touched: a bad file
+        // must never be found after the database was dropped.
+        if (! $this->checkBeforeAnyChange($checker, $mysql, $dump, $hasZip ? $zip : null)) {
+            $this->line('Nothing was changed. The system is still running.');
+
+            return self::FAILURE;
+        }
+
         $this->warn('Everything encoded after this backup was taken will be gone. It must be re-encoded from paper.');
 
         if ($this->ask('Type RESTORE to continue') !== 'RESTORE') {
@@ -149,8 +160,13 @@ class RestoreCommand extends Command
         }
 
         // Old sessions came back with the data: everyone logs in again.
+        // Everything that was only valid at the time of the backup is cleared:
+        // old logins, old locks (a backup lock that was held would block the next
+        // backup) and the old scheduler heartbeat (it would hide a stopped scheduler).
         $mysql->refreshAppConnection();
-        DB::table('sessions')->delete();
+        DB::table(config('session.table') ?: 'sessions')->delete();
+        DB::table(config('cache.stores.database.table') ?: 'cache')->delete();
+        DB::table(config('cache.stores.database.lock_table') ?: 'cache_locks')->delete();
 
         $this->auditSystem($audit, 'system.restored', [
             'label' => 'System restored from '.basename($dump),
@@ -215,6 +231,62 @@ class RestoreCommand extends Command
         }
 
         return $path;
+    }
+
+    /**
+     * (a, b) The dump can be read and is not cut off, (c) the mysql program
+     * is there and starts, (d) the picture zip, if there is one, opens.
+     * Says why and returns false on the first problem.
+     */
+    private function checkBeforeAnyChange(BackupFileChecker $checker, MysqlAdmin $mysql, string $dump, ?string $zip): bool
+    {
+        if (($problem = $checker->dumpProblem($dump)) !== null) {
+            $this->error($problem);
+
+            return false;
+        }
+
+        if (! $this->findMysqlClient($mysql)) {
+            return false;
+        }
+
+        if ($zip !== null && ($problem = $checker->zipProblem($zip)) !== null) {
+            $this->error($problem);
+
+            return false;
+        }
+
+        $this->line('The backup files are complete and the mysql program works.');
+
+        return true;
+    }
+
+    /** Run "mysql --version"; if it fails, ask for the path (Enter cancels). */
+    private function findMysqlClient(MysqlAdmin $mysql): bool
+    {
+        if ($mysql->clientWorks()) {
+            return true;
+        }
+
+        $this->warn('The mysql program was not found, or it does not start.');
+        $path = trim((string) $this->ask('Full path to mysql.exe (press Enter to cancel)'));
+
+        while ($path !== '') {
+            $path = str_replace('\\', '/', $path);
+
+            if (is_file($path) && $mysql->clientWorks($path)) {
+                $mysql->useClient($path);
+
+                return true;
+            }
+
+            $this->error('That does not work as the mysql program.');
+            $path = trim((string) $this->ask('Full path to mysql.exe (press Enter to cancel)'));
+        }
+
+        $this->error('The restore needs the mysql program to load the backup.');
+
+        return false;
     }
 
     private function stampOf(string $dump): CarbonImmutable

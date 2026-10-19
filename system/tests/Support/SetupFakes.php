@@ -56,6 +56,15 @@ class FakeMysqlAdmin extends MysqlAdmin
 
     public bool $migrationFails = false;
 
+    public bool $databaseAlreadyThere = false;
+
+    /** Does the usual mysql program work? A path in $workingClient works as well. */
+    public bool $clientOk = true;
+
+    public ?string $workingClient = null;
+
+    public ?string $clientUsed = null;
+
     /** @var array{database: string, user: string, password: string}|null */
     public ?array $provisioned = null;
 
@@ -71,6 +80,11 @@ class FakeMysqlAdmin extends MysqlAdmin
         if ($rootPassword !== $this->rootPassword) {
             throw new RuntimeException('Could not log in to MySQL as root. Check the root password and that MySQL is running.');
         }
+    }
+
+    public function databaseExists(string $database): bool
+    {
+        return $this->databaseAlreadyThere;
     }
 
     public function provision(string $database, string $user, string $password): void
@@ -107,6 +121,16 @@ class FakeMysqlAdmin extends MysqlAdmin
         SetupLog::add('import', ['file' => basename($dumpPath)]);
     }
 
+    public function clientWorks(?string $path = null): bool
+    {
+        return $path === null ? $this->clientOk : $path === $this->workingClient;
+    }
+
+    public function useClient(string $path): void
+    {
+        $this->clientUsed = $path;
+    }
+
     public function refreshAppConnection(): void
     {
         SetupLog::add('refresh-connection');
@@ -115,6 +139,13 @@ class FakeMysqlAdmin extends MysqlAdmin
     public function verifyAppLogin(string $host, int $port, string $database, string $user, string $password): bool
     {
         return true;
+    }
+
+    public ?string $mysqlClient = 'C:/fake/mysql.exe';
+
+    public function findMysqlClient(string $mysqldumpPath): ?string
+    {
+        return $this->mysqlClient;
     }
 
     public function findMysqldump(): ?string

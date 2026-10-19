@@ -10,6 +10,7 @@ use App\Services\AuditLogger;
 use App\Services\UserSessions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -40,9 +41,10 @@ class SecurityController extends Controller
 
         DB::transaction(function () use ($user, $request, $audit): void {
             // One clear entry instead of a generic "user.updated".
-            AuditObserver::muted(fn () => $user->update([
+            AuditObserver::muted(fn () => $user->forceFill([
                 'password' => $request->password,
-            ]));
+                'remember_token' => Str::random(60), // an old "remember me" cookie stops working
+            ])->save());
 
             $audit->log('user.password_changed', $user, ['was_temporary' => false], by: $user);
         });

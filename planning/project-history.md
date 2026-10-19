@@ -1,6 +1,6 @@
 # Project History & Handover: AFP Hospital Patient Encoding & Reporting System
 
-_Last updated: 2026-10-18 (Step 6i-1 done) · Read this first in any new Claude conversation about this project._
+_Last updated: 2026-10-19 (Step 6i-1-fix done) · Read this first in any new Claude conversation about this project._
 
 This file carries over what was discussed in the first planning-and-review conversation (Oct 3–15, 2026), so a new conversation can continue without starting over. The official rules are still in `CLAUDE.md` and the other `planning/` files. This file explains **what was decided, why, where we are, and how to work with me.**
 
@@ -9,11 +9,11 @@ This file carries over what was discussed in the first planning-and-review conve
 ## 0. Quick Start (read this first; it may be all you need)
 | | |
 |---|---|
-| **Current step** | **6i-1 Self-setup and self-care is done** and merged (2026-10-18): picture zip in every backup, `census:install` / `census:update` / `census:restore` / `census:health`, scheduler heartbeat bar, System health page |
-| **Next step** | **6i-2 Windows scripts** (double-click helpers around these commands), then the Security review (`planning/security.md` section 3). Start a **new conversation** for each step. |
-| **Still to prove** | `census:install`, `census:update` and `census:restore` were only tested with fakes (no real MySQL root login, no real restore). **They need a real test on a spare PC** before handover. |
-| **Next prompt file** | Prompt 6i-2 (not written yet). Last prompt: `planning/Prompts/prompt-6i.md` |
-| **Last merged commit** | Step 6i-1 merge into main (2026-10-18, not pushed yet; hash: see `git log -1`) |
+| **Current step** | **6i-1-fix is done** and merged (2026-10-19), after 6i-1 (picture zip in every backup, `census:install` / `update` / `restore` / `health`, scheduler heartbeat bar, System health page). Fixes: remember-me always off, restore checks everything before it deletes, install refuses a live system, one month lock per year, accent-proof duplicate-patient lock, caches cleared after a restore, `MYSQL_PATH` saved by the install |
+| **Next step** | **6i-2 Windows scripts**, then **6i-3 Automatic test restore and "Copy to USB"** (both prompts are in `planning/Prompts/prompt-6i.md`), then the Security review (`planning/security.md` section 3). Start a **new conversation** for each step. |
+| **Still to prove** | `census:install`, `census:update` and `census:restore` were only tested with fakes (no real MySQL root login, no real restore). **They need a real test on a spare PC** before handover (6i-2 has the manual test list). |
+| **Next prompt file** | 6i-2 and 6i-3: `planning/Prompts/prompt-6i.md`. Last prompt used: `planning/Prompts/prompt-6i-1-fix.md` |
+| **Last merged commit** | Step 6i-1-fix merged into main on 2026-10-19 (hash: `git log --merges -1`) |
 | **Open decisions** | HTTPS vs HTTP on the hospital LAN (Phase 8). |
 
 **Token-saving rules (agreed 2026-10-16):**
@@ -97,6 +97,19 @@ This file carries over what was discussed in the first planning-and-review conve
   - **The 8 small decisions Claude Code made, approved:** (1) update and restore ask for the root password before `down`, so a typo never leaves the site in maintenance mode; (2) restore drops and recreates the database before loading; (3) restore deletes all sessions afterwards, so everyone logs in again; (4) the restore safety backup skips the 30-day cleanup, so it cannot delete the file being restored; (5) if update or restore fails, the site stays in maintenance mode on purpose and the command prints the next steps (`php artisan up`, or `php artisan census:restore <safety backup>`); (6) caches are rebuilt in a new PHP process so they read the new `.env`; (7) the install asks every question first, then changes things; (8) `census_app` is created for `localhost` only, with a login test at the end.
   - **Temporary MySQL login file** (only when loading a backup): written to the system temp folder, never under `storage/app/private` (it is zipped into backups), owner-only, deleted in a `finally` block even when loading fails. Tested.
 
+- **Review fixes after 6i-1 (6i-1-fix, decided 2026-10-19):**
+  - **Remember me is always off.** The login page has no checkbox, and the server now ignores a hand-made `remember=1`, so no long-lived cookie exists that could survive a password reset or the 8 PM sign-out. `remember_token` also changes whenever a password is set or changed (Admin reset, IT reset, own change, first-login change), so any old cookie stops working.
+  - **Restore checks before it deletes:** the dump must be readable and end with mysqldump's "-- Dump completed" line ("This backup file is incomplete. Choose another one."), the mysql program must start (`mysql --version`, else it asks for the path, Enter cancels) and the picture zip must open. All of this happens before the `RESTORE` question, the safety backup, maintenance mode and `DROP DATABASE`, so a bad file never costs the live data. After a restore, the sessions, `cache` and `cache_locks` tables are cleared too (old locks and the old scheduler heartbeat must not come back).
+  - **Install never runs over a live system by mistake:** it refuses when `.env` has an `APP_KEY`, when users exist, or when the `patient_census` database exists, even if the database login fails. Only `--force` plus typing `INSTALL OVER` goes on. `census:install` also finds the mysql program next to mysqldump and saves it as `MYSQL_PATH` (`--repair` adds it to older installs), and System health shows a "MySQL program (for restore)" check (Warning only).
+  - **One month lock per year** (`month-close:YYYY`) is used by close and reopen, so two months of one quarter closed together still make the quarter and year snapshot and a reopen cannot race a close. The duplicate-patient lock key uses ASCII-folded, lowercased, space-collapsed names, the way MySQL compares them ("Peña" and "Pena" share one lock). Both waits come from `census.lock_wait_seconds` (5).
+  - **The scheduler time shown on System health is in Asia/Manila**, not UTC.
+- **Goal: the hospital needs little or no IT (decided 2026-10-19; built in 6i-2 and 6i-3, written up in Phase 7.5):**
+  - **Automatic test restore** (6i-3): on the 1st of each month at 03:00 the latest backup is loaded into a scratch database, counts are compared and the scratch database is dropped; success records the "Test restore" mark by itself, failure shows a red bar. Admin can also press "Run test restore now".
+  - **"Copy to USB" button** (6i-3): copies the latest backup (dump and picture zip) from the server to a removable drive plugged into the server PC, checks sizes, keeps the newest 8, and records the "USB copy" mark.
+  - **`reset-admin-password.bat`** (6i-2) next to `install.bat`, `update.bat`, `restore.bat` and `health.bat`, so a forgotten Admin password needs no typed commands.
+  - **System custodian:** an Admin-office person (not IT) looks after the system with a one-page custodian card, the operations guide and `docs/troubleshooting.md` (daily: no red bar; weekly: Copy to USB; monthly: automatic test restore is green).
+  - **Phase 7.5 documentation proof:** every document is written from the real system and followed step by step by someone who did not write it; the custodian must do the daily, weekly and monthly tasks and solve at least five troubleshooting entries using only the documents (`planning/project-phases.md`, "Proof"). **Rule in `CLAUDE.md`:** any step that changes a feature that has a document in `docs/` updates that document in the same step, with the real screen labels and messages.
+
 ### Stack
 - Laravel 13 (PHP 8.3) + official React starter kit (Inertia, TypeScript, Tailwind), Fortify, Wayfinder, Pest, MySQL. Monolith. **No Sanctum, no Spatie.** Allowed packages: maatwebsite/excel, barryvdh/laravel-dompdf. vite-plus 0.3.3 (when updating it, update the `vite` alias in package.json to match).
 - Databases: `patient_census` (dev), `patient_census_test` (**tests only**). User `census_app`.
@@ -142,14 +155,16 @@ This file carries over what was discussed in the first planning-and-review conve
 | 6b Records (+ delete-reason dropdown, security plan) | Done, merged |
 | 6c Lists | Done, merged |
 | 6d Reports (6d-1 counts, 6d-2 close/reopen/delete month, 6d-3 PDF/Excel/Print) | Done, merged and pushed (2026-10-16) |
-| 6e Trash (restore, delete permanently, Empty Trash) | Done, merged (2026-10-16, not pushed) |
-| 6f Audit log (+ rows per page 10 / 20 / 50 on Records, Trash, Audit log) | Done, merged (2026-10-16, not pushed) |
-| 6g Backup screen (status, history, run now, USB copy / test restore reminders) | Done, merged (2026-10-16, not pushed) |
-| 6h Settings (hospital name, office line, signatories, logo, signature pictures; crop; frozen signature block) | Done, merged (2026-10-18, not pushed) |
-| 6d-4 Reports split by category (OPD / ER / Admission / Summary tabs; Print / PDF this category or all; Excel all sheets) | Done, merged (2026-10-18, not pushed) |
-| 6x Review fixes (sessions end on password change, close-month race, quarter and year snapshots, Gate on Encode, throttles, typed Other rank, duplicate patient race) | Done, merged (2026-10-18, not pushed) |
-| 6i-1 Self-setup and self-care (picture zip in every backup, `census:install` / `update` / `restore` / `health`, scheduler heartbeat bar, System health page) | Done, merged (2026-10-18, not pushed). Commands tested with fakes only: **real test on a spare PC still to do** |
-| **6i-2 Windows scripts** | **Next** |
+| 6e Trash (restore, delete permanently, Empty Trash) | Done, merged (2026-10-16, pushed) |
+| 6f Audit log (+ rows per page 10 / 20 / 50 on Records, Trash, Audit log) | Done, merged (2026-10-16, pushed) |
+| 6g Backup screen (status, history, run now, USB copy / test restore reminders) | Done, merged (2026-10-16, pushed) |
+| 6h Settings (hospital name, office line, signatories, logo, signature pictures; crop; frozen signature block) | Done, merged (2026-10-18, pushed) |
+| 6d-4 Reports split by category (OPD / ER / Admission / Summary tabs; Print / PDF this category or all; Excel all sheets) | Done, merged (2026-10-18, pushed) |
+| 6x Review fixes (sessions end on password change, close-month race, quarter and year snapshots, Gate on Encode, throttles, typed Other rank, duplicate patient race) | Done, merged (2026-10-18, pushed) |
+| 6i-1 Self-setup and self-care (picture zip in every backup, `census:install` / `update` / `restore` / `health`, scheduler heartbeat bar, System health page) | Done, merged (2026-10-18, pushed). Commands tested with fakes only: **real test on a spare PC still to do** |
+| 6i-1-fix Review fixes (remember-me off, restore pre-checks, install refuses a live system, year lock, patient lock key, cache cleared after restore, `MYSQL_PATH`) | Done, merged (2026-10-19) |
+| **6i-2 Windows scripts** (`install.bat`, `update.bat`, `restore.bat`, `health.bat`, `reset-admin-password.bat`, Task Scheduler) | **Next** |
+| 6i-3 Automatic monthly test restore, "Copy to USB" button, health checks for both | After 6i-2 |
 | Security review (`planning/security.md` section 3) | End of Phase 6 |
 | Phase 7 parallel run (1 month beside Google Sheets) · 7.5 Docs · 8 Deploy · 9 Training | Later |
 

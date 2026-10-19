@@ -49,7 +49,7 @@ function healthyServer(object $test, array $fake = []): void
     app(SchedulerHeartbeat::class)->beat();
     backupWith($test, 2, zip: true);
 
-    $fake += ['free_server' => 100 * GB, 'free_backup' => 100 * GB, 'upload' => '2M', 'post' => '8M', 'php' => '8.3.5', 'database_down' => false, 'storage_writable' => true];
+    $fake += ['free_server' => 100 * GB, 'free_backup' => 100 * GB, 'upload' => '2M', 'post' => '8M', 'php' => '8.3.5', 'database_down' => false, 'storage_writable' => true, 'mysql' => true];
     $folder = $test->folder;
 
     app()->bind(HealthChecker::class, fn ($app) => new class($app->make(BackupMonitor::class), $app->make(SchedulerHeartbeat::class), $fake, $folder) extends HealthChecker
@@ -79,6 +79,11 @@ function healthyServer(object $test, array $fake = []): void
             if ($this->fake['database_down']) {
                 throw new RuntimeException('SQLSTATE[HY000] [2002] Connection refused (host=10.1.2.3, user=census_app, password=db-secret-pass)');
             }
+        }
+
+        protected function mysqlClientWorks(): bool
+        {
+            return $this->fake['mysql'];
         }
 
         protected function isWritable(string $path): bool
@@ -140,11 +145,12 @@ it('lists every check with a result and one "what to do" line', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->component('system/health')
             ->where('overall', 'ok')
-            ->has('checks', 11)
+            ->has('checks', 12)
             ->where('checks.0.key', 'database')
             ->where('checks.0.status', 'ok')
-            ->where('checks.10.key', 'version')
-            ->where('checks.10.detail', '1.2.3.')
+            ->where('checks.10.key', 'mysql_client')
+            ->where('checks.11.key', 'version')
+            ->where('checks.11.detail', '1.2.3.')
             ->has('checks.0.todo'));
 });
 
@@ -353,4 +359,24 @@ it('census:health prints no password or connection detail', function () {
         ->doesntExpectOutputToContain('10.1.2.3')
         ->doesntExpectOutputToContain('census_app')
         ->assertExitCode(1);
+});
+
+it('shows the scheduler time in Asia/Manila, not UTC', function () {
+    // "Now" is 14:00 in Manila (06:00 UTC).
+    app(SchedulerHeartbeat::class)->beat();
+
+    expect(app(SchedulerHeartbeat::class)->lastBeat()->format('H:i'))->toBe('14:00')
+        ->and(check('scheduler')['detail'])->toBe('Ran at 14:00.');
+});
+
+it('mysql program: OK when found, only a Warning when it is missing', function () {
+    expect(check('mysql_client')['status'])->toBe('ok');
+
+    healthyServer($this, ['mysql' => false]);
+
+    expect(check('mysql_client')['status'])->toBe('warning')
+        ->and(check('mysql_client')['todo'])->toContain('MYSQL_PATH');
+
+    // A warning is not a problem: census:health still exits 0.
+    $this->artisan('census:health')->expectsOutputToContain('WARNING  MySQL program (for restore)')->assertExitCode(0);
 });

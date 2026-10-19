@@ -29,6 +29,9 @@ return [
         // The picture files (logo, signatures, frozen signature folders) that
         // every backup zips next to the database dump.
         'files_path' => storage_path('app/private'),
+        // The mysql program (to load a backup). Empty = the one next to mysqldump.
+        // census:restore can set it for one run when that one is not found.
+        'mysql_path' => env('MYSQL_PATH') ?: null,
     ],
 
     // Shown on the System health page and saved in the audit log by
@@ -42,6 +45,10 @@ return [
         'env_example' => base_path('.env.example'),
         'install_log' => storage_path('logs/install.log'),
     ],
+
+    // How long close / reopen month wait for the year lock (another close of the
+    // same year is running) before saying "wait a moment".
+    'lock_wait_seconds' => 5,
 
     // The scheduler saves a "last ran" time every minute. Older than this
     // many minutes, Admin sees a red bar (planning/deployment-handover.md).

@@ -11,6 +11,7 @@ use App\Services\UserSessions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -50,6 +51,7 @@ class ChoosePasswordController extends Controller
             AuditObserver::muted(fn () => $user->forceFill([
                 'password' => $request->string('password')->value(), // hashed by the cast
                 'must_change_password' => false,
+                'remember_token' => Str::random(60), // an old "remember me" cookie stops working
             ])->save());
 
             $audit->log('user.password_changed', $user, ['was_temporary' => true], by: $user);

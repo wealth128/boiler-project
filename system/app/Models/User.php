@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 
 /**
  * A system account. Accounts are created by Admin or System Admin only.
@@ -71,6 +72,8 @@ class User extends Authenticatable
         return $this->forceFill([
             'password' => $password, // hashed by the cast
             'must_change_password' => true,
+            // Any old "remember me" cookie stops working with the old password.
+            'remember_token' => Str::random(60),
         ])->save();
     }
 
