@@ -30,7 +30,8 @@ class SchedulerHeartbeat
             return null;
         }
 
-        return is_numeric($value) ? CarbonImmutable::createFromTimestamp((int) $value) : null;
+        // Shown on the System health page, so in the hospital's time zone, not UTC.
+        return is_numeric($value) ? CarbonImmutable::createFromTimestamp((int) $value, config('app.timezone')) : null;
     }
 
     /** True when the scheduler never ran, or not within the last 5 minutes. */

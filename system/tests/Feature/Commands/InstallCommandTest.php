@@ -117,6 +117,7 @@ it('writes a production .env with the new database login and the backup settings
         ->and($env->get('DB_USERNAME'))->toBe('census_app')
         ->and($env->get('DB_PASSWORD'))->toBe($app['password'])
         ->and($env->get('MYSQLDUMP_PATH'))->toBe('C:/fake/mysqldump.exe')
+        ->and($env->get('MYSQL_PATH'))->toBe('C:/fake/mysql.exe')
         ->and($env->get('BACKUP_PATH'))->toBe(str_replace('\\', '/', $this->backupDir))
         ->and($env->get('APP_NAME'))->toBe('Patient Encoding & Reports') // the rest comes from .env.example
         ->and(is_dir($this->backupDir))->toBeTrue()
@@ -229,7 +230,7 @@ it('refuses to run again on an installed system and changes nothing', function (
     userWithRole('admin', ['username' => 'admin']);
 
     $this->artisan('census:install')
-        ->expectsOutputToContain('already installed')
+        ->expectsOutputToContain('This server already has the system installed. Use census:install --repair, or census:restore.')
         ->assertFailed();
 
     expect(SetupLog::names())->toBe([])
@@ -247,13 +248,14 @@ it('--repair adds missing .env keys, rebuilds the caches and changes no data', f
 
     $this->artisan('census:install', ['--repair' => true])
         ->expectsQuestion('Backup folder', $this->backupDir)
-        ->expectsOutputToContain('Added the missing .env keys: APP_DEBUG, LOG_STACK, MYSQLDUMP_PATH, BACKUP_PATH.')
+        ->expectsOutputToContain('Added the missing .env keys: APP_DEBUG, LOG_STACK, MYSQLDUMP_PATH, MYSQL_PATH, BACKUP_PATH.')
         ->assertSuccessful();
 
     $env = new EnvFile($this->envPath);
     expect($env->get('APP_DEBUG'))->toBe('false')
         ->and($env->get('LOG_STACK'))->toBe('daily')
         ->and($env->get('MYSQLDUMP_PATH'))->toBe('C:/fake/mysqldump.exe')
+        ->and($env->get('MYSQL_PATH'))->toBe('C:/fake/mysql.exe')
         ->and($env->get('BACKUP_PATH'))->toBe(str_replace('\\', '/', $this->backupDir))
         // What was there stays exactly as it was.
         ->and($env->get('APP_KEY'))->toBe('base64:keepthiskey')
@@ -268,7 +270,7 @@ it('--repair adds missing .env keys, rebuilds the caches and changes no data', f
 
 it('--repair leaves a .env that is complete alone', function () {
     userWithRole('admin', ['username' => 'admin']);
-    $text = "APP_KEY=base64:k\nDB_PASSWORD=x\nAPP_ENV=production\nAPP_DEBUG=false\nLOG_STACK=daily\nMYSQLDUMP_PATH=C:/fake/mysqldump.exe\nBACKUP_PATH=C:/b\n";
+    $text = "APP_KEY=base64:k\nDB_PASSWORD=x\nAPP_ENV=production\nAPP_DEBUG=false\nLOG_STACK=daily\nMYSQLDUMP_PATH=C:/fake/mysqldump.exe\nMYSQL_PATH=C:/m2\nBACKUP_PATH=C:/b\n";
     file_put_contents($this->envPath, $text);
 
     $this->artisan('census:install', ['--repair' => true])
@@ -280,7 +282,7 @@ it('--repair leaves a .env that is complete alone', function () {
 
 it('--repair warns about a debug or non-production .env but does not change it', function () {
     userWithRole('admin', ['username' => 'admin']);
-    file_put_contents($this->envPath, "APP_KEY=base64:k\nDB_PASSWORD=x\nAPP_ENV=local\nAPP_DEBUG=true\nLOG_STACK=daily\nMYSQLDUMP_PATH=C:/m\nBACKUP_PATH=C:/b\n");
+    file_put_contents($this->envPath, "APP_KEY=base64:k\nDB_PASSWORD=x\nAPP_ENV=local\nAPP_DEBUG=true\nLOG_STACK=daily\nMYSQLDUMP_PATH=C:/m\nMYSQL_PATH=C:/m2\nBACKUP_PATH=C:/b\n");
 
     $this->artisan('census:install', ['--repair' => true])
         ->expectsOutputToContain('APP_DEBUG is "true", not "false"')
@@ -291,7 +293,7 @@ it('--repair warns about a debug or non-production .env but does not change it',
 
 it('--repair never makes a new key and never creates accounts', function () {
     userWithRole('admin', ['username' => 'admin']);
-    file_put_contents($this->envPath, "APP_KEY=\nDB_PASSWORD=x\nAPP_ENV=production\nAPP_DEBUG=false\nLOG_STACK=daily\nMYSQLDUMP_PATH=C:/m\nBACKUP_PATH=C:/b\n");
+    file_put_contents($this->envPath, "APP_KEY=\nDB_PASSWORD=x\nAPP_ENV=production\nAPP_DEBUG=false\nLOG_STACK=daily\nMYSQLDUMP_PATH=C:/m\nMYSQL_PATH=C:/m2\nBACKUP_PATH=C:/b\n");
 
     $this->artisan('census:install', ['--repair' => true])
         ->expectsOutputToContain('APP_KEY is empty')
@@ -362,4 +364,157 @@ it('reads and writes .env lines without touching the rest', function () {
         ->and($again->get('C'))->toBe('has space & "quote" $x')
         ->and($again->filled('MISSING'))->toBeFalse()
         ->and(str_replace("\r", '', file_get_contents($this->envPath)))->toStartWith("# comment\n");
+});
+
+// --- Never over a live system by mistake -------------------------------------
+
+const REFUSED = 'This server already has the system installed. Use census:install --repair, or census:restore.';
+
+it('refuses when .env already has an APP_KEY, even with no users and a database that cannot be reached', function () {
+    file_put_contents($this->envPath, 'APP_KEY=base64:alivekey
+DB_PASSWORD=live-pass
+');
+    $this->mysql->rootPassword = 'something-else'; // the login would fail
+
+    $this->artisan('census:install')
+        ->expectsOutputToContain(REFUSED)
+        ->assertFailed();
+
+    // Not even a login was tried, and .env is as it was.
+    expect(SetupLog::names())->toBe([])
+        ->and(User::count())->toBe(0)
+        ->and(file_get_contents($this->envPath))->toContain('base64:alivekey')->toContain('live-pass');
+});
+
+it('refuses when the patient_census database already exists, before creating anything', function () {
+    $this->mysql->databaseAlreadyThere = true;
+
+    $this->artisan('census:install')
+        ->expectsQuestion(InstallCommand::ROOT_PROMPT, 'root-secret-Pw1')
+        ->expectsOutputToContain(REFUSED)
+        ->assertFailed();
+
+    // Only the login happened: no account, no .env, no migration.
+    expect(SetupLog::names())->toBe(['connect'])
+        ->and(file_exists($this->envPath))->toBeFalse()
+        ->and(User::count())->toBe(0);
+});
+
+it('still installs when .env has an empty APP_KEY and there is no database', function () {
+    file_put_contents($this->envPath, 'APP_KEY=
+');
+
+    install($this)
+        ->expectsConfirmation('A .env file already exists. Replace it?', 'yes')
+        ->assertSuccessful();
+
+    expect(User::count())->toBe(2);
+});
+
+it('--force still refuses unless INSTALL OVER is typed exactly', function (string $typed) {
+    file_put_contents($this->envPath, 'APP_KEY=base64:alivekey
+');
+
+    $this->artisan('census:install', ['--force' => true])
+        ->expectsQuestion('Type INSTALL OVER to continue', $typed)
+        ->expectsOutputToContain('Nothing was changed.')
+        ->assertFailed();
+
+    expect(SetupLog::names())->toBe([])
+        ->and(file_get_contents($this->envPath))->toContain('base64:alivekey');
+})->with(['lowercase' => 'install over', 'yes' => 'yes', 'empty' => '', 'one word' => 'INSTALL']);
+
+it('--force with INSTALL OVER installs over a live .env', function () {
+    file_put_contents($this->envPath, 'APP_KEY=base64:alivekey
+');
+
+    // The questions come in this order: INSTALL OVER first, then the usual ones.
+    $this->artisan('census:install', ['--force' => true])
+        ->expectsQuestion('Type INSTALL OVER to continue', 'INSTALL OVER')
+        ->expectsQuestion(InstallCommand::ROOT_PROMPT, 'root-secret-Pw1')
+        ->expectsQuestion('Backup folder', $this->backupDir)
+        ->expectsQuestion('Username for the Admin account', 'head.admin')
+        ->expectsQuestion('Username for the System Admin account', 'it.admin')
+        ->expectsConfirmation('A .env file already exists. Replace it?', 'yes')
+        ->expectsOutputToContain('NEW application key')
+        ->assertSuccessful();
+
+    expect((new EnvFile($this->envPath))->get('APP_KEY'))->not->toBe('base64:alivekey')->toStartWith('base64:')
+        ->and(User::count())->toBe(2);
+});
+
+it('--force with INSTALL OVER installs over an existing database, and asks only once', function () {
+    $this->mysql->databaseAlreadyThere = true;
+
+    // Found after the root login, so the question comes after the password.
+    $this->artisan('census:install', ['--force' => true])
+        ->expectsQuestion(InstallCommand::ROOT_PROMPT, 'root-secret-Pw1')
+        ->expectsQuestion('Type INSTALL OVER to continue', 'INSTALL OVER')
+        ->expectsQuestion('Backup folder', $this->backupDir)
+        ->expectsQuestion('Username for the Admin account', 'head.admin')
+        ->expectsQuestion('Username for the System Admin account', 'it.admin')
+        ->assertSuccessful();
+
+    expect(SetupLog::names())->toContain('provision', 'migrate');
+});
+
+it('--force does not ask anything on a server that is really new', function () {
+    // No INSTALL OVER question expected: asking it would fail the test.
+    install($this, ['--force' => true])->assertSuccessful();
+
+    expect(User::count())->toBe(2);
+});
+
+it('--repair still works when .env has a key but the users cannot be counted', function () {
+    file_put_contents($this->envPath, 'APP_KEY=base64:k
+DB_PASSWORD=x
+APP_ENV=production
+APP_DEBUG=false
+LOG_STACK=daily
+MYSQLDUMP_PATH=C:/m
+MYSQL_PATH=C:/m2
+BACKUP_PATH=C:/b
+');
+
+    $this->artisan('census:install', ['--repair' => true])
+        ->expectsOutputToContain('No .env keys were missing.')
+        ->assertSuccessful();
+});
+
+// --- MYSQL_PATH ------------------------------------------------------------------
+
+it('finds the mysql program next to mysqldump', function () {
+    $dump = $this->dir.'/mysqldump.exe';
+    $client = $this->dir.'/mysql.exe';
+    file_put_contents($dump, 'x');
+
+    $admin = new MysqlAdmin;
+
+    expect($admin->findMysqlClient($dump))->toBeNull(); // no mysql.exe there yet
+
+    file_put_contents($client, 'x');
+
+    expect($admin->findMysqlClient($dump))->toBe(str_replace(chr(92), '/', $client))
+        ->and($admin->findMysqlClient($this->dir.'/something-else.exe'))->toBeNull();
+});
+
+it('asks for the path of mysql.exe when it is not next to mysqldump, and saves it as MYSQL_PATH', function () {
+    $this->mysql->mysqlClient = null;
+    $client = $this->dir.'/my-mysql.exe';
+    file_put_contents($client, 'x');
+
+    $this->artisan('census:install')
+        ->expectsQuestion(InstallCommand::ROOT_PROMPT, 'root-secret-Pw1')
+        ->expectsOutputToContain('The mysql program was not found next to mysqldump.')
+        ->expectsQuestion('Full path to mysql.exe', $client)
+        ->expectsQuestion('Backup folder', $this->backupDir)
+        ->expectsQuestion('Username for the Admin account', 'head.admin')
+        ->expectsQuestion('Username for the System Admin account', 'it.admin')
+        ->assertSuccessful();
+
+    expect((new EnvFile($this->envPath))->get('MYSQL_PATH'))->toBe(str_replace(chr(92), '/', $client));
+});
+
+it('lists MYSQL_PATH, empty, in .env.example', function () {
+    expect((new EnvFile(base_path('.env.example')))->get('MYSQL_PATH'))->toBe('');
 });

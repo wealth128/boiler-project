@@ -31,10 +31,10 @@ All software used is free/open source (Laravel, React, MySQL Community, Laragon)
 1. Copy the ready-to-install `system/` folder to the server.
 2. **Run `php artisan census:install`** (steps 2 to 5 of the old manual list are now this one command). It checks PHP 8.3+, the extensions and the folders (and stops on any FIX), asks for the MySQL root password (hidden, never saved), then:
    - creates the database `patient_census` and the user `census_app` with a random password and **only** SELECT, INSERT, UPDATE, DELETE, LOCK TABLES, SHOW VIEW, TRIGGER (MySQL listens on `127.0.0.1` only);
-   - writes the production `.env` (`APP_ENV=production`, `APP_DEBUG=false`, new `APP_KEY`, `LOG_STACK=daily`, `MYSQLDUMP_PATH` found in Laragon, `BACKUP_PATH` asked and tested);
+   - writes the production `.env` (`APP_ENV=production`, `APP_DEBUG=false`, new `APP_KEY`, `LOG_STACK=daily`, `MYSQLDUMP_PATH` found in Laragon and `MYSQL_PATH` found next to it, so a restore never has to ask, `BACKUP_PATH` asked and tested);
    - runs the migrations with root, seeds **only** the lists and settings (never the dev seeder), and creates the Admin and System Admin with temporary passwords shown once ("Write these down and put them in the sealed envelope");
    - runs `config:cache`, `route:cache`, `view:cache` and writes `storage/logs/install.log` (no passwords).
-   On an installed system it refuses; `php artisan census:install --repair` re-checks and fixes missing `.env` keys without touching data.
+   On a server that already has the system (`.env` with an `APP_KEY`, users in the database, or the `patient_census` database) it refuses with "This server already has the system installed. Use census:install --repair, or census:restore." Only `--force` plus typing `INSTALL OVER` goes on. `php artisan census:install --repair` re-checks and fixes missing `.env` keys (including `MYSQL_PATH`) without touching data.
 3. Still by hand: set `'serve' => false` in `config/filesystems.php`. Check `php artisan route:list` has no `_inertia/devtools` or `storage/{path}` routes.
 4. Run `php artisan census:health`. Everything must be OK or Warning (the scheduler shows Problem until step 7 is done).
 5. The `.env` and the caches were already made by step 2. After any later change to `.env`, run `php artisan census:install --repair` to rebuild the caches.
@@ -93,3 +93,4 @@ All software used is free/open source (Laravel, React, MySQL Community, Laragon)
 ## 9. Support After Handover
 - Who to call first (hospital IT), and the developer's contact and support period, if any, written on the acceptance form.
 - Common problems and fixes are in the operations guide (locked account, failed backup, server won't start, printer/PDF issues).
+- A first troubleshooting guide is already in `docs/troubleshooting.md` (a 500 error "Unknown column" after an update, the red scheduler bar, a missing or failed backup, an update or restore that stopped half-way). Fold it into the operations guide in Phase 7.5.

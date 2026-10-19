@@ -1,6 +1,6 @@
 # Security Plan: AFP Hospital Patient Encoding & Reporting System
 
-_Last updated: 2026-10-18 · Applies to every build step and to deployment_
+_Last updated: 2026-10-19 · Applies to every build step and to deployment_
 
 The system holds patient names, birthdates and diagnoses, so it is treated as sensitive data (Philippine Data Privacy Act of 2012). It runs on the hospital LAN only, with no internet. The main risks are not outside hackers. They are: someone using another person's account, a user reaching data their role shouldn't see, records changed or deleted without a trace, data lost when the server PC fails, and the server PC itself being copied or stolen.
 
@@ -13,6 +13,7 @@ The system holds patient names, birthdates and diagnoses, so it is treated as se
 | Password rule: at least 8 characters, letters and numbers; stored hashed, never logged | Steps 3, 5b |
 | Deactivated, locked or deleted users are signed out on their next click | Step 5b |
 | **A new password ends other logins:** resetting a password (Admin, System Admin, or IT with `census:reset-admin-password`) signs that user out everywhere; changing your own password signs out your other sessions and keeps the current one. Needs `SESSION_DRIVER=database` | Step 6x |
+| **No "remember me":** the login always uses remember = false and ignores the field, so a hand-made `remember=1` gets no long-lived cookie; `remember_token` changes with every new or changed password, so an old cookie never works after a reset | Step 6i-1-fix |
 | **Request limits:** Print, PDF and Excel share 20 a minute per user, the patient search 60 a minute; a 429 shows "Too many requests, wait a minute" | Step 6x |
 | **Races:** Close month runs under a lock and re-checks "already closed" on the locked row; a new patient saved twice at the same moment is stopped by a lock and a second duplicate check (the same duplicate message) | Step 6x |
 | The Encode page and the patient search check the `encode-visits` Gate inside the controller as well as the route role | Step 6x |
@@ -25,6 +26,8 @@ The system holds patient names, birthdates and diagnoses, so it is treated as se
 | Daily backup at 02:00, kept 30 days, each run recorded | Step 5 |
 | Every backup also zips the picture files; a run succeeds only if both files were written | Step 6i-1 |
 | Red bar for Admin when the scheduler stops (no backup, no 8 PM sign-out); System health page and `census:health` | Step 6i-1 |
+| `census:restore` checks everything before it drops anything (dump readable and complete, mysql program starts, picture zip opens), then clears sessions, cache and locks after loading | Step 6i-1-fix |
+| `census:install` refuses on a server that already has the system (`.env` with an `APP_KEY`, users, or the database) unless `--force` and the typed words `INSTALL OVER` | Step 6i-1-fix |
 | `census:install`, `census:update`, `census:restore`: root password typed hidden, never stored or logged; restore needs `RESTORE` typed, takes a safety backup first and refuses files outside `BACKUP_PATH` | Step 6i-1 |
 | Pages share only the user's id, name, username, role and office | Step 2.5 |
 | AFP serial number not collected | Phase 1 |
@@ -42,8 +45,9 @@ The system holds patient names, birthdates and diagnoses, so it is treated as se
 10. **Tests:** every new route gets a test for each role (allowed or 403).
 11. **No new packages** without asking.
 12. Delete reasons are picked from a fixed list per record type; Other needs at least 10 characters.
-13. **New password or reset = end the old sessions** (`App\Services\UserSessions`). Any new feature that sets or resets a password must call it.
+13. **New password or reset = end the old sessions** (`App\Services\UserSessions`). Any new feature that sets or resets a password must call it. It must also set a new `remember_token` (`User::setTemporaryPassword()` does).
 14. **Anything that can be pressed twice at once** (close, save a new record that must be unique) takes a lock for that record and checks the rule again inside it. Anything that builds a file or searches as the user types gets a named limiter in `AppServiceProvider::configureRateLimits()`.
+15. **Locks that cover related records share one key:** closing and reopening a month use one lock per year (`month-close:YYYY`); a new patient's lock key is built from the name the way MySQL compares it (case and accents ignored), so different spellings of one person cannot get different locks.
 
 ## 3. Security Review (end of Phase 6, before the parallel run)
 A full check of the finished system, by Claude Code and then by me:

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Services\Setup\MysqlAdmin;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Number;
 use Throwable;
@@ -56,6 +57,7 @@ class HealthChecker
             $this->storage(),
             $this->uploadLimits(),
             $this->php(),
+            $this->mysqlClient(),
             $this->version(),
         ];
     }
@@ -268,6 +270,24 @@ class HealthChecker
         return $this->row('php', 'PHP version', self::OK, "PHP {$version}.", 'Nothing to do.');
     }
 
+    /**
+     * The mysql program that census:restore uses to load a backup. Only a
+     * Warning when it is missing: backups and everything else still work, and
+     * the restore would just ask for its path.
+     *
+     * @return array{key: string, label: string, status: string, detail: string, todo: string}
+     */
+    private function mysqlClient(): array
+    {
+        $label = 'MySQL program (for restore)';
+
+        if (! $this->mysqlClientWorks()) {
+            return $this->row('mysql_client', $label, self::WARNING, 'The mysql program was not found, or it does not start.', 'Tell IT: set MYSQL_PATH in the server settings file (.env) to the full path of mysql.exe, then run "php artisan census:install --repair".');
+        }
+
+        return $this->row('mysql_client', $label, self::OK, 'Found.', 'Nothing to do.');
+    }
+
     /** @return array{key: string, label: string, status: string, detail: string, todo: string} */
     private function version(): array
     {
@@ -279,6 +299,12 @@ class HealthChecker
     {
         DB::connection()->getPdo();
         DB::select('select 1');
+    }
+
+    /** Runs "mysql --version". */
+    protected function mysqlClientWorks(): bool
+    {
+        return app(MysqlAdmin::class)->clientWorks();
     }
 
     protected function isWritable(string $path): bool

@@ -6,6 +6,7 @@ use App\Models\MonthClosure;
 use App\Models\ReportSnapshot;
 use App\Models\User;
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Cache\Lock;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -31,7 +32,7 @@ use Illuminate\Validation\ValidationException;
  *   saves fresh ones.
  *
  * Two people pressing Close on the same month at the same moment: closing
- * runs under a lock for that month and checks "already closed" again inside
+ * runs under a lock for that month's YEAR (reopening takes the same lock) and checks "already closed" again inside
  * the transaction on the locked row, so the second one is refused and the
  * first one's saved copy and pictures are left alone.
  *
@@ -56,13 +57,7 @@ class MonthService
             self::fail("{$this->label($period)} hasn't ended yet. A month can be closed from the 1st of the next month.");
         }
 
-        $lock = Cache::lock("month-close:{$period}", 60);
-
-        try {
-            $lock->block(5);
-        } catch (LockTimeoutException) {
-            self::fail("{$this->label($period)} is being closed right now. Wait a moment and look at the report again.");
-        }
+        $lock = $this->lockYear($period, "{$this->label($period)} is being closed right now. Wait a moment and look at the report again.");
 
         // Snapshots whose picture copies THIS request made: only these are
         // removed if the close fails. A refused second close makes none.
@@ -109,33 +104,62 @@ class MonthService
 
         ReportBuilder::monthRange($period); // checks the format
 
-        $closure = MonthClosure::query()->where('period', $period)->where('is_closed', true)->first();
+        // The same lock as closing, so a reopen cannot run in the middle of a close
+        // of this month or of another month of the same year.
+        $lock = $this->lockYear($period, "{$this->label($period)} can't be reopened while a month of that year is being closed. Wait a moment and try again.");
 
-        if ($closure === null) {
-            self::fail("{$this->label($period)} is not closed.");
+        try {
+            $closure = MonthClosure::query()->where('period', $period)->where('is_closed', true)->first();
+
+            if ($closure === null) {
+                self::fail("{$this->label($period)} is not closed.");
+            }
+
+            $keys = [$period, ...array_values(self::longerPeriodsOf($period))];
+
+            $reopened = DB::transaction(function () use ($closure, $by, $keys): MonthClosure {
+                $closure->fill([
+                    'is_closed' => false,
+                    'reopened_by' => $by->id,
+                    'reopened_at' => now(),
+                ])->save();
+
+                // The month's copy, and the copies of its quarter and year, which are no longer final.
+                ReportSnapshot::query()->whereIn('period', $keys)->delete();
+
+                return $closure;
+            });
+
+            // The frozen signature pictures go with their snapshots.
+            foreach ($keys as $key) {
+                $this->signatures->release($key);
+            }
+
+            return $reopened;
+        } finally {
+            $lock->release();
+        }
+    }
+
+    /**
+     * One lock for a whole year, "month-close:YYYY", taken by close and reopen.
+     * A quarter's or a year's snapshot depends on the other months of the same
+     * year, so closes of two months of one quarter (and a reopen) must take
+     * turns: the second one then sees the first one's committed close and
+     * makes the quarter or year snapshot. Waits up to 5 seconds, then refuses
+     * with $busyMessage.
+     */
+    private function lockYear(string $period, string $busyMessage): Lock
+    {
+        $lock = Cache::lock('month-close:'.substr($period, 0, 4), 60);
+
+        try {
+            $lock->block((int) config('census.lock_wait_seconds'));
+        } catch (LockTimeoutException) {
+            self::fail($busyMessage);
         }
 
-        $keys = [$period, ...array_values(self::longerPeriodsOf($period))];
-
-        $reopened = DB::transaction(function () use ($closure, $by, $keys): MonthClosure {
-            $closure->fill([
-                'is_closed' => false,
-                'reopened_by' => $by->id,
-                'reopened_at' => now(),
-            ])->save();
-
-            // The month's copy, and the copies of its quarter and year, which are no longer final.
-            ReportSnapshot::query()->whereIn('period', $keys)->delete();
-
-            return $closure;
-        });
-
-        // The frozen signature pictures go with their snapshots.
-        foreach ($keys as $key) {
-            $this->signatures->release($key);
-        }
-
-        return $reopened;
+        return $lock;
     }
 
     /**

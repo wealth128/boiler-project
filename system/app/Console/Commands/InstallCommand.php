@@ -45,8 +45,18 @@ class InstallCommand extends Command
 {
     use UsesRootLogin;
 
+    /** Shown whenever an install would run over a system that is already there. */
+    public const ALREADY_INSTALLED = 'This server already has the system installed. Use census:install --repair, or census:restore.';
+
+    /** Typed to allow an install over a live system (with --force). */
+    public const OVERRIDE_WORDS = 'INSTALL OVER';
+
     protected $signature = 'census:install
-                            {--repair : Re-check the server and fix missing .env keys on an installed system}';
+                            {--repair : Re-check the server and fix missing .env keys on an installed system}
+                            {--force : Install over a system that is already there (asks you to type INSTALL OVER)}';
+
+    /** True once INSTALL OVER was typed in this run. */
+    private bool $overConfirmed = false;
 
     protected $description = 'Set up a new server: database, .env, migrations, lists and the first accounts';
 
@@ -65,12 +75,13 @@ class InstallCommand extends Command
         AuditLogger $audit,
     ): int {
         $repair = (bool) $this->option('repair');
-        $installed = app(Installation::class)->isInstalled();
 
-        if ($installed && ! $repair) {
-            $this->error('The system is already installed. Nothing was changed.');
-            $this->line('To re-check this server and fix missing settings, run: php artisan census:install --repair');
+        // A live system is there when the users exist OR .env already has an
+        // application key. The key alone is enough: with the database down the
+        // users cannot be counted, and that must never make a live server look new.
+        $installed = app(Installation::class)->isInstalled() || $this->envHasKey();
 
+        if ($installed && ! $repair && ! $this->allowInstallOver()) {
             return self::FAILURE;
         }
 
@@ -102,6 +113,41 @@ class InstallCommand extends Command
         }
 
         return $result;
+    }
+
+    // --- A system that is already there -----------------------------------
+
+    /** .env exists and its APP_KEY has a value. */
+    private function envHasKey(): bool
+    {
+        return (new EnvFile((string) config('census.paths.env')))->filled('APP_KEY');
+    }
+
+    /**
+     * Refuse, unless --force was given and INSTALL OVER is typed. Returns
+     * true when the install may go on over what is there.
+     */
+    private function allowInstallOver(): bool
+    {
+        if (! $this->option('force')) {
+            $this->error(self::ALREADY_INSTALLED);
+            $this->note('Stopped: the system is already installed.');
+
+            return false;
+        }
+
+        $this->warn('A system is already installed here. Installing over it makes a NEW application key (everyone is signed out) and a NEW census_app password, and rewrites .env. Patient data is not deleted.');
+
+        if ($this->ask('Type '.self::OVERRIDE_WORDS.' to continue') !== self::OVERRIDE_WORDS) {
+            $this->line('Nothing was changed.');
+            $this->note('Stopped: INSTALL OVER was not typed.');
+
+            return false;
+        }
+
+        $this->overConfirmed = true;
+
+        return true;
     }
 
     // --- Checks --------------------------------------------------------
@@ -153,7 +199,13 @@ class InstallCommand extends Command
             return self::FAILURE;
         }
 
+        // The database may be there even if .env was lost: never install over it by mistake.
+        if (! $this->overConfirmed && $mysql->databaseExists(MysqlAdmin::DATABASE) && ! $this->allowInstallOver()) {
+            return self::FAILURE;
+        }
+
         $mysqldump = $this->askMysqldump($mysql);
+        $mysqlClient = $this->askMysqlClient($mysql, $mysqldump);
         $backupPath = $this->askBackupPath();
         [$adminName, $sysadminName] = $this->askUsernames();
 
@@ -188,6 +240,7 @@ class InstallCommand extends Command
             'DB_USERNAME' => MysqlAdmin::APP_USER,
             'DB_PASSWORD' => $appPassword,
             'MYSQLDUMP_PATH' => $mysqldump,
+            'MYSQL_PATH' => $mysqlClient,
             'BACKUP_PATH' => $backupPath,
         ] as $key => $value) {
             $env->set($key, $value);
@@ -195,7 +248,7 @@ class InstallCommand extends Command
 
         $env->save();
         $this->info('The .env file is written (production settings, new application key).');
-        $this->note('.env written: production, debug off, new APP_KEY, LOG_STACK=daily, MYSQLDUMP_PATH and BACKUP_PATH set.');
+        $this->note('.env written: production, debug off, new APP_KEY, LOG_STACK=daily, MYSQLDUMP_PATH, MYSQL_PATH and BACKUP_PATH set.');
 
         // 4. Tables, lists and the first two accounts, with the root login.
         $ran = $mysql->migrate();
@@ -267,6 +320,12 @@ class InstallCommand extends Command
         if (! $env->filled('MYSQLDUMP_PATH')) {
             $env->set('MYSQLDUMP_PATH', $this->askMysqldump(app(MysqlAdmin::class)));
             $fixed[] = 'MYSQLDUMP_PATH';
+        }
+
+        // Older installs have no MYSQL_PATH: find it next to mysqldump, so a restore need not ask.
+        if (! $env->filled('MYSQL_PATH')) {
+            $env->set('MYSQL_PATH', $this->askMysqlClient(app(MysqlAdmin::class), (string) $env->get('MYSQLDUMP_PATH')));
+            $fixed[] = 'MYSQL_PATH';
         }
 
         if (! $env->filled('BACKUP_PATH')) {
@@ -341,6 +400,30 @@ class InstallCommand extends Command
 
         do {
             $path = str_replace('\\', '/', trim((string) $this->ask('Full path to mysqldump.exe')));
+
+            if (is_file($path)) {
+                return $path;
+            }
+
+            $this->error('That file does not exist. Try again.');
+        } while (true);
+    }
+
+    /** The mysql program next to mysqldump (they come together); ask if it is not there. */
+    private function askMysqlClient(MysqlAdmin $mysql, string $mysqldump): string
+    {
+        $found = $mysql->findMysqlClient($mysqldump);
+
+        if ($found !== null) {
+            $this->line("Found mysql: {$found}");
+
+            return $found;
+        }
+
+        $this->warn('The mysql program was not found next to mysqldump.');
+
+        do {
+            $path = str_replace('\\', '/', trim((string) $this->ask('Full path to mysql.exe')));
 
             if (is_file($path)) {
                 return $path;

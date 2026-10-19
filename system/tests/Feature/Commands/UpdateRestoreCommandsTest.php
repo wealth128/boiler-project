@@ -77,7 +77,7 @@ function fakeDumpWorks(bool $works = true): void
 function putBackup(object $test, string $name = OLD_DUMP, bool $withZip = true): string
 {
     $path = $test->backupDir.'/'.$name;
-    file_put_contents($path, "-- MySQL dump\nCREATE TABLE visits (...);\n");
+    file_put_contents($path, "-- MySQL dump\nCREATE TABLE visits (...);\n-- Dump completed on 2026-09-01  2:00:01\n");
 
     if ($withZip) {
         $zip = new ZipArchive;
@@ -345,4 +345,29 @@ it('restore: needs an installed system', function () {
     $this->artisan('census:restore', ['file' => OLD_DUMP])->expectsOutputToContain('not installed')->assertFailed();
 
     expect(SetupLog::names())->toBe([]);
+});
+
+it('restore: also clears the cache and cache_locks tables, so old locks and the old heartbeat do not come back', function () {
+    putBackup($this);
+    DB::table('cache')->insert(['key' => 'scheduler.heartbeat', 'value' => 'i:1;', 'expiration' => 2000000000]);
+    DB::table('cache')->insert(['key' => 'something-else', 'value' => 's:1:"x";', 'expiration' => 2000000000]);
+    DB::table('cache_locks')->insert(['key' => 'backup-run', 'owner' => 'old-process', 'expiration' => 2000000000]);
+    DB::table('sessions')->insert(['id' => 'abc', 'user_id' => $this->admin->id, 'ip_address' => '10.0.0.1', 'user_agent' => 'x', 'payload' => 'x', 'last_activity' => time()]);
+
+    restore($this)->assertSuccessful();
+
+    expect(DB::table('cache')->count())->toBe(0)
+        ->and(DB::table('cache_locks')->count())->toBe(0)
+        ->and(DB::table('sessions')->count())->toBe(0);
+});
+
+it('restore: leaves the cache alone when the restore is refused or fails', function () {
+    putBackup($this);
+    DB::table('cache_locks')->insert(['key' => 'backup-run', 'owner' => 'live-process', 'expiration' => 2000000000]);
+
+    $this->artisan('census:restore', ['file' => OLD_DUMP])
+        ->expectsQuestion('Type RESTORE to continue', 'no')
+        ->assertFailed();
+
+    expect(DB::table('cache_locks')->count())->toBe(1);
 });

@@ -42,6 +42,12 @@ class AuthenticateUser
 
     public function __invoke(Request $request): User
     {
+        // "Remember me" is off in this system: the login page has no checkbox, and a
+        // hand-made POST with remember=1 must not get a long-lived cookie that
+        // survives a password reset and the 8 PM sign-out. Fortify reads this
+        // field right after we return, so overwrite whatever the browser sent.
+        $request->merge(['remember' => false]);
+
         $username = Str::lower(trim((string) $request->input('username')));
         $password = (string) $request->input('password');
 

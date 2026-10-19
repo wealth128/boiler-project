@@ -13,6 +13,7 @@ use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
@@ -84,18 +85,32 @@ class VisitController extends Controller
     }
 
     /**
-     * Take the lock for a new patient's name and birthdate (case and extra
+     * The lock key for a new patient. The name is compared the way MySQL
+     * compares it in the duplicate check (utf8mb4_unicode_ci: case and accents
+     * ignored), so "Peña", "PEÑA" and "Pena" share one lock; extra spaces are
+     * collapsed. Different spellings that MySQL treats as equal must never get
+     * different locks, or two saves at the same moment could both pass.
+     */
+    public static function newPatientLockKey(string $lastName, string $firstName, string $birthdate): string
+    {
+        $part = fn (string $value): string => Str::of($value)->ascii()->lower()->squish()->value();
+
+        return 'new-patient:'.sha1($part($lastName).'|'.$part($firstName).'|'.trim($birthdate));
+    }
+
+    /**
+     * Take the lock for a new patient's name and birthdate (case, accents and extra
      * spaces ignored), waiting a few seconds for another save of the same
      * person. If it is still busy, the duplicate message is shown: the other
      * save is very likely the same person.
      */
     private function lockNewPatient(StoreVisitRequest $request): Lock
     {
-        $key = 'new-patient:'.sha1(mb_strtolower(trim((string) $request->validated('last_name')).'|'.trim((string) $request->validated('first_name')).'|'.(string) $request->validated('birthdate')));
+        $key = self::newPatientLockKey((string) $request->validated('last_name'), (string) $request->validated('first_name'), (string) $request->validated('birthdate'));
         $lock = Cache::lock($key, 30);
 
         try {
-            $lock->block(5);
+            $lock->block((int) config('census.lock_wait_seconds'));
         } catch (LockTimeoutException) {
             throw ValidationException::withMessages(['duplicate_patient' => StoreVisitRequest::DUPLICATE_MESSAGE]);
         }
