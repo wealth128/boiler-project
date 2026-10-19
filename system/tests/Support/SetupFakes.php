@@ -87,6 +87,20 @@ class FakeMysqlAdmin extends MysqlAdmin
         return $this->databaseAlreadyThere;
     }
 
+    /** What the fake root account lets in with no password (System health). */
+    public bool $rootOpen = false;
+
+    public function setRootPassword(string $password): void
+    {
+        SetupLog::add('set-root-password');
+        $this->rootPassword = $password;
+    }
+
+    public function rootHasNoPassword(): bool
+    {
+        return $this->rootOpen;
+    }
+
     public function provision(string $database, string $user, string $password): void
     {
         SetupLog::add('provision', ['database' => $database, 'user' => $user]);
@@ -196,6 +210,6 @@ class FakeRequirements extends InstallRequirements
 
     protected function phpVersion(): string
     {
-        return '8.3.5';
+        return '8.4.5';
     }
 }

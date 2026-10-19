@@ -12,6 +12,7 @@ This is the checklist for putting the system on the hospital server and handing 
 | The running system | Installed on the server PC | Production settings, tested from every office PC |
 | Source code | GitHub repository (transfer ownership or add a hospital IT account), plus a ZIP copy on the USB drive | Includes `planning/`, `docs/`, `prototype/` |
 | Ready-to-install copy | ZIP with `system/` including `vendor/` and built `public/build/` | The server has no internet, so it can't download packages |
+| **Installers on the handover USB** | `vc_redist.x64.exe` (Microsoft Visual C++ Redistributable 2015-2022 x64), `laragon-wamp.exe` (Laragon **Full**), and only if Laragon's PHP is older than 8.4.1 the Thread Safe PHP x64 zip | The server has no internet. Exact file names and versions tested are in `docs/requirements.md` (filled in at the spare-PC test). Composer, Node.js and Git are **not** needed on the server |
 | Documents | Printed + PDF: user manual (per role), keyboard shortcuts, operations guide, developer guide, database guide, security plan | From Phase 7.5 |
 | Accounts sheet | Sealed envelope, given to the CO or IT head | Admin and System Admin usernames with **temporary** passwords (must be changed at first login), MySQL root password, Windows server login |
 | Backup setup | Working daily backup + one tested restore | Proven before handover (section 5) |
@@ -22,14 +23,15 @@ All software used is free/open source (Laravel, React, MySQL Community, Laragon)
 ## 2. Before Deployment (prepare the server)
 - [ ] **Server PC:** dedicated, on a UPS, in a locked room, set to never sleep; Windows updated; antivirus on; screen lock 5 min.
 - [ ] **Fixed address on the LAN:** a static IP (or fixed hostname, e.g. `census-server`) so office PCs always find it.
-- [ ] **Laragon** with **PHP 8.3+** and extensions: gd, intl, zip, mbstring, pdo_mysql, fileinfo, openssl. **MySQL 8.**
+- [ ] **Everything in `docs/requirements.md` part 1 installed** (Windows 10/11 64-bit, 4 GB memory, 10 GB free disk, port 80 free, Visual C++ Redistributable x64). `install.bat` checks all of it before it changes anything.
+- [ ] **Laragon Full** with **PHP 8.4.1+** (the locked packages need it; `composer.json` requires `^8.4.1`) and extensions: gd, intl, zip, mbstring, pdo_mysql, fileinfo, openssl. **MySQL 8.**
 - [ ] **Backup destination:** a shared folder on a second PC (e.g. `\\BACKUP-PC\census-backups`), writable only by the server's account; a USB drive for weekly copies.
 - [ ] **Disk encryption** (BitLocker) on the server and backup PC, if available.
 - [ ] **HTTPS or HTTP decision** made with hospital IT / CO (open decision in `planning/security.md`).
 
 ## 3. Deployment Steps (summary; full steps in the operations guide)
 1. Copy the ready-to-install `system/` folder to the server.
-2. **Run `php artisan census:install`** (steps 2 to 5 of the old manual list are now this one command). It checks PHP 8.3+, the extensions and the folders (and stops on any FIX), asks for the MySQL root password (hidden, never saved), then:
+2. **Run `php artisan census:install`** (steps 2 to 5 of the old manual list are now this one command). It checks PHP 8.4.1+, the extensions and the folders (and stops on any FIX), asks for the MySQL root password (hidden, never saved), then: **if root has no password** (a new Laragon), it makes you set one first (twice, hidden, at least 12 characters) and says "Write this in the sealed envelope."; then:
    - creates the database `patient_census` and the user `census_app` with a random password and **only** SELECT, INSERT, UPDATE, DELETE, LOCK TABLES, SHOW VIEW, TRIGGER (MySQL listens on `127.0.0.1` only);
    - writes the production `.env` (`APP_ENV=production`, `APP_DEBUG=false`, new `APP_KEY`, `LOG_STACK=daily`, `MYSQLDUMP_PATH` found in Laragon and `MYSQL_PATH` found next to it, so a restore never has to ask, `BACKUP_PATH` asked and tested);
    - runs the migrations with root, seeds **only** the lists and settings (never the dev seeder), and creates the Admin and System Admin with temporary passwords shown once ("Write these down and put them in the sealed envelope");
@@ -38,8 +40,8 @@ All software used is free/open source (Laravel, React, MySQL Community, Laragon)
 3. Still by hand: set `'serve' => false` in `config/filesystems.php`. Check `php artisan route:list` has no `_inertia/devtools` or `storage/{path}` routes.
 4. Run `php artisan census:health`. Everything must be OK or Warning (the scheduler shows Problem until step 7 is done).
 5. The `.env` and the caches were already made by step 2. After any later change to `.env`, run `php artisan census:install --repair` to rebuild the caches.
-6. Web server (Laragon/Apache) points to `system/public`. Windows Firewall: allow only the web port from the LAN; block 3306.
-7. **Windows Task Scheduler:** run `php artisan schedule:run` every minute (this runs the 02:00 backup).
+6. **Done by `install.bat`** (right-click, Run as administrator; it runs `census:install` first): MySQL and Apache become Windows services (`CensusMySQL`, `CensusApache`) that start with Windows with nobody logged in and restart after a crash, using Laragon's own `my.ini` and `httpd.conf`; `bind-address=127.0.0.1` is checked in `my.ini` (copy kept); the Apache site file `00-census.conf` serves `system/public` on the web port; and `http://localhost/` is checked to show the login page. Windows Firewall: the web port is open to the local network only and 3306 is blocked from outside. **Laragon's Start All is never used on the server after the first install.**
+7. **Done by `install.bat`:** the Task Scheduler task "Census - Scheduler" runs `php artisan schedule:run` every minute (this runs the 02:00 backup), as SYSTEM for a local backup folder or as a Windows account whose password never expires for a network share. One real backup is run through the task to prove it. The install prints the address for the office PCs.
 8. Folder permissions: `storage/` and `bootstrap/cache/` writable by the server account; `.env` and the backup folder readable only by the server account and IT.
 9. Fill in **Settings**: hospital name, logo, office line, Prepared by / Noted by with titles.
 10. Smoke test from **each office PC**: log in per role, encode a test visit, run a report, export PDF/Excel, then move the test data to Trash and delete it permanently.
@@ -60,15 +62,15 @@ All software used is free/open source (Laravel, React, MySQL Community, Laragon)
 | Before any system update | Nothing extra: `php artisan census:update` takes a backup first and stops if it fails | IT |
 | Any time | `php artisan census:health` (exit code 1 means a Problem) | IT |
 
-**Restore (when the server fails), in short:** set up a new server (section 2, then `census:install`, then steps 6 to 8 of section 3), then run `php artisan census:restore <backup file>` with the latest backup in `BACKUP_PATH`. It asks you to type `RESTORE`, takes a safety backup, asks for the MySQL root password (hidden), loads the dump, unzips the matching picture zip, migrates, signs everyone out and prints the record counts and the last encoded visit. Check those, then let users back in. Anything encoded after the last backup must be re-encoded from paper. If a restore or update fails, the site stays in maintenance mode on purpose: the command prints `php artisan up` and the `census:restore` command that undoes it. Full steps in the operations guide.
+**Restore (when the server fails), in short:** set up a new server (section 2, then `install.bat`), then run `restore.bat` (it lists the backups in `BACKUP_PATH`, newest first, and runs `php artisan census:restore <backup file>`) with the latest backup in `BACKUP_PATH`. It asks you to type `RESTORE`, takes a safety backup, asks for the MySQL root password (hidden), loads the dump, unzips the matching picture zip, migrates, signs everyone out and prints the record counts and the last encoded visit. Check those, then let users back in. Anything encoded after the last backup must be re-encoded from paper. If a restore or update fails, the site stays in maintenance mode on purpose: the command prints `php artisan up` and the `census:restore` command that undoes it. Full steps in the operations guide.
 
-**Before handover:** do one complete practice **install** (`census:install`), **update** (`census:update`) and **restore** (`census:restore`) on a spare PC and record the result. These three commands were built in Step 6i-1 and tested only with fakes.
+**Before handover:** do one complete practice **install**, **update** and **restore** on a spare PC with the double-click files in `system\scripts\windows\` (`install.bat`, `update.bat`, `restore.bat`), plus the reboot, crash-restart and firewall tests, and record the result. Use `docs/windows-scripts-manual-test.md`. The commands (Step 6i-1) and the files (Step 6i-2) were tested only with fakes. If the Windows password of the backup account changes, run `install.bat` again and type the new password.
 
 ## 6. Accounts & Access at Handover
 - [ ] Remove or deactivate every developer/test account; make sure no dev users exist in production.
 - [ ] Admin and System Admin get temporary passwords (forced change at first login). Real owners change them in front of no one.
 - [ ] MySQL root and Windows server passwords changed by hospital IT after handover; developer no longer knows them.
-- [ ] `php artisan census:reset-admin-password` explained to IT (for a locked-out Admin).
+- [ ] `reset-admin-password.bat` (it runs `census:reset-admin-password`; on the server only, as administrator) explained to IT and the custodian, for a locked-out or forgetful Admin.
 - [ ] GitHub repository: transfer ownership or give hospital IT admin access; remove personal access when done.
 - [ ] Agree in writing who owns the code and who maintains it after handover.
 

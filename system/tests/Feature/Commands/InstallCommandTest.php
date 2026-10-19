@@ -49,10 +49,17 @@ afterEach(function () {
 });
 
 /** Answers every question of a normal install. */
-function install(object $test, array $options = [], string $rootPassword = 'root-secret-Pw1')
+function install(object $test, array $options = [], string $rootPassword = 'root-secret-Pw1', array $newRoot = [])
 {
-    return $test->artisan('census:install', $options)
-        ->expectsQuestion(InstallCommand::ROOT_PROMPT, $rootPassword)
+    $command = $test->artisan('census:install', $options)
+        ->expectsQuestion(InstallCommand::ROOT_PROMPT, $rootPassword);
+
+    foreach ($newRoot as [$first, $second]) {
+        $command->expectsQuestion(InstallCommand::NEW_ROOT_PROMPT, $first)
+            ->expectsQuestion(InstallCommand::NEW_ROOT_AGAIN, $second);
+    }
+
+    return $command
         ->expectsQuestion('Backup folder', $test->backupDir)
         ->expectsQuestion('Username for the Admin account', 'head.admin')
         ->expectsQuestion('Username for the System Admin account', 'it.admin');
@@ -130,6 +137,79 @@ it('rebuilds the caches in a new process that does not inherit the old .env valu
     $keys = SetupLog::detail('rebuild-caches')['keys'];
 
     expect($keys)->toContain('APP_KEY', 'DB_PASSWORD', 'APP_ENV');
+});
+
+// --- MySQL root with no password (a new Laragon) -----------------------
+
+/** Answers a normal install where MySQL root has NO password and a new one is set. */
+function installWithEmptyRoot(object $test, array $newPasswords, bool $full = true)
+{
+    $test->mysql->rootPassword = '';
+
+    if ($full) {
+        return install($test, rootPassword: '', newRoot: $newPasswords);
+    }
+
+    $command = $test->artisan('census:install')->expectsQuestion(InstallCommand::ROOT_PROMPT, '');
+
+    foreach ($newPasswords as [$first, $second]) {
+        $command->expectsQuestion(InstallCommand::NEW_ROOT_PROMPT, $first)
+            ->expectsQuestion(InstallCommand::NEW_ROOT_AGAIN, $second);
+    }
+
+    return $command;
+}
+
+it('requires a new MySQL root password when root has none, before anything else', function () {
+    installWithEmptyRoot($this, [['a-strong-new-root-1', 'a-strong-new-root-1']])
+        ->expectsOutputToContain('Write this in the sealed envelope.')
+        ->assertSuccessful();
+
+    // Set first, then logged in again with it, then the usual steps.
+    expect(SetupLog::names())->toBe(['connect', 'set-root-password', 'connect', 'provision', 'migrate', 'with-root', 'clear-caches', 'rebuild-caches'])
+        ->and($this->mysql->rootPassword)->toBe('a-strong-new-root-1');
+});
+
+it('does not ask for a new root password when root already has one', function () {
+    install($this)->assertSuccessful();
+
+    expect(SetupLog::names())->not->toContain('set-root-password');
+});
+
+it('refuses a root password under 12 characters or two that differ, and asks again', function () {
+    installWithEmptyRoot($this, [
+        ['too-short', 'too-short'],
+        ['a-strong-new-root-1', 'a-different-root-22'],
+        ['a-strong-new-root-1', 'a-strong-new-root-1'],
+    ])
+        ->expectsOutputToContain('at least 12 characters')
+        ->expectsOutputToContain('do not match')
+        ->assertSuccessful();
+
+    expect($this->mysql->rootPassword)->toBe('a-strong-new-root-1')
+        ->and(collect(SetupLog::names())->filter(fn ($n) => $n === 'set-root-password'))->toHaveCount(1);
+});
+
+it('stops after three bad tries and changes nothing', function () {
+    installWithEmptyRoot($this, [['short', 'short'], ['short', 'short'], ['short', 'short']], full: false)
+        ->expectsOutputToContain('Nothing was changed')
+        ->assertFailed();
+
+    expect(SetupLog::names())->toBe(['connect'])
+        ->and($this->mysql->provisioned)->toBeNull()
+        ->and(User::count())->toBe(0)
+        ->and(file_exists($this->envPath))->toBeFalse();
+});
+
+it('never writes the new root password to a log, file, .env or the audit log', function () {
+    installWithEmptyRoot($this, [['a-strong-new-root-1', 'a-strong-new-root-1']])->assertSuccessful();
+
+    foreach (filesToScan($this) as $path) {
+        expect((string) file_get_contents($path))->not->toContain('a-strong-new-root-1', "new root password found in {$path}");
+    }
+
+    $audit = AuditLog::all()->map(fn ($e) => json_encode($e->changes))->implode(' ');
+    expect($audit)->not->toContain('a-strong-new-root-1');
 });
 
 it('never keeps the MySQL root password or the app password in a log or file, or in the audit log', function () {
@@ -323,7 +403,7 @@ it('checks PHP, the extensions, the folders and the upload limits', function () 
     $results = collect((new InstallRequirements)->results())->pluck('label');
 
     expect($results->implode('|'))
-        ->toContain('PHP 8.3 or newer')
+        ->toContain('PHP 8.4.1 or newer')
         ->toContain('PHP extension gd')->toContain('PHP extension intl')->toContain('PHP extension zip')
         ->toContain('PHP extension mbstring')->toContain('PHP extension pdo_mysql')
         ->toContain('PHP extension fileinfo')->toContain('PHP extension openssl')
@@ -336,7 +416,7 @@ it('flags a PHP that is too old and upload limits under 2M', function () {
     {
         protected function phpVersion(): string
         {
-            return '8.2.30';
+            return '8.3.9';
         }
 
         protected function ini(string $key): string
@@ -347,7 +427,7 @@ it('flags a PHP that is too old and upload limits under 2M', function () {
 
     $bad = collect($old->results())->where('ok', false)->pluck('label')->implode('|');
 
-    expect($bad)->toContain('PHP 8.3 or newer')->toContain('upload_max_filesize')->toContain('post_max_size');
+    expect($bad)->toContain('PHP 8.4.1 or newer')->toContain('upload_max_filesize')->toContain('post_max_size');
 });
 
 it('reads and writes .env lines without touching the rest', function () {

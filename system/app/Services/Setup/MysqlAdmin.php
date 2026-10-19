@@ -103,6 +103,52 @@ class MysqlAdmin
         $this->useDatabase($database);
     }
 
+    /**
+     * Give every root account that has no password the new one (needs the
+     * root login). Laragon's MySQL starts with root and no password. The
+     * password is only used in this statement: it is never stored.
+     */
+    public function setRootPassword(string $password): void
+    {
+        $root = DB::connection(self::CONNECTION);
+        $pdo = $root->getPdo();
+        $secret = $pdo->quote($password);
+
+        $hosts = collect($root->select("SELECT Host FROM mysql.user WHERE User = 'root' AND authentication_string = ''"))
+            ->map(fn (object $row): string => (string) $row->Host)
+            ->push('localhost')
+            ->unique();
+
+        foreach ($hosts as $host) {
+            $root->statement('ALTER USER IF EXISTS '."'root'@".$pdo->quote($host)." IDENTIFIED BY {$secret}");
+        }
+
+        $root->statement('FLUSH PRIVILEGES');
+    }
+
+    /**
+     * Does MySQL let root in with NO password? It tries one login with an
+     * empty password and stores nothing. False when MySQL cannot be reached.
+     */
+    public function rootHasNoPassword(): bool
+    {
+        $db = $this->baseConfig();
+
+        try {
+            $pdo = new PDO(
+                'mysql:host='.$db['host'].';port='.(int) $db['port'],
+                'root',
+                '',
+                [PDO::ATTR_TIMEOUT => 3, PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION],
+            );
+            unset($pdo);
+
+            return true;
+        } catch (Throwable) {
+            return false;
+        }
+    }
+
     /** Is there already a database with this name? Needs the root login. */
     public function databaseExists(string $database): bool
     {

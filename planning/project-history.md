@@ -1,6 +1,6 @@
 # Project History & Handover: AFP Hospital Patient Encoding & Reporting System
 
-_Last updated: 2026-10-19 (Step 6i-1-fix done) · Read this first in any new Claude conversation about this project._
+_Last updated: 2026-10-19 (Step 6i-2 done and merged; spare-PC test still to do) · Read this first in any new Claude conversation about this project._
 
 This file carries over what was discussed in the first planning-and-review conversation (Oct 3–15, 2026), so a new conversation can continue without starting over. The official rules are still in `CLAUDE.md` and the other `planning/` files. This file explains **what was decided, why, where we are, and how to work with me.**
 
@@ -9,12 +9,13 @@ This file carries over what was discussed in the first planning-and-review conve
 ## 0. Quick Start (read this first; it may be all you need)
 | | |
 |---|---|
-| **Current step** | **6i-1-fix is done** and merged (2026-10-19), after 6i-1 (picture zip in every backup, `census:install` / `update` / `restore` / `health`, scheduler heartbeat bar, System health page). Fixes: remember-me always off, restore checks everything before it deletes, install refuses a live system, one month lock per year, accent-proof duplicate-patient lock, caches cleared after a restore, `MYSQL_PATH` saved by the install |
-| **Next step** | **6i-2 Windows scripts**, then **6i-3 Automatic test restore and "Copy to USB"** (both prompts are in `planning/Prompts/prompt-6i.md`), then the Security review (`planning/security.md` section 3). Start a **new conversation** for each step. |
-| **Still to prove** | `census:install`, `census:update` and `census:restore` were only tested with fakes (no real MySQL root login, no real restore). **They need a real test on a spare PC** before handover (6i-2 has the manual test list). |
-| **Next prompt file** | 6i-2 and 6i-3: `planning/Prompts/prompt-6i.md`. Last prompt used: `planning/Prompts/prompt-6i-1-fix.md` |
+| **Current step** | **6i-2 Windows scripts is done and merged (2026-10-19)** (`install.bat`, `update.bat`, `restore.bat`, `health.bat`, `reset-admin-password.bat`, `uninstall-tasks.bat` in `system/scripts/windows/`; MySQL and Apache as Windows services; site file; scheduler task with a real backup proof; firewall). Before it: **6i-1-fix is done** and merged (2026-10-19), after 6i-1 (picture zip in every backup, `census:install` / `update` / `restore` / `health`, scheduler heartbeat bar, System health page). Fixes: remember-me always off, restore checks everything before it deletes, install refuses a live system, one month lock per year, accent-proof duplicate-patient lock, caches cleared after a restore, `MYSQL_PATH` saved by the install |
+| **Next step** | **6i-3 Automatic test restore and "Copy to USB"** (both prompts are in `planning/Prompts/prompt-6i.md`), then the Security review (`planning/security.md` section 3). Start a **new conversation** for each step. |
+| **Still to prove** | `census:install`, `census:update` and `census:restore` were only tested with fakes (no real MySQL root login, no real restore). **They need a real test on a spare PC** before handover. The `.bat` files and the Laragon service setup were also written without a real Laragon at hand: `docs/windows-scripts-manual-test.md` is the test list (install, run again, services, reboot with no one logged in, crash restart, firewall, backup, update, restore). |
+| **Next prompt file** | 6i-2 and 6i-3: `planning/Prompts/prompt-6i.md`. Last prompt used: 6i-2 (in the same file) |
 | **Last merged commit** | d9e23fc (Step 6i-1-fix merge, 2026-10-19) |
-| **Open decisions** | HTTPS vs HTTP on the hospital LAN (Phase 8). |
+| **Open decisions** | HTTPS vs HTTP on the hospital LAN (Phase 8). (none about PHP: the minimum is decided, see the decisions log). |
+| **Open item (blocks Phase 8)** | **Spare-PC test of 6i-1 and 6i-2 is still required before Phase 8:** a fresh Windows PC with only the `docs/requirements.md` items, then `docs/windows-scripts-manual-test.md` from section 0 to the end. Fill in the installer versions in `docs/requirements.md` at the same time. |
 
 **Token-saving rules (agreed 2026-10-16):**
 - Start a **new conversation for each major step** (6f, 6g, 6h, security review…). Give it only this file plus the step's prompt; read other files or chat history only when I say so.
@@ -103,6 +104,16 @@ This file carries over what was discussed in the first planning-and-review conve
   - **Install never runs over a live system by mistake:** it refuses when `.env` has an `APP_KEY`, when users exist, or when the `patient_census` database exists, even if the database login fails. Only `--force` plus typing `INSTALL OVER` goes on. `census:install` also finds the mysql program next to mysqldump and saves it as `MYSQL_PATH` (`--repair` adds it to older installs), and System health shows a "MySQL program (for restore)" check (Warning only).
   - **One month lock per year** (`month-close:YYYY`) is used by close and reopen, so two months of one quarter closed together still make the quarter and year snapshot and a reopen cannot race a close. The duplicate-patient lock key uses ASCII-folded, lowercased, space-collapsed names, the way MySQL compares them ("Peña" and "Pena" share one lock). Both waits come from `census.lock_wait_seconds` (5).
   - **The scheduler time shown on System health is in Asia/Manila**, not UTC.
+- **Windows scripts (6i-2, decided 2026-10-19):**
+  - **Files** in `system/scripts/windows/`: thin wrappers that run the 6i-1 artisan commands. Each one checks "Run as administrator" (and says so in plain words), finds Laragon's `php.exe` (asks if not found, remembers it in `php-path.txt`, not committed), writes start and end lines (never secrets) to `storage/logs/scripts.log`, and ends with "Press any key to close...". Shared helpers: `_common.bat`, `_services.bat`, `run-scheduler.bat`, four small PowerShell files. `.bat` and `.ps1` are forced to Windows line endings in `.gitattributes`.
+  - **MySQL and Apache run as Windows services** `CensusMySQL` and `CensusApache` (not a start-up task, not Laragon's tray): registered from Laragon's own `my.ini` and `httpd.conf`, automatic (delayed) start, restart on crash (3 tries, 1 minute apart). `install.bat` also checks `bind-address=127.0.0.1` in `my.ini` (keeps a `.bak` first), writes `sites-enabled/00-census.conf` (loads first, answers for any name or IP, serves `system/public`), checks Apache's syntax first and rolls the file back if it fails, turns off Laragon's own auto-start (best effort: only keys that exist), and checks that `http://localhost/` shows the login page. **Never click Start All in Laragon on the server** (printed by the install, written in the operations guide and troubleshooting). If a Laragon file is missing it stops with: open Laragon once, Start All, Stop All, close it, run `install.bat` again.
+  - **Scheduler task "Census - Scheduler"** runs `run-scheduler.bat` every minute with nobody logged in. It runs as SYSTEM when `BACKUP_PATH` is a local folder, or as a Windows account (Windows asks for the password) when `BACKUP_PATH` is a network share, because SYSTEM cannot sign in to another PC. The install warns to use an account whose password never expires, and right after creating the task runs one real backup through it (a flag file makes `run-scheduler.bat` run `backup:run` once) and shows success or failure. A Windows password change breaks backups until `install.bat` is run again (troubleshooting entry).
+  - **Firewall:** web port (80, a constant in `_common.bat`) open to the local subnet only; 3306 blocked from outside. `install.bat` run again on an installed system runs `census:install --repair` and re-creates services (only if missing), task and rules; it never touches data. `uninstall-tasks.bat` removes the task, both services and the firewall rules only.
+  - **Why Windows services, not a start-up task (decided 2026-10-19):** a service starts with Windows with nobody logged in and Windows restarts it after a crash (`sc failure`); a start-up task would not restart it, and Laragon itself is a tray program that needs a logged-in user. The cost: never click Start All in Laragon on the server.
+  - **Why SYSTEM for a local backup folder and a Windows account for a network share (decided 2026-10-19):** SYSTEM has no network login, so it cannot write to the backup PC. The account's password is saved inside the task, so it must never expire; after a password change `install.bat` is run again with the new password (troubleshooting entry). Proven at install time by one real backup run through the task.
+  - **Requirements doc (decided 2026-10-19):** `docs/requirements.md` lists what to install first (server part, developer part, how to build the ready-to-install folder: clean clone, `composer install --no-dev --optimize-autoloader`, `npm ci`, `npm run build`; no Composer, Node.js or Git on the server). `install.bat` runs `check-requirements.ps1` before anything changes: Windows 10/11 64-bit, 4 GB memory, 10 GB free disk, Visual C++ Redistributable x64 (registry), Laragon with MySQL 8 and Apache, PHP starts and is 8.4.1+ and Thread Safe, port 80 free. `census:install` then checks the PHP extensions, folders, upload limits and MySQL as before.
+  - **Not yet proven:** none of this has run on a real Laragon server. The manual test list is `docs/windows-scripts-manual-test.md`.
+
 - **Goal: the hospital needs little or no IT (decided 2026-10-19; built in 6i-2 and 6i-3, written up in Phase 7.5):**
   - **Automatic test restore** (6i-3): on the 1st of each month at 03:00 the latest backup is loaded into a scratch database, counts are compared and the scratch database is dropped; success records the "Test restore" mark by itself, failure shows a red bar. Admin can also press "Run test restore now".
   - **"Copy to USB" button** (6i-3): copies the latest backup (dump and picture zip) from the server to a removable drive plugged into the server PC, checks sizes, keeps the newest 8, and records the "USB copy" mark.
@@ -111,7 +122,7 @@ This file carries over what was discussed in the first planning-and-review conve
   - **Phase 7.5 documentation proof:** every document is written from the real system and followed step by step by someone who did not write it; the custodian must do the daily, weekly and monthly tasks and solve at least five troubleshooting entries using only the documents (`planning/project-phases.md`, "Proof"). **Rule in `CLAUDE.md`:** any step that changes a feature that has a document in `docs/` updates that document in the same step, with the real screen labels and messages.
 
 ### Stack
-- Laravel 13 (PHP 8.3) + official React starter kit (Inertia, TypeScript, Tailwind), Fortify, Wayfinder, Pest, MySQL. Monolith. **No Sanctum, no Spatie.** Allowed packages: maatwebsite/excel, barryvdh/laravel-dompdf. vite-plus 0.3.3 (when updating it, update the `vite` alias in package.json to match).
+- Laravel 13 (PHP 8.4.1 or newer) + official React starter kit (Inertia, TypeScript, Tailwind), Fortify, Wayfinder, Pest, MySQL. Monolith. **No Sanctum, no Spatie.** Allowed packages: maatwebsite/excel, barryvdh/laravel-dompdf. vite-plus 0.3.3 (when updating it, update the `vite` alias in package.json to match).
 - Databases: `patient_census` (dev), `patient_census_test` (**tests only**). User `census_app`.
 
 ### Screens & design
@@ -147,7 +158,7 @@ This file carries over what was discussed in the first planning-and-review conve
 - **Security plan:** `planning/security.md`. Every step follows its section 2. HTTPS vs HTTP on the LAN is **still to decide** with hospital IT/CO (Phase 8).
 - **Documentation phase 7.5** added: developer guide, database guide, how-to, learning path, operations guide, user manual, keyboard shortcuts (collected in `docs/keyboard-shortcuts.md` as each screen is built).
 
-## 5. Where We Are (2026-10-18, after 6i-1)
+## 5. Where We Are (2026-10-19, after 6i-2)
 | Step | Status |
 |---|---|
 | 1–5, 5b, 5c (foundation, login, RBAC, audit, Trash service, backup, temp passwords) | Done, merged |
@@ -163,7 +174,7 @@ This file carries over what was discussed in the first planning-and-review conve
 | 6x Review fixes (sessions end on password change, close-month race, quarter and year snapshots, Gate on Encode, throttles, typed Other rank, duplicate patient race) | Done, merged (2026-10-18, pushed) |
 | 6i-1 Self-setup and self-care (picture zip in every backup, `census:install` / `update` / `restore` / `health`, scheduler heartbeat bar, System health page) | Done, merged (2026-10-18, pushed). Commands tested with fakes only: **real test on a spare PC still to do** |
 | 6i-1-fix Review fixes (remember-me off, restore pre-checks, install refuses a live system, year lock, patient lock key, cache cleared after restore, `MYSQL_PATH`) | Done, merged (2026-10-19) |
-| **6i-2 Windows scripts** (`install.bat`, `update.bat`, `restore.bat`, `health.bat`, `reset-admin-password.bat`, Task Scheduler) | **Next** |
+| **6i-2 Windows scripts** (`install.bat`, `update.bat`, `restore.bat`, `health.bat`, `reset-admin-password.bat`, `uninstall-tasks.bat`, services, site file, Task Scheduler, firewall) | **Done, merged (2026-10-19)**. Needs the spare-PC test (`docs/windows-scripts-manual-test.md`) |
 | 6i-3 Automatic monthly test restore, "Copy to USB" button, health checks for both | After 6i-2 |
 | Security review (`planning/security.md` section 3) | End of Phase 6 |
 | Phase 7 parallel run (1 month beside Google Sheets) · 7.5 Docs · 8 Deploy · 9 Training | Later |
@@ -192,7 +203,8 @@ This file carries over what was discussed in the first planning-and-review conve
 9. Give the exact "approve / fix" message, then commit → merge → push.
 
 ## 8. Phase 8 (deployment) notes
-- Server PHP must be **8.3 or newer** (maatwebsite/excel 4 requires it).
+- **Server PHP minimum is 8.4.1 (decided 2026-10-19).** `composer.lock` resolved Symfony 8.x packages that need PHP 8.4.1 or newer, and `vendor/composer/platform_check.php` stops the app on anything older (found while building a clean `--no-dev` copy). So `composer.json` now requires `^8.4.1` (lock refreshed), `HealthChecker::MIN_PHP` and `InstallRequirements::MIN_PHP` are 8.4.1 (with their tests), `.github/workflows/tests.yml` runs PHP 8.4, and the docs, `install.bat` requirements check and planning guides say 8.4.1. Re-locking for 8.3 was considered and rejected.
+- **MySQL root must have a password (decided 2026-10-19).** A new Laragon starts with root and no password. `census:install` detects that (the root login worked with an empty password) and, before anything else, makes the installer set a new one: asked twice, hidden, at least 12 characters, 3 tries, then it stops with nothing changed. It sets the password on every root account that had none (`ALTER USER`), logs in again with it, and says "Write this in the sealed envelope." The password is only in memory: never in `.env`, `install.log`, the audit log or any file (tested). `census:update` and `census:restore` only warn if root is empty. **System health has a new check, "MySQL root password" (Problem):** the web app cannot read MySQL's account list with its own login, so the check tries one root login with an empty password and stores nothing; if it gets in, it is a Problem with "set a root password of at least 12 characters". It shows on dev PCs that have no root password, which is accurate. Steps to set one on an existing server are in `docs/requirements.md`, "MySQL root password".
 - Required PHP extensions include **gd, intl, zip, mbstring, pdo_mysql, fileinfo, openssl**. `gd` is off by default in a fresh `php.ini`; PhpSpreadsheet (Excel export) will not install or run without it.
 - The hospital network has **no internet**. Run `composer install --no-dev` and `npm run build` on a dev PC, then copy the `vendor` folder and the built `public/build` assets to the server.
 - `storage/` (and `bootstrap/cache/`) must be **writable** by the web server: dompdf font cache, logs and backups live there.

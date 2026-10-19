@@ -9,3 +9,6 @@
 CHANGELOG.md export-ignore
 README.md export-ignore
 .github/workflows/browser-tests.yml export-ignore
+# .bat files must have Windows line endings or cmd.exe can jump to the wrong label
+*.bat text eol=crlf
+*.ps1 text eol=crlf

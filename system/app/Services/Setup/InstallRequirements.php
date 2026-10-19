@@ -14,7 +14,7 @@ use App\Services\HealthChecker;
  */
 class InstallRequirements
 {
-    public const MIN_PHP = '8.3.0';
+    public const MIN_PHP = '8.4.1';
 
     /** @var list<string> */
     public const EXTENSIONS = ['gd', 'intl', 'zip', 'mbstring', 'pdo_mysql', 'fileinfo', 'openssl'];
@@ -29,16 +29,16 @@ class InstallRequirements
         $results = [];
 
         $results[] = [
-            'label' => 'PHP 8.3 or newer (this is '.$this->phpVersion().')',
+            'label' => 'PHP 8.4.1 or newer (this is '.$this->phpVersion().')',
             'ok' => version_compare($this->phpVersion(), self::MIN_PHP, '>='),
-            'fix' => 'Install PHP 8.3 or newer in Laragon (Menu > PHP > Version), then try again.',
+            'fix' => 'Install PHP 8.4.1 or newer in Laragon (docs/requirements.md, "Adding PHP to Laragon"; then Menu > PHP > Version), then try again.',
         ];
 
         foreach (self::EXTENSIONS as $extension) {
             $results[] = [
                 'label' => "PHP extension {$extension}",
                 'ok' => $this->extensionLoaded($extension),
-                'fix' => "Turn on the {$extension} extension (Laragon: Menu > PHP > Extensions), then try again.",
+                'fix' => "Turn on the {$extension} extension (Laragon: Menu > PHP > Extensions; see docs/requirements.md), then try again.",
             ];
         }
 

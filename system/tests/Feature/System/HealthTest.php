@@ -49,7 +49,7 @@ function healthyServer(object $test, array $fake = []): void
     app(SchedulerHeartbeat::class)->beat();
     backupWith($test, 2, zip: true);
 
-    $fake += ['free_server' => 100 * GB, 'free_backup' => 100 * GB, 'upload' => '2M', 'post' => '8M', 'php' => '8.3.5', 'database_down' => false, 'storage_writable' => true, 'mysql' => true];
+    $fake += ['free_server' => 100 * GB, 'free_backup' => 100 * GB, 'upload' => '2M', 'post' => '8M', 'php' => '8.4.5', 'database_down' => false, 'storage_writable' => true, 'mysql' => true, 'root_open' => false];
     $folder = $test->folder;
 
     app()->bind(HealthChecker::class, fn ($app) => new class($app->make(BackupMonitor::class), $app->make(SchedulerHeartbeat::class), $fake, $folder) extends HealthChecker
@@ -84,6 +84,11 @@ function healthyServer(object $test, array $fake = []): void
         protected function mysqlClientWorks(): bool
         {
             return $this->fake['mysql'];
+        }
+
+        protected function rootHasNoPassword(): bool
+        {
+            return $this->fake['root_open'];
         }
 
         protected function isWritable(string $path): bool
@@ -145,12 +150,12 @@ it('lists every check with a result and one "what to do" line', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->component('system/health')
             ->where('overall', 'ok')
-            ->has('checks', 12)
+            ->has('checks', 13)
             ->where('checks.0.key', 'database')
             ->where('checks.0.status', 'ok')
             ->where('checks.10.key', 'mysql_client')
-            ->where('checks.11.key', 'version')
-            ->where('checks.11.detail', '1.2.3.')
+            ->where('checks.12.key', 'version')
+            ->where('checks.12.detail', '1.2.3.')
             ->has('checks.0.todo'));
 });
 
@@ -291,15 +296,39 @@ it('upload limits: OK at 2M or more (or unlimited), Problem under 2M', function 
     'unlimited post' => ['2M', '-1', 'ok'],
 ]);
 
-it('PHP version: OK from 8.3, Problem before', function (string $version, string $status) {
+it('PHP version: OK from 8.4.1, Problem before', function (string $version, string $status) {
     healthyServer($this, ['php' => $version]);
 
     expect(check('php')['status'])->toBe($status);
 })->with([
     '8.5' => ['8.5.5', 'ok'],
-    '8.3.0' => ['8.3.0', 'ok'],
-    '8.2.30' => ['8.2.30', 'problem'],
+    '8.4.1' => ['8.4.1', 'ok'],
+    '8.4.0' => ['8.4.0', 'problem'],
+    '8.3.9' => ['8.3.9', 'problem'],
 ]);
+
+it('MySQL root password: Problem when root lets anyone in with no password, OK otherwise', function () {
+    expect(check('mysql_root'))->toMatchArray(['status' => 'ok']);
+
+    healthyServer($this, ['root_open' => true]);
+
+    $row = check('mysql_root');
+
+    expect($row['status'])->toBe('problem')
+        ->and($row['detail'])->toContain('no password')
+        ->and($row['todo'])->toContain('12 characters')->toContain('sealed envelope');
+});
+
+it('MySQL root password Problem makes census:health fail and shows on the page', function () {
+    healthyServer($this, ['root_open' => true]);
+
+    $this->artisan('census:health')
+        ->expectsOutputToContain('MySQL root password')
+        ->assertExitCode(1);
+
+    $this->actingAs(userWithRole('admin'))->get('/system/health')
+        ->assertInertia(fn (Assert $page) => $page->where('overall', 'problem'));
+});
 
 it('system version: shown from the config', function () {
     expect(check('version'))->toMatchArray(['status' => 'ok', 'detail' => '1.2.3.']);

@@ -25,6 +25,9 @@ trait UsesRootLogin
      */
     private array $secrets = [];
 
+    /** The root login worked with an empty password (a new Laragon). */
+    protected bool $rootPasswordWasEmpty = false;
+
     /**
      * Ask for the root password and log in. Returns false (after saying why)
      * when the login fails. An empty password is tried too, because a new
@@ -35,16 +38,18 @@ trait UsesRootLogin
         $password = (string) $this->secret(self::ROOT_PROMPT);
         $this->secrets[] = $password;
 
-        if ($password === '') {
-            $this->warn('The root password is empty. Ask IT to set one after setup.');
-        }
-
         try {
             $mysql->connect($password, $database);
         } catch (Throwable $e) {
             $this->error($e->getMessage());
 
             return false;
+        }
+
+        $this->rootPasswordWasEmpty = $password === '';
+
+        if ($this->rootPasswordWasEmpty && $this->getName() !== 'census:install') {
+            $this->warn('The MySQL root password is empty. Ask IT to set one: see docs/requirements.md, "MySQL root password".');
         }
 
         return true;
