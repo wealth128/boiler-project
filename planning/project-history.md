@@ -13,7 +13,7 @@ This file carries over what was discussed in the first planning-and-review conve
 | **Next step** | **6i-2 Windows scripts**, then **6i-3 Automatic test restore and "Copy to USB"** (both prompts are in `planning/Prompts/prompt-6i.md`), then the Security review (`planning/security.md` section 3). Start a **new conversation** for each step. |
 | **Still to prove** | `census:install`, `census:update` and `census:restore` were only tested with fakes (no real MySQL root login, no real restore). **They need a real test on a spare PC** before handover (6i-2 has the manual test list). |
 | **Next prompt file** | 6i-2 and 6i-3: `planning/Prompts/prompt-6i.md`. Last prompt used: `planning/Prompts/prompt-6i-1-fix.md` |
-| **Last merged commit** | Step 6i-1-fix merged into main on 2026-10-19 (hash: `git log --merges -1`) |
+| **Last merged commit** | d9e23fc (Step 6i-1-fix merge, 2026-10-19) |
 | **Open decisions** | HTTPS vs HTTP on the hospital LAN (Phase 8). |
 
 **Token-saving rules (agreed 2026-10-16):**
