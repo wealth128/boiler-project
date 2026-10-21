@@ -34,7 +34,7 @@ mysql --version
 ```
 mysql -u root -p
 CREATE DATABASE patient_census CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'census_app'@'localhost' IDENTIFIED BY 'ChangeThisPassword!';
+CREATE USER 'census_app'@'localhost' IDENTIFIED BY '<set in .env>';
 GRANT ALL PRIVILEGES ON patient_census.* TO 'census_app'@'localhost';
 FLUSH PRIVILEGES;
 EXIT;

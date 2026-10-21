@@ -10,7 +10,7 @@ Create the database in MySQL (Claude Code shouldn't handle your root password):
 ```
 mysql -u root -p
 CREATE DATABASE patient_census CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'census_app'@'localhost' IDENTIFIED BY 'ChangeThisPassword!';
+CREATE USER 'census_app'@'localhost' IDENTIFIED BY '<set in .env>';
 GRANT ALL PRIVILEGES ON patient_census.* TO 'census_app'@'localhost';
 FLUSH PRIVILEGES;
 EXIT;
@@ -25,7 +25,7 @@ Read CLAUDE.md and all files in planning/ first.
 Step 1 – Database setup and config:
 1. Check php -v, composer -V, node -v. Stop and tell me if anything is below what Laravel needs.
 2. Create the Laravel app in ./system using the official React starter kit (composer create-project laravel/react-starter-kit system), then npm install.
-3. Configure system/.env for MySQL: DB_DATABASE=patient_census, DB_USERNAME=census_app, DB_PASSWORD=ChangeThisPassword!, APP_TIMEZONE=Asia/Manila, APP_NAME="Patient Encoding & Reports". Make sure config/app.php uses the timezone.
+3. Configure system/.env for MySQL: DB_DATABASE=patient_census, DB_USERNAME=census_app, DB_PASSWORD=<set in .env>, APP_TIMEZONE=Asia/Manila, APP_NAME="Patient Encoding & Reports". Make sure config/app.php uses the timezone.
 4. Write migrations for EVERY table in planning/database-schema.md (extend the existing users migration: username, role, office, is_active, failed_attempts, locked_at, soft delete columns). Use foreign keys and the listed indexes.
 5. Create the Enums (Role, Office, Category) and Models with relationships, casts and SoftDeletes where the schema says.
 6. Seeders: branches + AFP ranks (draft lists from prototype/prototype.html), sample diagnoses, sample age brackets, settings, one Admin (username: admin) and one System Admin (username: sysadmin) with passwords read from .env (SEED_ADMIN_PASSWORD, SEED_SYSADMIN_PASSWORD).
