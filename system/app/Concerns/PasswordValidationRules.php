@@ -24,6 +24,7 @@ trait PasswordValidationRules
      */
     protected function currentPasswordRules(): array
     {
-        return ['required', 'string', 'current_password'];
+        // "bail": a list instead of text stops at "string" and never reaches the password check.
+        return ['bail', 'required', 'string', 'current_password'];
     }
 }

@@ -57,7 +57,7 @@ DB_HOST=127.0.0.1
 DB_PORT=3306
 DB_DATABASE=patient_census
 DB_USERNAME=census_app
-DB_PASSWORD=ChangeThisPassword!
+(set in .env; never written in planning files)
 ```
 
 **e. Run it once:**

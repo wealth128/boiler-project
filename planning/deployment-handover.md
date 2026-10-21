@@ -27,7 +27,7 @@ All software used is free/open source (Laravel, React, MySQL Community, Laragon)
 - [ ] **Laragon Full** with **PHP 8.4.1+** (the locked packages need it; `composer.json` requires `^8.4.1`) and extensions: gd, intl, zip, mbstring, pdo_mysql, fileinfo, openssl. **MySQL 8.**
 - [ ] **Backup destination:** a shared folder on a second PC (e.g. `\\BACKUP-PC\census-backups`), writable only by the server's account; a USB drive for weekly copies.
 - [ ] **Disk encryption** (BitLocker) on the server and backup PC, if available.
-- [ ] **HTTPS or HTTP decision** made with hospital IT / CO (open decision in `planning/security.md`).
+- [ ] **HTTPS or HTTP decision** made with hospital IT / CO (open decision in `planning/security.md`). If HTTPS: set `SESSION_SECURE_COOKIE=true` in `.env` (default `false`, which is right for plain HTTP; with `true` on plain HTTP nobody can log in), then `php artisan census:install --repair`. The login cookie is always HttpOnly and SameSite=Lax; every page sends `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy` and a `Content-Security-Policy` (Step 7a). Add the HSTS header only after HTTPS works on every office PC.
 
 ## 3. Deployment Steps (summary; full steps in the operations guide)
 1. Copy the ready-to-install `system/` folder to the server.
@@ -37,7 +37,7 @@ All software used is free/open source (Laravel, React, MySQL Community, Laragon)
    - runs the migrations with root, seeds **only** the lists and settings (never the dev seeder), and creates the Admin and System Admin with temporary passwords shown once ("Write these down and put them in the sealed envelope");
    - runs `config:cache`, `route:cache`, `view:cache` and writes `storage/logs/install.log` (no passwords).
    On a server that already has the system (`.env` with an `APP_KEY`, users in the database, or the `patient_census` database) it refuses with "This server already has the system installed. Use census:install --repair, or census:restore." Only `--force` plus typing `INSTALL OVER` goes on. `php artisan census:install --repair` re-checks and fixes missing `.env` keys (including `MYSQL_PATH`) without touching data.
-3. Still by hand: set `'serve' => false` in `config/filesystems.php`. Check `php artisan route:list` has no `_inertia/devtools` or `storage/{path}` routes.
+3. Check `php artisan route:list`: there must be no `_inertia/devtools` and no `storage/{path}` route. Nothing to set by hand: `config/filesystems.php` turns `serve` off whenever `APP_ENV=production` (Step 7a), and a test proves it.
 4. Run `php artisan census:health`. Everything must be OK or Warning (the scheduler shows Problem until step 7 is done).
 5. The `.env` and the caches were already made by step 2. After any later change to `.env`, run `php artisan census:install --repair` to rebuild the caches.
 6. **Done by `install.bat`** (right-click, Run as administrator; it runs `census:install` first): MySQL and Apache become Windows services (`CensusMySQL`, `CensusApache`) that start with Windows with nobody logged in and restart after a crash, using Laragon's own `my.ini` and `httpd.conf`; `bind-address=127.0.0.1` is checked in `my.ini` (copy kept); the Apache site file `00-census.conf` serves `system/public` on the web port; and `http://localhost/` is checked to show the login page. Windows Firewall: the web port is open to the local network only and 3306 is blocked from outside. **Laragon's Start All is never used on the server after the first install.**

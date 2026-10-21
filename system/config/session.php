@@ -171,7 +171,11 @@ return [
     |
     */
 
-    'secure' => env('SESSION_SECURE_COOKIE'),
+    // Off by default: the system runs on plain HTTP on the hospital network.
+    // Set SESSION_SECURE_COOKIE=true in .env the day HTTPS is switched on
+    // (planning/security.md, "HTTPS decision"); with it on, a browser sends the
+    // cookie only over HTTPS, so it would never reach a plain HTTP page.
+    'secure' => (bool) env('SESSION_SECURE_COOKIE', false),
 
     /*
     |--------------------------------------------------------------------------
@@ -184,7 +188,8 @@ return [
     |
     */
 
-    'http_only' => env('SESSION_HTTP_ONLY', true),
+    // Fixed on purpose (not read from .env): page scripts can never read the cookie.
+    'http_only' => true,
 
     /*
     |--------------------------------------------------------------------------
@@ -201,7 +206,8 @@ return [
     |
     */
 
-    'same_site' => env('SESSION_SAME_SITE', 'lax'),
+    // Fixed on purpose (not read from .env): the cookie is not sent with requests started by other sites.
+    'same_site' => 'lax',
 
     /*
     |--------------------------------------------------------------------------

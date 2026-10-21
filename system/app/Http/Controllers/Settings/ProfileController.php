@@ -27,7 +27,8 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->update($request->validated());
+        // Only the name: never a role, a flag or a password, whatever else the form sends.
+        $request->user()->update($request->safe()->only(['name']));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Profile updated.')]);
 

@@ -44,7 +44,9 @@ Route::get('/', LandingController::class)->name('home');
 
 // Constraints shared by the routes below.
 Route::pattern('period', '\d{4}-(0[1-9]|1[0-2])'); // e.g. 2026-09
-Route::pattern('id', '[0-9]+');
+// Whole numbers of at most 18 digits (fits a PHP integer): a longer one is a 404, not a type error.
+Route::pattern('id', '[0-9]{1,18}');
+Route::pattern('batch', '[0-9]{1,18}');
 
 Route::middleware('auth')->group(function () {
     // --- Choose your new password -------------------------------- Everyone
@@ -78,7 +80,7 @@ Route::middleware('auth')->group(function () {
             Route::post('records/import', [ImportController::class, 'upload'])->name('records.import.upload');
             Route::post('records/import/confirm', [ImportController::class, 'confirm'])->name('records.import.confirm');
             Route::post('records/import/cancel', [ImportController::class, 'cancel'])->name('records.import.cancel');
-            Route::post('records/import/{batch}/undo', [ImportController::class, 'undo'])->whereNumber('batch')->name('records.import.undo');
+            Route::post('records/import/{batch}/undo', [ImportController::class, 'undo'])->name('records.import.undo');
         });
     });
 
@@ -112,11 +114,11 @@ Route::middleware('auth')->group(function () {
         Route::get('settings/lists', [ListController::class, 'index'])->name('lists.index');
         Route::whereIn('list', ['diagnoses', 'ranks', 'age-brackets'])->group(function () {
             Route::post('settings/{list}', [ListController::class, 'store'])->name('lists.store');
-            Route::put('settings/{list}/{id}', [ListController::class, 'update'])->whereNumber('id')->name('lists.update');
-            Route::delete('settings/{list}/{id}', [ListController::class, 'destroy'])->whereNumber('id')->name('lists.destroy');
+            Route::put('settings/{list}/{id}', [ListController::class, 'update'])->name('lists.update');
+            Route::delete('settings/{list}/{id}', [ListController::class, 'destroy'])->name('lists.destroy');
         });
         // Move up / Move down (rank seniority order).
-        Route::put('settings/ranks/{id}/move', [ListController::class, 'move'])->whereNumber('id')->name('lists.ranks.move');
+        Route::put('settings/ranks/{id}/move', [ListController::class, 'move'])->name('lists.ranks.move');
     });
 
     // --- Hospital settings -------------------------------------- Admin
@@ -158,7 +160,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:admin')->group(function () {
         Route::get('trash', [TrashController::class, 'index'])->name('trash.index');
         Route::delete('trash', [TrashController::class, 'empty'])->name('trash.empty');
-        Route::whereIn('type', ['visits', 'patients', 'users', 'diagnoses', 'ranks', 'age-brackets', 'months'])->whereNumber('id')->group(function () {
+        Route::whereIn('type', ['visits', 'patients', 'users', 'diagnoses', 'ranks', 'age-brackets', 'months'])->group(function () {
             Route::post('trash/{type}/{id}/restore', [TrashController::class, 'restore'])->name('trash.restore');
             Route::delete('trash/{type}/{id}', [TrashController::class, 'destroy'])->name('trash.destroy');
         });

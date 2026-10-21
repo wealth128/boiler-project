@@ -157,9 +157,12 @@ class BackupService
                 }
             }
 
-            Log::error('Backup failed: '.$e->getMessage(), ['folder' => $folder]);
+            // The error text is saved and shown to Admin: no password or key, even if the program repeated one.
+            $error = RedactSecretsInLogs::redact(mb_substr($e->getMessage(), 0, 2000));
 
-            return $this->record($startedAt, BackupStatus::Failed, null, null, mb_substr($e->getMessage(), 0, 2000));
+            Log::error('Backup failed: '.$error, ['folder' => $folder]);
+
+            return $this->record($startedAt, BackupStatus::Failed, null, null, $error);
         } finally {
             if ($optionFile !== null && is_file($optionFile)) {
                 @unlink($optionFile);

@@ -177,7 +177,9 @@ class ImportController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        $staged = $this->store->find((string) $request->input('token'), $user);
+        // A token sent as a list (token[]=x) is not a token.
+        $token = $request->input('token');
+        $staged = is_string($token) ? $this->store->find($token, $user) : null;
 
         if ($staged !== null) {
             $this->store->delete($staged->token);

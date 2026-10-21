@@ -33,7 +33,10 @@ return [
         'local' => [
             'driver' => 'local',
             'root' => storage_path('app/private'),
-            'serve' => true,
+            // Laravel's built-in /storage/{path} routes (signed links only). The system never
+            // makes a signed link: files are sent by controllers that check the role. So the
+            // routes are not registered on the hospital server (APP_ENV=production).
+            'serve' => env('APP_ENV', 'production') !== 'production',
             'throw' => false,
             'report' => false,
         ],
