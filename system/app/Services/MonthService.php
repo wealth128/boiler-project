@@ -142,6 +142,48 @@ class MonthService
     }
 
     /**
+     * The same year locks as closing and reopening, taken by the downtime
+     * import (confirm and undo) for every year it touches, in year order so
+     * two imports can't wait on each other. A month can't be closed while
+     * the import runs, and the import checks the closed months again once it
+     * holds them. Release with releaseLocks().
+     *
+     * @param  list<string>  $years  e.g. ["2026"]
+     * @return list<Lock>
+     *
+     * @throws ValidationException With a plain-words message on `import` when a year stays busy
+     */
+    public static function lockYears(array $years): array
+    {
+        $years = array_values(array_unique($years));
+        sort($years);
+
+        $locks = [];
+
+        try {
+            foreach ($years as $year) {
+                $lock = Cache::lock('month-close:'.$year, 60);
+                $lock->block((int) config('census.lock_wait_seconds'));
+                $locks[] = $lock;
+            }
+        } catch (LockTimeoutException) {
+            self::releaseLocks($locks);
+
+            throw ValidationException::withMessages(['import' => 'A month is being closed or reopened right now. Wait a moment and try again.']);
+        }
+
+        return $locks;
+    }
+
+    /** @param  list<Lock>  $locks */
+    public static function releaseLocks(array $locks): void
+    {
+        foreach ($locks as $lock) {
+            $lock->release();
+        }
+    }
+
+    /**
      * One lock for a whole year, "month-close:YYYY", taken by close and reopen.
      * A quarter's or a year's snapshot depends on the other months of the same
      * year, so closes of two months of one quarter (and a reopen) must take

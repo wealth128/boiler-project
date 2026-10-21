@@ -1,6 +1,6 @@
 # Operations Guide
 
-_Version: DRAFT (Step 6i-3) · Matches system: Step 6i-3 · Phase 7.5 will finish this guide, add screenshots and have it tested by someone who did not write it._
+_Version: DRAFT (Step 6j) · Matches system: Step 6j · Phase 7.5 will finish this guide, add screenshots and have it tested by someone who did not write it._
 
 This guide is for the person who looks after the server PC. You do not need to type commands. Everything is a file you double-click.
 
@@ -68,10 +68,11 @@ Running `install.bat` again on a server that already works is safe. It only re-c
    **The x only hides a warning. It comes back tomorrow (yellow) or at your next sign-in (red) until the problem is fixed.** Closing a bar never fixes or marks anything. The **Backups** and **System health** pages always show the full status.
 2. Open **System health** (left menu, under Administration). Every line should say OK.
 
-**The custodian's three tasks in one place** (the one-page card will copy this):
+**The custodian's tasks in one place** (the one-page card will copy this):
 - **Daily:** log in, look for a red bar, open **System health**. The x on a bar only hides it until tomorrow (yellow) or your next sign-in (red).
 - **Weekly:** plug the USB into the **server PC**, click **Copy to USB** on **Backups**.
 - **Monthly:** check that **Test restore** on **Backups** is green (Passed).
+- **Every 3 months, and every time the lists change** (a new rank, branch or diagnosis): in **Records > Import**, click **Download template**. Copy the new file to every office PC (replace the old one) and print a fresh copy for each office. The file name has the date. The PC copy and the paper copy are what the offices use when the system is down (section 8).
 
 **Every week (Admin or custodian, 2 minutes):**
 1. Go to the **server PC** and plug the USB drive into it. It must be the server, not your office PC.
@@ -155,10 +156,47 @@ The System Admin can reset other people's passwords in the system. Only this fil
 7. Give the new server the old server's fixed IP address, or tell every office PC the new address.
 8. After one week with no problems, wipe the old server's disk. It holds patient data.
 
+### 8. When the system is down
+
+**Do this NOW, while everything works. It cannot be done during the downtime.**
+1. Log in as Admin. Open **Patient Records**, then the **Import** tab.
+2. Click **Download template**. You get `census-downtime-template_YYYY-MM-DD.xlsx`.
+3. Copy the file to **every office PC** that encodes (for example on the Desktop, in a folder called "Downtime"). Print the **Visits** sheet and the **How to fill** sheet on paper for each office.
+4. Download it again every 3 months and whenever a list changes. The lists inside the file (branches, ranks, diagnoses) are copied from the system on the day you download it. An old file still works, but a rank added later is missing from its dropdowns. The office writes it under "Other (specify)" instead.
+
+**During the downtime (the offices):**
+1. Open the template on the office PC, or take the printed sheet. Write **one row for each patient seen**, with the real time the patient was seen.
+2. Fill the columns marked *. Leave **Age** blank. For a returning patient write the Patient ID if known. Otherwise leave it blank.
+3. Write your own name in **Written by**.
+4. Do not change the column names, add columns or merge cells. If the sheet is on paper, someone types it into the **Visits** sheet afterwards.
+5. Save the file with a clear name, for example `ER-2026-11-03.xlsx`, and give it to the Admin. Use a USB stick or the office PC, never e-mail. The file holds patient data.
+
+**When the system is back (the Admin):**
+1. **Patient Records > Import**. Under "2. Upload the filled file", choose the file and click **Upload and check**.
+2. Read the preview. Every row is **OK**, **Warning** or **Error**, with the row number of the file and the reason in plain words.
+   - **Error:** the row cannot be imported (a required value is missing, a bad date, a month that is closed, a name not on the list, a Patient ID that does not match...). Fix the file and upload it again. Rows with errors are never imported.
+   - **Warning:** the row can be imported and you decide. "Will be linked to P-000012" means a patient with the same name and birthdate exists: tick **Save as a new patient instead** only if it is a different person. "Possible duplicate visit" is not ticked by default.
+3. Click **Import N visits** and confirm. The chosen rows are saved together: all or none.
+4. Open **Patient Records** to check the visits (they show **Imported** and **Written by**). They count in the reports like any other visit.
+5. Delete the file copies from the office PCs and the USB stick.
+
+**A month that is already closed** does not accept visits. Reopen it first (Reports), import, then close it again. The system says "<Month> is closed. Reopen <Month> first."
+
+**Imported the wrong file?** Under **Past imports**, click **Undo import**. All its visits (and the patients only that import created) go to Trash. Undo is refused while one of its visits is in a closed month.
+
+**Good to know:**
+- Limits: 2 MB and 2,000 rows in one file. A file with more rows (even data far below the last filled row) is refused, never cut: split it. Visits before January 2026 are not accepted.
+- The uploaded file is kept on the server for **one hour at most** (until you confirm or cancel), then deleted. A scheduled cleanup runs every 15 minutes, so nothing stays more than about 75 minutes. It is never in a backup.
+- A file can be imported **once**. A second click on **Import**, or a second tab, says "This file was already imported." and saves nothing.
+- While a month is being closed or reopened, an import (or an undo) waits a few seconds and then asks you to try again. A month closed after the preview refuses the whole import.
+- CSV files: in Excel choose **CSV UTF-8**. An ordinary Windows Excel "CSV" is also read correctly (PEÑA stays PEÑA), but `.xlsx` is best.
+- Only visits written during a downtime can be imported. Old Google Sheets history is not imported.
+- Problems with a file: `docs/troubleshooting.md`, section 9.
+
 ---
 
 ## Not yet in this draft (Phase 7.5)
 
 - Screenshots for every step.
 - A tested recovery guide for a technician who has never seen the system.
-- The one-page custodian card (daily: no red bar; weekly: Copy to USB; monthly: test restore is green). The tasks are written in section 2 now.
+- The one-page custodian card (daily: no red bar; weekly: Copy to USB; monthly: test restore is green; every 3 months and after a list change: download the downtime template again). The tasks are written in section 2 now.

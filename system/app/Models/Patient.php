@@ -23,11 +23,12 @@ use Illuminate\Support\Carbon;
  * @property string|null $middle_initial
  * @property Sex $sex
  * @property Carbon $birthdate
+ * @property int|null $import_batch_id
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read string $full_name
  */
-#[Fillable(['last_name', 'first_name', 'middle_initial', 'sex', 'birthdate'])]
+#[Fillable(['last_name', 'first_name', 'middle_initial', 'sex', 'birthdate', 'import_batch_id'])]
 class Patient extends Model
 {
     /** @use HasFactory<PatientFactory> */

@@ -1,6 +1,7 @@
 <?php
 
 use App\Services\BackupMonitor;
+use App\Services\Import\ImportFileStore;
 use App\Services\SchedulerHeartbeat;
 use Illuminate\Support\Facades\Schedule;
 
@@ -25,3 +26,9 @@ Schedule::command('backup:test-restore')
 Schedule::call(fn () => app(SchedulerHeartbeat::class)->beat())
     ->name('scheduler-heartbeat')
     ->everyMinute();
+
+// Uploaded import files wait at most an hour (Records > Import). Every 15 minutes anything
+// older is deleted, also when nobody opens the import page again (so no file stays more than about 75 minutes).
+Schedule::call(fn () => app(ImportFileStore::class)->purgeExpired())
+    ->name('import-files-purge')
+    ->everyFifteenMinutes();

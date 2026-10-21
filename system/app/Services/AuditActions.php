@@ -41,6 +41,9 @@ final class AuditActions
         'patient.created' => ['Patient added', self::PATIENTS],
         'patient.updated' => ['Patient edited', self::PATIENTS],
 
+        'import.created' => ['Visits imported from a file', self::VISITS],
+        'import.undone' => ['Import undone', self::VISITS],
+
         'month.closed' => ['Month closed', self::MONTHS],
         'month.reopened' => ['Month reopened', self::MONTHS],
         'report.exported' => ['Report exported', self::MONTHS],

@@ -83,6 +83,8 @@ it('shows the Visits tab to Admin', function () {
                 'id' => $visit->id,
                 'visit_no' => $visit->visit_no,
                 'visited_at' => $visit->visited_at->toIso8601String(),
+                'written_by' => null,
+                'imported' => false,
                 'patient_no' => $this->santos->patient_no,
                 'patient_name' => 'Santos, Maria L.',
                 'sex' => 'Female',
@@ -528,6 +530,7 @@ it('offers the visit reasons, with "Other (specify)" last', function () {
             ['value' => 'Wrong patient selected', 'other' => false],
             ['value' => 'Encoded by mistake', 'other' => false],
             ['value' => 'Test / training entry', 'other' => false],
+            ['value' => 'Wrong import', 'other' => false],
             ['value' => 'Other (specify)', 'other' => true],
         ]));
 });

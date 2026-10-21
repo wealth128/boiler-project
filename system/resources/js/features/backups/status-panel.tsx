@@ -2,7 +2,7 @@ import { router } from '@inertiajs/react';
 import { useState } from 'react';
 import BackupController from '@/actions/App/Http/Controllers/Backup/BackupController';
 import { Button } from '@/components/ui/button';
-import { ConfirmDialog } from '@/features/backups/confirm-dialog';
+import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import type {
     BackupMarkInfo,
     BackupStatusInfo,

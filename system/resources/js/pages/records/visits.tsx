@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import EncodeController from "@/actions/App/Http/Controllers/Encode/EncodeController";
 import VisitRecordController from "@/actions/App/Http/Controllers/Records/VisitRecordController";
 import { CategoryChip } from "@/components/shared/category-chip";
+import { Chip } from "@/components/shared/chip";
 import { DataTable } from "@/components/shared/data-table";
 import type {
     DeleteReasonOption,
@@ -196,7 +197,21 @@ export default function RecordsVisits({
         {
             key: "encoded_by",
             header: "Encoded by",
-            cell: (visit) => visit.encoded_by,
+            cell: (visit) => (
+                <>
+                    {visit.encoded_by}
+                    {visit.imported && (
+                        <div className="mt-0.5">
+                            <Chip tone="navy">Imported</Chip>
+                        </div>
+                    )}
+                    {visit.written_by && (
+                        <div className="text-xs text-muted-foreground">
+                            Written by {visit.written_by}
+                        </div>
+                    )}
+                </>
+            ),
         },
         {
             key: "actions",

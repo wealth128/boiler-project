@@ -15,5 +15,6 @@ enum VisitDeleteReason: string implements DeleteReason
     case WrongPatient = 'Wrong patient selected';
     case EncodedByMistake = 'Encoded by mistake';
     case TestEntry = 'Test / training entry';
+    case WrongImport = 'Wrong import';
     case Other = 'Other (specify)';
 }

@@ -11,6 +11,7 @@ use App\Models\TestRestoreRun;
 use App\Models\BackupRun;
 use App\Models\Branch;
 use App\Models\Diagnosis;
+use App\Models\ImportBatch;
 use App\Models\MonthClosure;
 use App\Models\MonthDeletion;
 use App\Models\Patient;
@@ -64,6 +65,12 @@ class AppServiceProvider extends ServiceProvider
      * - report-files: Print, PDF and Excel together (20). Each one counts
      *   every report, so this stops a stuck button or script, not normal use.
      * - patient-search: the Encode search box (60). It searches while typing.
+     * - import-actions: the downtime import (template download, upload,
+     *   confirm, undo) shares 10 a minute per user. Each reads or writes a
+     *   whole file, so a stuck button must not pile them up.
+     * - import-page: opening the Import page, its preview and the paging of
+     *   Past imports (60 a minute per user). Light, and clicked through, so it
+     *   has its own, higher limit.
      * - backup-actions: Run backup now, Run test restore now and Copy to USB
      *   share 6 a minute per user. Each is heavy (mysqldump, a restore, a copy),
      *   so a stuck button or a script must not queue them up.
@@ -72,6 +79,8 @@ class AppServiceProvider extends ServiceProvider
     {
         RateLimiter::for('report-files', fn (Request $request): Limit => Limit::perMinute(20)->by($request->user()?->id ?? $request->ip()));
         RateLimiter::for('backup-actions', fn (Request $request): Limit => Limit::perMinute(6)->by($request->user()?->id ?? $request->ip()));
+        RateLimiter::for('import-actions', fn (Request $request): Limit => Limit::perMinute(10)->by($request->user()?->id ?? $request->ip()));
+        RateLimiter::for('import-page', fn (Request $request): Limit => Limit::perMinute(60)->by($request->user()?->id ?? $request->ip()));
         RateLimiter::for('patient-search', fn (Request $request): Limit => Limit::perMinute(60)->by($request->user()?->id ?? $request->ip()));
     }
 
@@ -144,6 +153,7 @@ class AppServiceProvider extends ServiceProvider
             'age_brackets' => AgeBracket::class,
             'month_closures' => MonthClosure::class,
             'month_deletions' => MonthDeletion::class,
+            'import_batches' => ImportBatch::class,
             'report_snapshots' => ReportSnapshot::class,
             'backup_runs' => BackupRun::class,
             'backup_marks' => BackupMark::class,
