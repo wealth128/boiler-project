@@ -63,6 +63,7 @@ return [
             'path' => storage_path('logs/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
             'replace_placeholders' => true,
+            'tap' => [App\Services\RedactSecretsInLogs::class],
         ],
 
         'daily' => [
@@ -71,6 +72,7 @@ return [
             'level' => env('LOG_LEVEL', 'debug'),
             'max_files' => env('LOG_DAILY_DAYS', 14),
             'replace_placeholders' => true,
+            'tap' => [App\Services\RedactSecretsInLogs::class],
         ],
 
         'monthly' => [
@@ -79,6 +81,7 @@ return [
             'level' => env('LOG_LEVEL', 'debug'),
             'max_files' => 3,
             'replace_placeholders' => true,
+            'tap' => [App\Services\RedactSecretsInLogs::class],
         ],
 
         'slack' => [
@@ -124,6 +127,7 @@ return [
             'driver' => 'errorlog',
             'level' => env('LOG_LEVEL', 'debug'),
             'replace_placeholders' => true,
+            'tap' => [App\Services\RedactSecretsInLogs::class],
         ],
 
         'null' => [

@@ -1,6 +1,6 @@
 # Project History & Handover: AFP Hospital Patient Encoding & Reporting System
 
-_Last updated: 2026-10-19 (Step 6i-2 done and merged; spare-PC test still to do) · Read this first in any new Claude conversation about this project._
+_Last updated: 2026-10-21 (Step 7a Security review done and merged; next 7b pagination) · Read this first in any new Claude conversation about this project._
 
 This file carries over what was discussed in the first planning-and-review conversation (Oct 3–15, 2026), so a new conversation can continue without starting over. The official rules are still in `CLAUDE.md` and the other `planning/` files. This file explains **what was decided, why, where we are, and how to work with me.**
 
@@ -9,13 +9,13 @@ This file carries over what was discussed in the first planning-and-review conve
 ## 0. Quick Start (read this first; it may be all you need)
 | | |
 |---|---|
-| **Current step** | **6j Downtime import is done and merged (2026-10-21):** Admin imports the Excel / Google Sheets file the offices filled in while the system was down (Records > Import: template, upload, preview, confirm, Past imports, Undo import), with the code-review fixes (month lock and re-check, one import per file, duplicates that appear after the preview held back, list items re-read at save, bounded queries, row and size limits, Windows-1252 CSV, page limit 60 a minute). Before it: **6i-3 Backup care is approved and merged (2026-10-19):** automatic monthly test restore (1st, 03:00) with a scratch database and its own MySQL account, **Run test restore now**, **Copy to USB** (removable drives on the server, `.part` copy, newest 8), health checks, an **x on every Admin warning bar**, and the review fixes (count ranges, throttle, lock length, audited USB failures, login-file cleanup). Before it: **6i-2 Windows scripts is done and merged (2026-10-19)** (`install.bat`, `update.bat`, `restore.bat`, `health.bat`, `reset-admin-password.bat`, `uninstall-tasks.bat` in `system/scripts/windows/`; MySQL and Apache as Windows services; site file; scheduler task with a real backup proof; firewall). Before it: **6i-1-fix is done** and merged (2026-10-19), after 6i-1 (picture zip in every backup, `census:install` / `update` / `restore` / `health`, scheduler heartbeat bar, System health page). Fixes: remember-me always off, restore checks everything before it deletes, install refuses a live system, one month lock per year, accent-proof duplicate-patient lock, caches cleared after a restore, `MYSQL_PATH` saved by the install |
-| **Next step** | **7a Security review** (`planning/security.md` section 3), using `planning/Prompts/prompt-7a-security-review.md`. It must cover the import routes too (Admin only, confirm checked again on the server, file handling). Start a **new conversation** for each step. |
+| **Current step** | **7a Security review is done and merged (2026-10-21):** every route against every kind of sender (70 routes, 490 cases, a new route without an entry fails), every form with the browser checks removed, an audit entry for every kind of change, no secret in the audit log, logs or pages, code scans, production settings (security headers with a CSP, cookie flags, no developer routes, friendly 500 page, log cleaner), login and session rules, uploads and path traversal. 15 findings (1 medium: no security headers; 6 low: server errors on list-shaped input; the rest low or informational), all fixed or explained. 1,585 new tests (suite: 3,394). Report: `docs/security-review-2026-10.md`. Before it: **6j Downtime import (2026-10-21)**, **6i-3 Backup care**, **6i-2 Windows scripts** and **6i-1 / 6i-1-fix** (see section 5). |
+| **Next step** | **7b Pagination**, then **7c Responsive UI**, then **7d Excel export**, then **7e Audit retention** (prompts in `planning/Prompts/`: `prompt-7b-pagination.md`, `prompt-7c-responsive-ui.md`, `prompt-7d-excel-export.md`, `prompt-7e-audit-retention.md`). After them: the spare-PC test, then the Phase 7 parallel run. Start a **new conversation** for each step. |
 | **Still to prove** | The downtime import was tested with generated .xlsx and .csv files only: try it once with a real Excel file and a real Google Sheets download from an office. The 6i-3 test restore (creating `census_restore_test`, loading a dump into the scratch database) and Copy to USB (a real removable drive) were only tested with fakes: include them in the spare-PC test. `census:install`, `census:update` and `census:restore` were only tested with fakes (no real MySQL root login, no real restore). **They need a real test on a spare PC** before handover. The `.bat` files and the Laragon service setup were also written without a real Laragon at hand: `docs/windows-scripts-manual-test.md` is the test list (install, run again, services, reboot with no one logged in, crash restart, firewall, backup, update, restore). |
-| **Next prompt file** | `planning/Prompts/prompt-7a-security-review.md`. Last prompts used: `prompt-6j-import.md` and `prompt-6j-fix.md` |
+| **Next prompt file** | `planning/Prompts/prompt-7b-pagination.md`. Last prompt used: `prompt-7a-security-review.md` |
 | **Last merged commit** | 1ecd31e (Step 6j merge, 2026-10-21; step commit 1d84be9) |
-| **Open decisions** | HTTPS vs HTTP on the hospital LAN (Phase 8). (none about PHP: the minimum is decided, see the decisions log). |
-| **Open item (blocks Phase 8)** | **Spare-PC test of 6i-1 and 6i-2 is still required before Phase 8:** a fresh Windows PC with only the `docs/requirements.md` items, then `docs/windows-scripts-manual-test.md` from section 0 to the end. Fill in the installer versions in `docs/requirements.md` at the same time. |
+| **Open decisions** | HTTPS vs HTTP on the hospital LAN (Phase 8); if HTTPS, set `SESSION_SECURE_COOKIE=true` and think about the HSTS header. Whether to update `vite-plus` (see the open items). |
+| **Open items (from 7a and before)** | **(1) Spare-PC test of 6i-1, 6i-2 and 6i-3 is still required before Phase 8:** a fresh Windows PC with only the `docs/requirements.md` items, then `docs/windows-scripts-manual-test.md` from section 0 to the end. Fill in the installer versions in `docs/requirements.md` at the same time. **(2) HTTPS decision.** **(3) BitLocker** on the server and backup PCs. **(4) Windows firewall** check on the real server (`install.bat` sets it). **(5) `vite-plus` dev-only audit finding:** `npm audit` reports 1 high (`launch-editor` inside `vite-plus`); it is the developer build tool and does not run on the server (`npm audit --omit=dev` and `composer audit` are clean). The only fix is `npm audit fix --force` (vite-plus 1.3.0, breaking; move the vite alias in `package.json` with it): decide later. |
 | **Notes and passwords** | Personal notes: planning/my-project-notes.md. Passwords: _private/credentials.md (never committed). |
 
 **Token-saving rules (agreed 2026-10-16):**
@@ -143,6 +143,19 @@ This file carries over what was discussed in the first planning-and-review conve
 - **Past imports and Undo:** `import_batches` (file name, counts, who, when, undone). Undo import moves every visit of the batch to Trash with the reason "Wrong import", and the patients only that batch created (unless they have other visits), refused while any of its visits is in a closed month. Audit: `import.created` (counts and file name, no patient data) and `import.undone`, plus the normal entries for each record.
 - **Template download was slow** (about 1 s, 83 KB): formats are now set per column instead of per cell (about 0.14 s, 13 KB).
 
+### Security review (7a, decided 2026-10-21)
+- **Test everything from the route list, not from a hand-made list:** `RouteAccessMatrixTest` reads `Route::getRoutes()`; a new route with no entry fails until someone writes its answer from `planning/rbac.md`. Seven senders: signed out, the four roles, an Admin with a temporary password and a deactivated Admin.
+- **Routes outside `rbac.md`** (`/`, `/login`, `/logout`, password confirm, `/settings`, `/up`, `/storage/*`, not found) now have written answers in `planning/rbac.md`.
+- **Security headers on every response** (`SecurityHeaders` middleware: `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Content-Security-Policy`). The CSP is strict for scripts (own server plus a per-response nonce, no `unsafe-eval`) and keeps `unsafe-inline` for **styles only**, because the interface and a toast library set styles while running. A response that sets a stricter policy itself (the pictures) keeps it. The Vite dev server is allowed only while `npm run dev` runs and never in production. No HSTS header until HTTPS is decided.
+- **Cookie:** `http_only` and `same_site=lax` fixed in the code; `Secure` from `SESSION_SECURE_COOKIE` (default off).
+- **`'serve'` follows `APP_ENV`:** no `storage/{path}` route in production, so the manual Phase 8 step is gone.
+- **Ids in addresses are at most 18 digits.** A longer number is "not found".
+- **Anything that can arrive as a list** (`name[]=x`) must be checked as text before it is cleaned or cast. The tamper tests send lists to every field.
+- **Logs are cleaned** of secrets by a formatter wrapper on every file channel; a failed backup's error text is cleaned before it is saved.
+- **Laravel 13 CSRF:** a request is accepted with the token or when the browser says it is "same-origin"; a script with no token and no such header gets 419. The session cookie is SameSite=Lax as well.
+- **Test rules learned:** global helper functions in test files share one namespace (give new ones a prefix); in Pest datasets a value that is an array is spread into arguments (wrap it in another array); a `Visit` or `Patient` created already in Trash gets no number (create it, then trash it).
+- **Left open on purpose:** a user with a temporary password gets "not found" for a record number that does not exist (the record is looked up before the redirect): no data is exposed.
+
 ### Stack
 - Laravel 13 (PHP 8.4.1 or newer) + official React starter kit (Inertia, TypeScript, Tailwind), Fortify, Wayfinder, Pest, MySQL. Monolith. **No Sanctum, no Spatie.** Allowed packages: maatwebsite/excel, barryvdh/laravel-dompdf. vite-plus 0.3.3 (when updating it, update the `vite` alias in package.json to match).
 - Databases: `patient_census` (dev), `patient_census_test` (**tests only**). User `census_app`.
@@ -180,7 +193,7 @@ This file carries over what was discussed in the first planning-and-review conve
 - **Security plan:** `planning/security.md`. Every step follows its section 2. HTTPS vs HTTP on the LAN is **still to decide** with hospital IT/CO (Phase 8).
 - **Documentation phase 7.5** added: developer guide, database guide, how-to, learning path, operations guide, user manual, keyboard shortcuts (collected in `docs/keyboard-shortcuts.md` as each screen is built).
 
-## 5. Where We Are (2026-10-21, after 6j)
+## 5. Where We Are (2026-10-21, after 7a)
 | Step | Status |
 |---|---|
 | 1–5, 5b, 5c (foundation, login, RBAC, audit, Trash service, backup, temp passwords) | Done, merged |
@@ -199,7 +212,11 @@ This file carries over what was discussed in the first planning-and-review conve
 | **6i-2 Windows scripts** (`install.bat`, `update.bat`, `restore.bat`, `health.bat`, `reset-admin-password.bat`, `uninstall-tasks.bat`, services, site file, Task Scheduler, firewall) | **Done, merged (2026-10-19)**. Needs the spare-PC test (`docs/windows-scripts-manual-test.md`) |
 | **6i-3 Backup care** (automatic monthly test restore, Run test restore now, Copy to USB, health checks, x on warning bars, review fixes) | **Done, merged (2026-10-19).** Real MySQL scratch restore and real USB drive still to prove on the spare PC |
 | **6j Downtime import** (template download, upload, preview, confirm, Past imports, Undo import) + review fixes + page limit 60 a minute | **Done, merged (2026-10-21).** Tested with generated files; a real Excel / Google Sheets file from an office still to try |
-| 7a Security review (`planning/security.md` section 3, `planning/Prompts/prompt-7a-security-review.md`) | **Next** (end of Phase 6) |
+| **7a Security review** (`planning/security.md` section 3, report `docs/security-review-2026-10.md`) | **Done, merged (2026-10-21).** Open items: see section 0 |
+| 7b Pagination (`planning/Prompts/prompt-7b-pagination.md`) | **Next** |
+| 7c Responsive UI (`planning/Prompts/prompt-7c-responsive-ui.md`) | Then |
+| 7d Excel export (`planning/Prompts/prompt-7d-excel-export.md`) | Then |
+| 7e Audit retention (`planning/Prompts/prompt-7e-audit-retention.md`) | Then |
 | Phase 7 parallel run (1 month beside Google Sheets) · 7.5 Docs · 8 Deploy · 9 Training | Later |
 
 ## 6. Notes from Reports (6d, done)

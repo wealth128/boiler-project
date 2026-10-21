@@ -27,13 +27,18 @@ trait UserFormRules
 
     protected function prepareForValidation(): void
     {
+        // Only text is tidied. A list (name[]=x) is left as it is: the rules below refuse it.
+        $name = $this->input('name');
+        $username = $this->input('username');
+
         $this->merge([
-            'name' => trim((string) $this->input('name')),
-            'username' => mb_strtolower(trim((string) $this->input('username'))),
+            'name' => is_string($name) ? trim($name) : $name,
+            'username' => is_string($username) ? mb_strtolower(trim($username)) : $username,
         ]);
 
         // The office follows the role, except for encoders.
-        $role = Role::tryFrom((string) $this->input('role'));
+        $chosen = $this->input('role');
+        $role = is_string($chosen) ? Role::tryFrom($chosen) : null;
 
         if ($role?->fixedOffice() !== null) {
             $this->merge(['office' => $role->fixedOffice()->value]);

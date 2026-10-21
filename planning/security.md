@@ -1,6 +1,6 @@
 # Security Plan: AFP Hospital Patient Encoding & Reporting System
 
-_Last updated: 2026-10-19 · Applies to every build step and to deployment_
+_Last updated: 2026-10-21 · Applies to every build step and to deployment_
 
 The system holds patient names, birthdates and diagnoses, so it is treated as sensitive data (Philippine Data Privacy Act of 2012). It runs on the hospital LAN only, with no internet. The main risks are not outside hackers. They are: someone using another person's account, a user reaching data their role shouldn't see, records changed or deleted without a trace, data lost when the server PC fails, and the server PC itself being copied or stolen.
 
@@ -35,6 +35,13 @@ The system holds patient names, birthdates and diagnoses, so it is treated as se
 | `census:install`, `census:update`, `census:restore`: root password typed hidden, never stored or logged; restore needs `RESTORE` typed, takes a safety backup first and refuses files outside `BACKUP_PATH` | Step 6i-1 |
 | **Automatic test restore and Copy to USB:** scratch database with its own account (`census_restore_test`, rights on that database only, fixed name), USB copy to removable drives only with `.part` files and size checks, the three heavy Backups buttons limited to 6 a minute per user, MySQL login files cleaned up after a crash | Step 6i-3 |
 | Pages share only the user's id, name, username, role, office and a per-login value (`loginAt`) | Step 2.5, 6i-3 |
+| **Security headers on every response (Step 7a):** `X-Frame-Options: SAMEORIGIN`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: same-origin`, and a `Content-Security-Policy` (scripts only from this server plus one inline script with a new nonce on every response, no `unsafe-eval`; styles keep `unsafe-inline` because the interface sets styles while running). Checked in Chrome against the production build | Step 7a |
+| **Session cookie:** HttpOnly and SameSite=Lax fixed in the code (not read from `.env`); `Secure` from `SESSION_SECURE_COOKIE` (default off for plain HTTP; `true` when HTTPS is chosen) | Step 7a |
+| **No developer or storage routes in production:** `'serve'` in `config/filesystems.php` follows `APP_ENV`, so `storage/{path}` and `_inertia/devtools` do not exist when `APP_ENV=production`. Tested by starting the app in production mode | Step 7a |
+| **Friendly 500 page:** with `APP_DEBUG=false` a server error shows no stack trace, SQL, class name or file path, as a page, an Inertia request or JSON. System health flags `APP_ENV` and `APP_DEBUG` | Step 7a |
+| **Log files hide secrets:** every file log channel cleans the `APP_KEY`, database and restore-test passwords, bcrypt hashes and `password=` / `remember_token=` values (`App\Services\RedactSecretsInLogs`); a failed backup's error text is cleaned before it is saved | Step 7a |
+| **Route x role matrix and tamper tests:** every route is in `tests/Feature/Security/RouteAccessMatrixTest.php` (a new route without an entry fails); every form is tested with wrong, missing, too long, list-shaped and extra values, other people's records, records in Trash and closed months. Code scans (raw SQL, redirects, files under `public/`, programs started, secrets, `$fillable`) fail when a new unlisted use appears | Step 7a |
+| **Ids in addresses are at most 18 digits** (`Route::pattern`), so a huge number is "not found", not a server error | Step 7a |
 | AFP serial number not collected | Phase 1 |
 
 ## 2. Rules for Every New Screen (Claude Code follows these)
@@ -55,6 +62,8 @@ The system holds patient names, birthdates and diagnoses, so it is treated as se
 15. **Locks that cover related records share one key:** closing and reopening a month use one lock per year (`month-close:YYYY`); a new patient's lock key is built from the name the way MySQL compares it (case and accents ignored), so different spellings of one person cannot get different locks.
 
 ## 3. Security Review (end of Phase 6, before the parallel run)
+**Done in Step 7a (2026-10-21): see `docs/security-review-2026-10.md`** (15 findings, all fixed or explained; the open items for the developer are at the end of that report). The list below is what was checked. Re-run `php artisan test tests/Feature/Security` after any change to routes, roles, forms or settings.
+
 A full check of the finished system, by Claude Code and then by me:
 - Every route × every role: allowed or 403 (one test file covering the whole route list).
 - Try each form with the browser checks removed (wrong values, missing values, someone else's record).
@@ -66,9 +75,9 @@ A full check of the finished system, by Claude Code and then by me:
 ## 4. Server Setup (Phase 8 checklist)
 **Laravel**
 - `APP_ENV=production`, `APP_DEBUG=false`, a new `APP_KEY` made on the server.
-- Run `php artisan route:list` and confirm no `_inertia/devtools` or `storage/{path}` routes (`'serve' => false` in `config/filesystems.php`).
+- Run `php artisan route:list` and confirm no `_inertia/devtools` or `storage/{path}` routes. Nothing to set by hand: `config/filesystems.php` turns `serve` off whenever `APP_ENV=production` (Step 7a).
 - Don't run the dev seeder. Set the first Admin and System Admin passwords on the server; both must change them at first login.
-- Session cookie: `http_only` on, `same_site=lax`; `secure` on if HTTPS is used.
+- Session cookie: `http_only` and `same_site=lax` are fixed in the code (Step 7a); set `SESSION_SECURE_COOKIE=true` in `.env` if HTTPS is used (never on plain HTTP: nobody could log in). If HTTPS: also consider the `Strict-Transport-Security` header, only after HTTPS works on every office PC.
 
 **HTTPS decision:** on a closed LAN, plain HTTP still lets anyone on the same network read traffic, including passwords. Options: (a) HTTPS with a certificate from an internal certificate authority or a self-signed one installed on each office PC, or (b) accept HTTP on a separate, wired, staff-only network. Decide with the hospital IT/CO.
 

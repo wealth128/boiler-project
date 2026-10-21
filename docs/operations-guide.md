@@ -193,6 +193,23 @@ The System Admin can reset other people's passwords in the system. Only this fil
 - Only visits written during a downtime can be imported. Old Google Sheets history is not imported.
 - Problems with a file: `docs/troubleshooting.md`, section 9.
 
+### 9. Security settings in the server file (`.env`)
+
+These are set once at install and are checked by **System health** ("Safe settings"). Change them only with IT, then run `php artisan census:install --repair` to rebuild the caches.
+
+| Setting | Value on the hospital server | What it does |
+|---|---|---|
+| `APP_ENV` | `production` | Turns off developer tools. With `production` the system has no `/storage/...` address and no developer pages at all. |
+| `APP_DEBUG` | `false` | A server error shows the plain "Something went wrong" page. Never a stack trace, SQL or file path. If this is `true`, **System health** shows a red problem. |
+| `SESSION_SECURE_COOKIE` | `false` while the system runs on plain HTTP. `true` the day HTTPS is switched on. | With `true` the browser sends the login cookie only over HTTPS. **Never set it to `true` on plain HTTP: nobody could log in.** |
+
+Always on, not settable (so a wrong value in `.env` cannot weaken them):
+- The login cookie is **HttpOnly** (page scripts cannot read it) and **SameSite=Lax** (other sites cannot use it).
+- Every page carries the headers `X-Frame-Options: SAMEORIGIN`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: same-origin` and a `Content-Security-Policy` that allows scripts, fonts and pictures from the system itself only.
+- The log files (`storage/logs`) hide passwords, password hashes, the `APP_KEY` and the database passwords, even if an error message repeats them.
+
+If an office PC shows a blank page after an update and the browser console mentions "Content Security Policy", run `php artisan census:update` again (the page files and the server must be the same version) and tell the developer.
+
 ---
 
 ## Not yet in this draft (Phase 7.5)

@@ -48,6 +48,20 @@ _Last updated: 2026-10-13 · Status: Confirmed by user_
 - **Forgot password:** there is no self-service reset (no "Forgot password" link, no email). The user asks Admin or System Admin. Both follow the same rule: before setting a new password, they must re-enter **their own** password to confirm. The Admin's own password is the exception: see "Admin forgot the password".
 - **Initial password must be changed:** a password set by Admin or System Admin, for a new account or a reset, is temporary. Right after logging in with it, the user must choose their own new password before they can use the system. Until then, they can only open the "Choose your new password" page or Log out. The new password can't be the same as the temporary one. This is written to the audit log (`user.password_changed`). A password set by IT with `census:reset-admin-password` is temporary too. Admin and System Admin therefore never know a user's working password.
 
+## Routes That Are Not a Role Screen (decided in Step 7a, 2026-10-21)
+These belong to the framework or to no screen. `rbac.md` did not cover them. The answers below are tested in `system/tests/Feature/Security/RouteAccessMatrixTest.php` for every kind of sender (signed out, the four roles, a user with a temporary password, a deactivated user).
+
+| Route | Signed out | Signed in (any role) | Temporary password / deactivated |
+|---|---|---|---|
+| `/` | Sent to login | Sent to the role's own page | Sent to "Choose your new password" / sent to login |
+| `/login` (page and send) | Works | Sent away from the login page | Same as the column before |
+| `/logout` | Sent to login | Works | Works with a temporary password; deactivated is sent to login |
+| `/user/confirm-password`, `/user/confirmed-password-status` | Sent to login | Works | Sent to "Choose your new password" / sent to login |
+| `/settings` | Sent to login | Sent on to the profile page | Same as the column before |
+| `/up` (health check) | Works | Works | Works. The only page open to everyone, with no data in it |
+| `/storage/{path}` (GET and PUT) | Refused (403) | Refused (403) | Refused. **Does not exist when `APP_ENV=production`** |
+| Any other address | The friendly "not found" page (404) | The friendly "not found" page (404) | Sent to "Choose your new password" / sent to login |
+
 ## Decisions
 - **System Admin and patient data** (confirmed 2026-10-08): **no access** to patient records, reports or the audit log. User accounts only.
 - **Password reset** (confirmed 2026-10-08): Admin and System Admin have the same right and the same rule. They re-enter their own password, then set a temporary password. Passwords are hashed and never shown.

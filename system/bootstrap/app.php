@@ -6,6 +6,7 @@ use App\Http\Middleware\EnsureRole;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\RequirePasswordChange;
+use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -27,6 +28,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => EnsureRole::class,
         ]);
+
+        // Security headers on every response, also the health check and error pages.
+        $middleware->append(SecurityHeaders::class);
 
         // Before "auth": a user moved to Trash no longer loads, and "auth"
         // would send them to login without saying why.

@@ -32,7 +32,9 @@ class PatientSearchController extends Controller
         // The route has role:encoder,admin; the Gate is the same rule inside the controller.
         Gate::authorize(Permission::EncodeVisits->value);
 
-        $query = trim((string) $request->query('q', ''));
+        // ?q[]=x is not text: treat it as an empty search, not an error.
+        $typed = $request->query('q');
+        $query = is_string($typed) ? trim($typed) : '';
 
         if (mb_strlen($query) < self::MIN_LENGTH) {
             return response()->json(['query' => $query, 'data' => []]);
