@@ -7,6 +7,7 @@ use App\Http\Controllers\Backup\BackupController;
 use App\Http\Controllers\Encode\EncodeController;
 use App\Http\Controllers\Encode\PatientSearchController;
 use App\Http\Controllers\Encode\VisitController;
+use App\Http\Controllers\Records\ImportController;
 use App\Http\Controllers\Records\PatientRecordController;
 use App\Http\Controllers\Records\VisitRecordController;
 use App\Http\Controllers\Reports\MonthController;
@@ -67,6 +68,18 @@ Route::middleware('auth')->group(function () {
         Route::get('records/patients', [PatientRecordController::class, 'index'])->name('records.patients');
         Route::delete('visits/{visit}', [VisitRecordController::class, 'destroy'])->name('visits.destroy');
         Route::delete('patients/{patient}', [PatientRecordController::class, 'destroy'])->name('patients.destroy');
+
+        // Downtime import: Records > Import (Step 6j). The template, the upload,
+        // the confirm and the undo share one limit (10 a minute per user). The page
+        // itself (and the paging of Past imports) has its own, 60 a minute.
+        Route::get('records/import', [ImportController::class, 'index'])->middleware('throttle:import-page')->name('records.import');
+        Route::middleware('throttle:import-actions')->group(function () {
+            Route::get('records/import/template', [ImportController::class, 'template'])->name('records.import.template');
+            Route::post('records/import', [ImportController::class, 'upload'])->name('records.import.upload');
+            Route::post('records/import/confirm', [ImportController::class, 'confirm'])->name('records.import.confirm');
+            Route::post('records/import/cancel', [ImportController::class, 'cancel'])->name('records.import.cancel');
+            Route::post('records/import/{batch}/undo', [ImportController::class, 'undo'])->whereNumber('batch')->name('records.import.undo');
+        });
     });
 
     // --- Reports ------------------------------------------------ Admin, Viewer (CO)

@@ -8,7 +8,7 @@ import { PageHeader } from '@/components/shared/page-header';
 import { Pagination } from '@/components/shared/pagination';
 import { Button } from '@/components/ui/button';
 import { CarePanel } from '@/features/backups/care-panel';
-import { ConfirmDialog } from '@/features/backups/confirm-dialog';
+import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { StatusPanel } from '@/features/backups/status-panel';
 import type {
     BackupMarkInfo,

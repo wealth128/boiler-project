@@ -29,6 +29,8 @@ use Illuminate\Support\Carbon;
  * @property string|null $diagnosis_other
  * @property Category $category
  * @property string|null $remarks
+ * @property string|null $written_by
+ * @property int|null $import_batch_id
  * @property int $encoded_by
  * @property int|null $updated_by
  * @property int|null $month_deletion_id
@@ -38,7 +40,7 @@ use Illuminate\Support\Carbon;
  */
 #[Fillable([
     'patient_id', 'visited_at', 'age', 'branch_id', 'rank_id', 'rank_other',
-    'diagnosis_id', 'diagnosis_other', 'category', 'remarks', 'encoded_by', 'updated_by',
+    'diagnosis_id', 'diagnosis_other', 'category', 'remarks', 'written_by', 'import_batch_id', 'encoded_by', 'updated_by',
 ])]
 class Visit extends Model
 {
@@ -104,6 +106,16 @@ class Visit extends Model
     public function diagnosis(): BelongsTo
     {
         return $this->belongsTo(Diagnosis::class)->withTrashed();
+    }
+
+    /**
+     * The downtime import that created this visit, if any.
+     *
+     * @return BelongsTo<ImportBatch, $this>
+     */
+    public function importBatch(): BelongsTo
+    {
+        return $this->belongsTo(ImportBatch::class);
     }
 
     /** @return BelongsTo<User, $this> */

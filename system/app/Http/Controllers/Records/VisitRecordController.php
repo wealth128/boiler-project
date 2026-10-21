@@ -180,6 +180,9 @@ class VisitRecordController extends Controller
             'remarks' => $visit->remarks,
             'category' => $visit->category->value,
             'encoded_by' => $visit->encoder->username,
+            // From a downtime import (Records > Import): who wrote the row, and a label.
+            'written_by' => $visit->written_by,
+            'imported' => $visit->import_batch_id !== null,
             // Admin may edit and delete any visit except in a closed month
             // (VisitPolicy). The server checks again on Edit and Delete.
             'month_closed' => $monthClosed,

@@ -28,6 +28,7 @@ _Last updated: 2026-10-13 · Status: Confirmed by user_
 | Delete user accounts (to Trash) | ✗ | ✗ | ✓ | ✓ | ✗ |
 | Delete a month report (all its visits, to Trash) | ✗ | ✗ | ✓ | ✗ | ✗ |
 | Restore from Trash, delete permanently, empty Trash | ✗ | ✗ | ✓ | ✗ | ✗ |
+| Import visits written during a downtime (download the template, upload, confirm, undo an import) · Gate `import-visits` | ✗ | ✗ | ✓ | ✗ | ✗ |
 
 ## Rules for Everyone
 - **Login lock:** an account locks after **5 wrong passwords**. Admin or System Admin unlocks it.
@@ -51,3 +52,4 @@ _Last updated: 2026-10-13 · Status: Confirmed by user_
 - **System Admin and patient data** (confirmed 2026-10-08): **no access** to patient records, reports or the audit log. User accounts only.
 - **Password reset** (confirmed 2026-10-08): Admin and System Admin have the same right and the same rule. They re-enter their own password, then set a temporary password. Passwords are hashed and never shown.
 - **Temporary passwords** (confirmed 2026-10-08): the user must change a password set by Admin or System Admin right after logging in with it. This applies to new accounts and to resets.
+- **Downtime import** (confirmed 2026-10-20, built in Step 6j): **Admin only**, Gate `import-visits` plus `role:admin` on every import route. Encoder, Viewer (CO) and System Admin get 403 on all of them (System Admin has no access to patient data). Imported visits are saved with the Admin as `encoded_by` and the staff name from the file as "Written by".

@@ -10,6 +10,7 @@ Laravel's standard tables (`sessions`, `cache`, `jobs`, `migrations`) are create
 | People | `users` | System accounts and roles |
 | | `patients` | One row per person (name, sex, birthdate) |
 | Encoding | `visits` | One row per visit: what gets counted in reports |
+| | `import_batches` | One row per downtime import file (who, when, counts, undone). Visits and new patients of the file point back to it |
 | Dropdown lists | `branches`, `ranks`, `diagnoses`, `age_brackets` | Admin-maintained choices |
 | Control | `month_closures` | Which months are closed (locked) |
 | | `report_snapshots` | Saved copy of each closed month's report, and of each quarter and year whose months are all closed |
@@ -48,6 +49,7 @@ Laravel's standard tables (`sessions`, `cache`, `jobs`, `migrations`) are create
 | middle_initial | varchar(2), null | |
 | sex | enum('Male','Female') | |
 | birthdate | date | |
+| import_batch_id | FK → import_batches, null | Set only on a patient first created by a downtime import, so "Undo import" knows which patients to move to Trash |
 | deleted_at | timestamp, null | Soft delete (Laravel `SoftDeletes`). Set = in Trash. |
 | deleted_by | FK → users, null | |
 | delete_reason | varchar(255), null | Required when moved to Trash. Picked from a list (section 5, "Delete reasons") |
@@ -68,6 +70,8 @@ Laravel's standard tables (`sessions`, `cache`, `jobs`, `migrations`) are create
 | diagnosis_other | varchar(120), null | Filled only when "Other (specify)" is chosen |
 | category | enum('OPD','ER','Admission') | |
 | remarks | text, null | |
+| written_by | varchar(60), null | Who wrote the row in the downtime sheet. Set only by an import. Shown in Records |
+| import_batch_id | FK → import_batches, null | Set only on visits created by a downtime import. Indexed. Shows the "Imported" label and drives "Undo import" |
 | encoded_by | FK → users | |
 | updated_by | FK → users, null | Last editor |
 | deleted_at | timestamp, null | Soft delete (Laravel `SoftDeletes`). Set = in Trash. |
@@ -75,7 +79,23 @@ Laravel's standard tables (`sessions`, `cache`, `jobs`, `migrations`) are create
 | delete_reason | varchar(255), null | Required when moved to Trash. Picked from a list (section 5, "Delete reasons") |
 | created_at, updated_at | | |
 
-**Indexes:** (category, visited_at, deleted_at) for reports · (patient_id, visited_at) for repeat checks · (encoded_by, visited_at) for "My entries today"
+**Indexes:** (category, visited_at, deleted_at) for reports · (patient_id, visited_at) for repeat checks · (encoded_by, visited_at) for "My entries today" · (import_batch_id) for Undo import
+
+### import_batches
+One row per downtime import (Records > Import). No soft delete: it is a record of what was imported, never removed.
+| Column | Type | Notes |
+|---|---|---|
+| id | bigint PK | |
+| file_name | varchar(255) | The name the file had on Admin's computer |
+| original_rows | int unsigned | Rows with data in the file |
+| imported_count | int unsigned | Rows saved as visits |
+| skipped_count | int unsigned | original_rows minus imported_count (unticked rows, and rows held back as new duplicates) |
+| imported_by | FK → users | The Admin who confirmed |
+| created_at | timestamp, indexed | |
+| undone_at | timestamp, null | Set when the whole import was moved to Trash |
+| undone_by | FK → users, null | |
+
+The uploaded file itself is not stored in the database. It waits in `storage/app/private/imports` for at most an hour (until confirm or cancel), and is never in `public/` or in a backup.
 
 ### branches
 | Column | Type | Notes |
@@ -191,6 +211,7 @@ Keys: `hospital_name`, `hospital_subtitle`, `report_office`, `prepared_by`, `pre
 - One **patient** has many **visits**.
 - Each **visit** points to one branch, rank, diagnosis, and the user who encoded it.
 - Each **rank** belongs to one **branch**.
+- A downtime **import batch** has many **visits** and many **patients** (`import_batch_id`). Reports ignore the column: imported visits count exactly like encoded ones.
 - **Age brackets** aren't linked by key. Reports place each visit's `age` into a bracket when the report runs.
 
 ## 4. Check: Can Every Report Count Be Produced?
@@ -257,3 +278,4 @@ GROUP BY p.sex;
 - Closed months save a report copy (`report_snapshots`): **Yes**
 - Dropdown lists: **Dynamic** (add, edit, delete, restore)
 - Delete: **Soft and hard** for visits, patients, users, dropdown items. Trash emptied by **Admin only**, never automatically.
+- Downtime import (Step 6j, 2026-10-20): `import_batches` table, `visits.written_by`, `visits.import_batch_id`, `patients.import_batch_id` (all new, nullable). No change to how reports count. Visit delete reason "Wrong import" added; Undo import uses that text for the visits and for the patients it moves to Trash.

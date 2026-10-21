@@ -21,8 +21,8 @@ type ConfirmDialogProps = {
 };
 
 /**
- * A plain "are you sure?" step for the Backups screen (run a backup, mark
- * a USB copy or a test restore). Nothing to type: none of these can lose data.
+ * A plain "are you sure?" step (Backups: run a backup, mark
+ * a USB copy or a test restore; Records > Import: import, undo). Nothing to type.
  */
 export function ConfirmDialog({
     open,

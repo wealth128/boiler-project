@@ -13,7 +13,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { NativeSelect } from '@/components/ui/native-select';
 import { Spinner } from '@/components/ui/spinner';
-import { ConfirmDialog } from '@/features/backups/confirm-dialog';
+import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import type { TestRestoreInfo, UsbDrive } from '@/features/backups/types';
 import { formatDateTime } from '@/lib/dates';
 import { cn } from '@/lib/utils';

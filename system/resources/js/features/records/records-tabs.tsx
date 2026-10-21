@@ -1,10 +1,11 @@
 import { Link } from '@inertiajs/react';
 import { useEffect } from 'react';
+import ImportController from '@/actions/App/Http/Controllers/Records/ImportController';
 import PatientRecordController from '@/actions/App/Http/Controllers/Records/PatientRecordController';
 import VisitRecordController from '@/actions/App/Http/Controllers/Records/VisitRecordController';
 import { cn } from '@/lib/utils';
 
-export type RecordsTab = 'visits' | 'patients';
+export type RecordsTab = 'visits' | 'patients' | 'import';
 
 /**
  * The last URL seen on each tab, with its filters and page. Switching tabs
@@ -14,6 +15,7 @@ export type RecordsTab = 'visits' | 'patients';
 const lastUrl: Record<RecordsTab, string> = {
     visits: VisitRecordController.index.url(),
     patients: PatientRecordController.index.url(),
+    import: ImportController.index.url(),
 };
 
 type RecordsTabsProps = {
@@ -23,17 +25,20 @@ type RecordsTabsProps = {
 };
 
 /**
- * "Visits" and "Patients" tabs of Patient Records. Each tab is its own page
- * (/records/visits, /records/patients), so the tabs are links.
+ * "Visits", "Patients" and "Import" tabs of Patient Records. Each tab is its
+ * own page (/records/visits, /records/patients, /records/import), so the
+ * tabs are links.
  */
 export function RecordsTabs({ current, url }: RecordsTabsProps) {
     useEffect(() => {
-        lastUrl[current] = url;
+        // The import tab always opens clean: a waiting file's preview is not worth coming back to.
+        lastUrl[current] = current === 'import' ? ImportController.index.url() : url;
     }, [current, url]);
 
     const tabs: { key: RecordsTab; label: string }[] = [
         { key: 'visits', label: 'Visits' },
         { key: 'patients', label: 'Patients' },
+        { key: 'import', label: 'Import' },
     ];
 
     return (

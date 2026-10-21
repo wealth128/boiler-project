@@ -82,6 +82,15 @@ With Inertia there's no separate API. Each URL below is a Laravel route. **GET**
 | | PUT | `/visits/{visit}` | Edit a visit (own same-day / Admin any) | Encoder, Admin |
 | Records | GET | `/records/visits` · `/records/patients` | Lists with filters | Admin |
 | | DELETE | `/visits/{visit}` · `/patients/{patient}` | Move to Trash (reason) | Admin |
+| Import | GET | `/records/import` | Import page: template and upload, the preview of a waiting file (`?file=<token>`), Past imports with paging. Own limit: 60 a minute per user | Admin |
+| | GET | `/records/import/template` | Download the .xlsx template, built from the current lists | Admin |
+| | POST | `/records/import` | Upload a file: it is kept (at most an hour) and checked; nothing is saved | Admin |
+| | POST | `/records/import/confirm` | Import the ticked rows (all or none) | Admin |
+| | POST | `/records/import/cancel` | Throw the waiting file away | Admin |
+| | POST | `/records/import/{batch}/undo` | Move a whole import to Trash (reason "Wrong import") | Admin |
+
+The template, upload, confirm, cancel and undo share 10 a minute per user (`import-actions`). Every import route has `role:admin` and the `import-visits` Gate. Files: `app/Services/Import/` (reader, analyzer, service, file store), `app/Exports/Import/` (template), `app/Http/Controllers/Records/ImportController.php`, `resources/js/features/import/`, `resources/js/pages/records/import.tsx`.
+
 | Reports | GET | `/reports` | Report on screen | Admin, CO |
 | | GET | `/reports/print` | Print view (opens in a new tab and starts the Print dialog); `?scope=all` = summary and every category | Admin, CO |
 | | GET | `/reports/export/pdf` · `/reports/export/excel` | Download (PDF: this tab, or `?scope=all`; Excel: always every category) | Admin, CO |

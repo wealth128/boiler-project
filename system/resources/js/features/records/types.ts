@@ -41,8 +41,12 @@ export type VisitRecord = {
     diagnosis: string;
     remarks: string | null;
     category: Category;
-    /** Username of the encoder. */
+    /** Username of the encoder (for an imported visit, the Admin who imported it). */
     encoded_by: string;
+    /** Who wrote the row on paper, for a visit from a downtime import. */
+    written_by: string | null;
+    /** From a downtime import (Records > Import). */
+    imported: boolean;
     /** No Edit or Delete until Admin reopens the month. */
     month_closed: boolean;
 };

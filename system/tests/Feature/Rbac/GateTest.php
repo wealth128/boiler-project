@@ -21,6 +21,7 @@ dataset('gate matrix', [
     'view-reports' => ['view-reports', ['admin', 'viewer']],
     'encode-visits' => ['encode-visits', ['encoder', 'admin']],
     'view-records' => ['view-records', ['admin']],
+    'import-visits' => ['import-visits', ['admin']],
 ]);
 
 it('gives each Gate to exactly the roles in rbac.md', function (string $gate, array $allowed) {
@@ -35,7 +36,7 @@ it('has a row in the table above for every Gate', function () {
 
     expect($names)->toEqualCanonicalizing([
         'manage-users', 'manage-lists', 'manage-trash', 'close-month', 'view-audit',
-        'view-backups', 'manage-settings', 'view-health', 'view-reports', 'encode-visits', 'view-records',
+        'view-backups', 'manage-settings', 'view-health', 'view-reports', 'encode-visits', 'view-records', 'import-visits',
     ]);
 });
 

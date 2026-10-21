@@ -59,6 +59,16 @@ Admin keeps the diagnosis list, the ranks of each branch (including the "Others"
 - **"Other (specify)"** in diagnoses and in "Others" types is fixed: it can't be edited, deleted or moved.
 - **Deleted items** go to Trash with a reason. They disappear from Encode, but past visits and reports keep showing them. An item can't be restored if its name is now used by an active item, or if its ages overlap an active bracket.
 
+## 5b. Downtime Import (added 2026-10-20, Step 6j)
+If the system is down for hours or days, offices write each visit in a spreadsheet (Excel or Google Sheets) using the downtime template. When the system is back, **Admin imports the file** so the reports are complete. This is **not** an import of old history (that stays out of v1.0).
+- **Where:** Records > Import. Admin only. Admin downloads the template there (it is built from the current lists) and keeps a copy on each office PC and a printed one.
+- **File:** one row = one visit, 17 columns in a fixed order (Visit Date, Visit Time, Patient ID, Last Name, First Name, M.I., Sex, Birthdate, Age, Branch, Rank / Type, Rank Other, Diagnosis, Diagnosis Other, Category, Remarks, Written by). `.xlsx` or `.csv` (UTF-8; a Windows-1252 CSV from Excel is converted), up to 2 MB and 2,000 rows. More rows, or data far below the last row, are refused, never cut.
+- **Preview first:** every row is OK, Warning or Error, with the reason in plain words. Nothing is saved until Admin confirms. Rows with an error can't be imported.
+- **Same rules as Encode:** the visit's fields use the Encode rules. A visit may not be in the future, before January 2026, or in a **closed month** (also checked again at confirm, under the same lock closing a month uses).
+- **Warnings Admin decides:** linked to an existing patient with the same name and birthdate (or "save as a new patient instead"), a possible duplicate visit (unticked by default), the same patient twice in the file, a typed Other that matches a listed name.
+- **At confirm:** only the ticked rows are saved, all or none, in one transaction. A row that became a possible duplicate after the preview is **held back** and listed in the result. If a branch, rank or diagnosis was removed or turned off, or a month was closed, meanwhile, the **whole import is refused**. A file can be imported **once**.
+- **Afterwards:** visits are dated from the file, the Admin is `encoded_by`, "Written by" is saved and shown with an "Imported" label in Records. Reports count them like any other visit. **Past imports** lists each import; **Undo import** moves the whole batch (and patients only it created) to Trash with the reason "Wrong import", unless a visit is in a closed month.
+
 ## 6. Setup
 - Runs on the **hospital network** (one server PC, other PCs open it in a browser), not on the internet
 - Server stays on **24/7** for ER
@@ -73,4 +83,4 @@ These are editable lists in the system, so design and build can start with sampl
 - Number of encoder PCs, target date, who supports it after go-live
 
 ## 8. Not in v1.0
-Discharge recording, transfer tracking, bed census, dashboard charts (later), importing old Google Sheets, address/doctor/unit fields, internet access.
+Discharge recording, transfer tracking, bed census, dashboard charts (later), importing old Google Sheets history (the downtime import of section 5b is different: only visits written while the system was down), address/doctor/unit fields, internet access.

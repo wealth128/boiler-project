@@ -25,6 +25,10 @@ The system holds patient names, birthdates and diagnoses, so it is treated as se
 | Delete goes to Trash first, with a reason; permanent delete needs the ID typed | Step 5 |
 | Daily backup at 02:00, kept 30 days, each run recorded | Step 5 |
 | Every backup also zips the picture files; a run succeeds only if both files were written | Step 6i-1 |
+| **Downtime import (Admin only, Gate `import-visits`):** the upload is checked again at confirm (the browser only sends row numbers), formulas in cells are kept as text and never calculated, the Encode rules and the closed-month rule apply, and Excel dropdown text can't run as a formula | Step 6j |
+| **Import file handling:** kept in `storage/app/private/imports` under a random 40-letter name, only for the user who uploaded it, at most an hour (cleanup every 15 minutes), never in `public/` or in a backup. 2 MB, 2,000 rows, and an .xlsx that is huge once unpacked is refused before it is read (no out-of-memory error) | Step 6j |
+| **Import races:** the file is claimed atomically (one import per file), the month locks `month-close:YYYY` are held for every year of the rows and the closed months are read again inside the transaction, branch / rank / diagnosis are re-read with a lock at save, undo takes the same month locks and locks the batch's patients. Audit entries for an import hold counts and the file name, no patient data | Step 6j |
+| Import page limit 60 a minute; template, upload, confirm, cancel and undo 10 a minute (per user) | Step 6j |
 | Red bar for Admin when the scheduler stops (no backup, no 8 PM sign-out); System health page and `census:health` | Step 6i-1 |
 | `census:restore` checks everything before it drops anything (dump readable and complete, mysql program starts, picture zip opens), then clears sessions, cache and locks after loading | Step 6i-1-fix |
 | `census:install` refuses on a server that already has the system (`.env` with an `APP_KEY`, users, or the database) unless `--force` and the typed words `INSTALL OVER` | Step 6i-1-fix |
@@ -57,6 +61,7 @@ A full check of the finished system, by Claude Code and then by me:
 - Confirm every change appears in the audit log, and that passwords never do.
 - `composer audit` and `npm audit`: no known vulnerable packages.
 - Restore a backup into a spare database and check the record counts match.
+- **Downtime import (6j):** every import route × every role (only Admin allowed); a hand-made confirm with rows that have errors, rows not in the file or someone else's token; a file with a formula, a huge formatted sheet, a CSV in another encoding; confirm twice; confirm while a month is closing; audit entries contain no patient data.
 
 ## 4. Server Setup (Phase 8 checklist)
 **Laravel**

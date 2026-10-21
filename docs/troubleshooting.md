@@ -1,6 +1,6 @@
 # Troubleshooting
 
-_Last updated: 2026-10-19 · For the developer and for hospital IT. Each problem says what you see, why it happens, and what to type._
+_Last updated: 2026-10-21 · For the developer and for hospital IT. Each problem says what you see, why it happens, and what to type._
 
 Run commands in the `system` folder. On the hospital server, use the same commands there. A quick overall check, any time:
 
@@ -202,6 +202,47 @@ A failed copy does not mark the weekly USB copy as done, so the yellow reminder 
 
 ---
 
-## 9. Still stuck
+## 9. When the system is down, and the import says no
+
+**While the system is down:** the offices write the visits in the downtime template (a copy on every office PC and on paper). The Admin imports the file when the system is back. The steps are in `docs/operations-guide.md`, section 8. **Download the template now**, before you need it: **Patient Records > Import > Download template**. It cannot be downloaded while the system is down.
+
+If the template is missing on every PC and the system is down, use any spreadsheet with these columns in this exact order, one row for each visit, and save it as `.xlsx` or `.csv` (UTF-8, comma): Visit Date, Visit Time, Patient ID, Last Name, First Name, M.I., Sex, Birthdate, Age, Branch, Rank / Type, Rank Other (specify), Diagnosis, Diagnosis Other (specify), Category, Remarks, Written by. Write the names exactly as in the lists.
+
+**What the import says, and what to do:**
+
+| Message | Why | Do this |
+|---|---|---|
+| "The first row must be the column names of the downtime template ... Column 4 should be ..." | The header row was changed, a column was added or removed, or it is a different file | Copy the rows into a fresh template (download it again) and upload again. |
+| "This file can't be read." | It is not a real Excel or CSV file, or it is damaged | Open it in Excel, **Save As** `.xlsx`, upload that. |
+| "This file has more than 2,000 rows. Split it into smaller files." or "bigger than 2 MB" | Too big for one import | Split the file and import the parts one at a time. |
+| "Visit Date “03/11/2026” is not a date" | The date is written in another way | Write dates as `2026-11-03`, or use a real Excel date cell. |
+| "Visit Time ... is not a time" | AM / PM or a typo | Write the time as 24-hour `14:05`. |
+| "September 2026 is closed. Reopen September 2026 first." | The month was closed in Reports | Reopen the month, import, close it again. |
+| "Visit Date is before January 2026" | Older visits are not imported | Do not import it. |
+| "Branch “X” is not on the list" or "Rank / Type “X” is not on the Army list" | Misspelled, or a rank of another branch | Pick it from the dropdown. If it is not on the list, choose **Other (specify)** and write the name in the next column. |
+| "... is turned off" or "was removed from the list" | A list item was switched off or sent to Trash after the template was made | Pick another item, or restore it in **Dropdown Lists** or **Trash**. |
+| "Patient ID P-000012 does not match this row" | The ID belongs to another person, or the name or birthdate was mistyped | Correct the ID or the name and birthdate. Leave the ID blank for a new patient. |
+| "Patient ID ... was not found" or "is in Trash" | A wrong ID, or the patient was moved to Trash | Correct the ID, or restore the patient in **Trash**. |
+| Warning "Will be linked to P-..." | A patient with the same name and birthdate exists | Fine if it is the same person. If not, tick **Save as a new patient instead**. |
+| Warning "Possible duplicate visit" | The patient already has a visit in the same category at the same minute | Leave it unticked unless it really is a second visit. |
+| Warning "Same patient, date and time as row N" | The same patient is written twice | Leave one of them unticked. |
+| "That file is no longer available. Upload it again." | The file waited more than one hour, or it was cancelled | Upload it again. |
+| "This file was already imported." | The same file was confirmed twice (double click or two tabs) | Nothing to do: the first import is saved. Check **Past imports**. |
+| "Not imported: row N now looks like a possible duplicate..." | A visit for that patient at the same date and time was saved after the preview (for example on the Encode screen) | The other rows were imported. The file stays: read the preview again and tick the row only if it is a real second visit. |
+| "... is closed. Reopen ... first. Nothing was imported." | A month was closed after the preview | Reopen the month (Reports), then import again. |
+| "Row N: the branch ... was turned off or removed after the preview" | A branch, rank or diagnosis in the file was changed in Lists while you were importing | Check the preview again and import again. |
+| "This file is too large to read." | The sheet is formatted far below the last row (for example down to row 1,000,000) | Copy your rows into a new copy of the downtime template and upload that. |
+| "A month is being closed or reopened right now." | Someone is closing a month at the same moment | Wait a minute and try again. |
+| "The import could not be saved, so nothing was imported." | A database problem. Nothing was saved | Wait a minute and click **Import** again. If it repeats, run `php artisan census:health` and read `storage/logs/laravel-<date>.log`. |
+
+**Imported the wrong file:** **Past imports > Undo import**. It moves the visits to Trash with the reason "Wrong import". Restore single visits from **Trash** if needed (restore the patient first).
+
+**Why a file disappears:** an uploaded file waits in `storage/app/private/imports` for one hour at most and is deleted after the import or when cancelled. A cleanup runs every 15 minutes. It is not included in backups.
+
+**Letters like Ñ show as ? or odd symbols:** save the CSV as **CSV UTF-8** (or use `.xlsx`). A plain Windows "CSV" is converted automatically, but another encoding may not be.
+
+---
+
+## 10. Still stuck
 
 Write down the exact message, the time, and what you clicked. Check `storage/logs/laravel-<date>.log` (no passwords are written there) and, for setup problems, `storage/logs/install.log`. Then tell the developer or hospital IT.

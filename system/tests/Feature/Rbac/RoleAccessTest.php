@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\AgeBracket;
+use App\Models\ImportBatch;
 use App\Models\Patient;
 use App\Models\Rank;
 use App\Models\User;
@@ -34,6 +35,12 @@ dataset('protected routes', [
     'patient records' => ['GET', '/records/patients', ['admin']],
     'delete visit' => ['DELETE', '/visits/{visit}', ['admin']],
     'delete patient' => ['DELETE', '/patients/{patient}', ['admin']],
+    'import page' => ['GET', '/records/import', ['admin']],
+    'import template' => ['GET', '/records/import/template', ['admin']],
+    'upload import file' => ['POST', '/records/import', ['admin']],
+    'confirm import' => ['POST', '/records/import/confirm', ['admin']],
+    'cancel import' => ['POST', '/records/import/cancel', ['admin']],
+    'undo import' => ['POST', '/records/import/{batch}/undo', ['admin']],
     // Reports: Admin, Viewer (CO)
     'reports page' => ['GET', '/reports', ['admin', 'viewer']],
     'print page' => ['GET', '/reports/print', ['admin', 'viewer']],
@@ -91,6 +98,7 @@ it('lets each role reach only the routes rbac.md allows', function (string $meth
     $otherUser = User::factory()->encoder()->create();
     $rank = Rank::factory()->create();
     $bracket = AgeBracket::create(['min_age' => 0, 'max_age' => 17]);
+    $batch = ImportBatch::create(['file_name' => 'a.csv', 'original_rows' => 0, 'imported_count' => 0, 'skipped_count' => 0, 'imported_by' => $actor->id, 'created_at' => now()]);
 
     $uri = strtr($uri, [
         '{visit}' => $visit->id,
@@ -98,6 +106,7 @@ it('lets each role reach only the routes rbac.md allows', function (string $meth
         '{user}' => $otherUser->id,
         '{rank}' => $rank->id,
         '{bracket}' => $bracket->id,
+        '{batch}' => $batch->id,
     ]);
 
     $response = $this->actingAs($actor)->from('/settings/profile')->call($method, $uri);
@@ -127,6 +136,6 @@ it('answers a JSON request from a role that is not allowed with JSON', function 
 });
 
 it('sends signed-out users to the login page instead of a 403', function (string $method, string $uri) {
-    $this->call($method, strtr($uri, ['{visit}' => 1, '{patient}' => 1, '{user}' => 1, '{rank}' => 1, '{bracket}' => 1]))
+    $this->call($method, strtr($uri, ['{visit}' => 1, '{patient}' => 1, '{user}' => 1, '{rank}' => 1, '{bracket}' => 1, '{batch}' => 1]))
         ->assertRedirect(route('login'));
 })->with('protected routes');

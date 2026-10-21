@@ -74,7 +74,7 @@ it('ends every reason list with "Other (specify)"', function (string $reasons) {
 ]);
 
 it('has the agreed reasons for each record type', function () {
-    expect(array_column(VisitDeleteReason::cases(), 'value'))->toBe(['Duplicate entry', 'Wrong patient selected', 'Encoded by mistake', 'Test / training entry', 'Other (specify)'])
+    expect(array_column(VisitDeleteReason::cases(), 'value'))->toBe(['Duplicate entry', 'Wrong patient selected', 'Encoded by mistake', 'Test / training entry', 'Wrong import', 'Other (specify)'])
         ->and(array_column(PatientDeleteReason::cases(), 'value'))->toBe(['Duplicate patient record', 'Encoded by mistake', 'Test / training entry', 'Other (specify)'])
         ->and(array_column(UserDeleteReason::cases(), 'value'))->toBe(['Resigned / separated', 'Transferred out', 'Created by mistake', 'Other (specify)'])
         ->and(array_column(ListItemDeleteReason::cases(), 'value'))->toBe(['Duplicate item', 'Misspelled, replaced with a corrected one', 'No longer used', 'Other (specify)'])

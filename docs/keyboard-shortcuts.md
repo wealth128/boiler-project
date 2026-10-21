@@ -1,6 +1,6 @@
 # Keyboard Shortcuts
 
-_Last updated: 2026-10-16 · One section per screen. Print and post beside each PC._
+_Last updated: 2026-10-21 · One section per screen. Print and post beside each PC._
 
 You can do everything on these screens without the mouse.
 
@@ -66,6 +66,18 @@ After picking a patient, the cursor jumps to the first empty field, usually **Di
 | Key | What it does |
 |---|---|
 | **Tab** to an **Edit** link, then **Enter** | Open that visit in the form |
+
+---
+
+## Patient Records > Import (Admin)
+
+No special shortcuts. Everything works with **Tab**, **Shift + Tab**, **Space** and **Enter**.
+
+| Key | What it does |
+|---|---|
+| **Tab** | Next control. Order: Download template, File, Upload and check; then, in the preview: Show, Tick the usual rows, Untick all, each row's checkbox and "Save as a new patient instead", Import, Cancel; then the Undo import links |
+| **Space** | Tick or untick a row, or a "Save as a new patient instead" box |
+| **Enter** or **Space** on a button | Press it. **Import** and **Undo import** ask once more; **Esc** closes that question |
 
 ---
 

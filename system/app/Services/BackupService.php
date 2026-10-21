@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\BackupStatus;
 use App\Models\BackupRun;
+use App\Services\Import\ImportFileStore;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -132,7 +133,9 @@ class BackupService
 
             $size = (int) filesize($file);
 
-            $this->zipper->zip((string) config('census.backup.files_path'), $zipFile, [$folder]);
+            // The backup folder itself and the files waiting for an import are left out
+            // (an uploaded import file holds patient data and lives at most an hour).
+            $this->zipper->zip((string) config('census.backup.files_path'), $zipFile, [$folder, ImportFileStore::path()]);
 
             clearstatcache(true, $zipFile);
 
