@@ -1,6 +1,14 @@
 import { Link, router } from "@inertiajs/react";
-import { ChevronDown, ChevronRight } from "lucide-react";
-import { useState } from "react";
+import { ChevronDown, ChevronRight, Menu } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+    Sheet,
+    SheetContent,
+    SheetDescription,
+    SheetTitle,
+    SheetTrigger,
+} from "@/components/ui/sheet";
 import { useCurrentUrl } from "@/hooks/use-current-url";
 import { usePermissions } from "@/hooks/use-permissions";
 import { cn } from "@/lib/utils";
@@ -9,7 +17,7 @@ import { APP_NAV_GROUPS, APP_NAV_ITEMS } from "./nav-items";
 import type { AppNavItem } from "./nav-items";
 
 const linkClass =
-    "rounded-md px-3 py-2 text-left text-sm font-medium whitespace-nowrap text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring";
+    "flex min-h-10 items-center rounded-md px-3 py-2 text-left text-sm font-medium whitespace-nowrap text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring";
 
 const STORAGE_PREFIX = "nav-group:";
 
@@ -46,8 +54,8 @@ type NavGroupProps = {
  * shows its links. The choice is remembered per browser. A section that holds
  * the current page is always opened when you arrive on that page.
  *
- * On a narrow screen the menu is a single row with no headings, so the links
- * are always shown there.
+ * The same sections are used by the side menu (1024 px and wider) and by the
+ * slide-in menu (below 1024 px).
  */
 function NavGroup({ groupKey, label, items, isActive }: NavGroupProps) {
     const hasActive = items.some((item) => isActive(item.activePath));
@@ -78,7 +86,7 @@ function NavGroup({ groupKey, label, items, isActive }: NavGroupProps) {
                     onClick={toggle}
                     aria-expanded={open}
                     aria-controls={linksId}
-                    className="hidden w-full cursor-pointer items-center justify-between rounded-md px-3 pt-4 pb-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring md:flex"
+                    className="flex w-full cursor-pointer items-center justify-between rounded-md px-3 pt-4 pb-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
                 >
                     {label}
                     {open ? (
@@ -90,9 +98,7 @@ function NavGroup({ groupKey, label, items, isActive }: NavGroupProps) {
             )}
             <div
                 id={linksId}
-                className={cn(
-                    !label || open ? "contents" : "hidden max-md:contents",
-                )}
+                className={cn(!label || open ? "contents" : "hidden")}
             >
                 {items.map((item) => {
                     const active = isActive(item.activePath);
@@ -118,11 +124,8 @@ function NavGroup({ groupKey, label, items, isActive }: NavGroupProps) {
     );
 }
 
-/**
- * Left menu. Shows only what the user's role allows. On narrow screens it
- * becomes a row that scrolls sideways under the top bar.
- */
-export function AppSideNav() {
+/** The sections and the Log out button, shared by both menus. */
+function NavContent() {
     const { can } = usePermissions();
     const { currentUrl } = useCurrentUrl();
 
@@ -136,10 +139,7 @@ export function AppSideNav() {
         currentUrl === path || currentUrl.startsWith(`${path}/`);
 
     return (
-        <nav
-            aria-label="Main"
-            className="flex shrink-0 gap-1 print:hidden overflow-x-auto border-b bg-card p-2 md:w-52 md:flex-col md:gap-0.5 md:overflow-x-visible md:border-r md:border-b-0 md:py-3"
-        >
+        <>
             {groups.map((group) => (
                 <NavGroup
                     key={group.key}
@@ -157,12 +157,89 @@ export function AppSideNav() {
                 className={cn(
                     linkClass,
                     // A bordered red button, so it reads as clickable at a glance.
-                    "ml-auto cursor-pointer border border-bad font-semibold text-bad hover:bg-bad-soft hover:text-bad md:mt-auto md:ml-0",
+                    "mt-4 cursor-pointer border border-bad font-semibold text-bad hover:bg-bad-soft hover:text-bad lg:mt-auto",
                 )}
                 data-test="logout-button"
             >
                 Log out
             </Link>
+        </>
+    );
+}
+
+/**
+ * Left menu for screens 1024 px and wider. Shows only what the user's role
+ * allows. Below 1024 px it is replaced by the menu button in the top bar
+ * (MobileMenu).
+ */
+export function AppSideNav() {
+    return (
+        <nav
+            aria-label="Main"
+            className="hidden w-52 shrink-0 flex-col gap-0.5 border-r bg-card px-2 py-3 lg:flex print:hidden"
+        >
+            <NavContent />
         </nav>
+    );
+}
+
+/**
+ * Menu button (hamburger) and slide-in panel for screens below 1024 px.
+ * Same links and same collapsible ADMINISTRATION section as the side menu.
+ * The panel closes by itself when you open a page.
+ */
+export function MobileMenu() {
+    const [open, setOpen] = useState(false);
+    const { currentUrl } = useCurrentUrl();
+    const [seenUrl, setSeenUrl] = useState(currentUrl);
+
+    // Opening a page closes the panel.
+    if (seenUrl !== currentUrl) {
+        setSeenUrl(currentUrl);
+        setOpen(false);
+    }
+
+    // The panel is for small screens: a window made wider closes it.
+    useEffect(() => {
+        const wide = window.matchMedia("(min-width: 1024px)");
+        const close = () => wide.matches && setOpen(false);
+
+        wide.addEventListener("change", close);
+
+        return () => wide.removeEventListener("change", close);
+    }, []);
+
+    return (
+        <Sheet open={open} onOpenChange={setOpen}>
+            <SheetTrigger asChild>
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="size-10 text-navy-foreground hover:bg-white/15 hover:text-navy-foreground lg:hidden print:hidden"
+                    aria-label="Open menu"
+                    data-test="menu-button"
+                >
+                    <Menu className="size-6" aria-hidden="true" />
+                </Button>
+            </SheetTrigger>
+            <SheetContent
+                side="left"
+                className="w-72 max-w-[85vw] gap-0 overflow-y-auto bg-card p-0 lg:hidden"
+            >
+                <SheetTitle className="border-b px-4 py-3 text-base">
+                    Menu
+                </SheetTitle>
+                <SheetDescription className="sr-only">
+                    Pages you can open
+                </SheetDescription>
+                <nav
+                    aria-label="Main menu"
+                    className="flex flex-1 flex-col gap-0.5 px-2 py-3"
+                >
+                    <NavContent />
+                </nav>
+            </SheetContent>
+        </Sheet>
     );
 }

@@ -27,7 +27,7 @@ export function SchedulerAlert() {
             >
                 <Link
                     href={system.health()}
-                    className="underline underline-offset-2"
+                    className="underline underline-offset-2 max-lg:inline-flex max-lg:min-h-10 max-lg:items-center"
                 >
                     Open System health
                 </Link>

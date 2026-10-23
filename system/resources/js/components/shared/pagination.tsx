@@ -23,7 +23,7 @@ type PaginationProps = {
 };
 
 const buttonClass =
-    "inline-flex h-8 min-w-8 items-center justify-center rounded-md border px-2.5 text-sm font-medium tabular-nums";
+    "inline-flex h-8 min-w-8 max-lg:h-10 max-lg:min-w-10 items-center justify-center rounded-md border px-2.5 text-sm font-medium tabular-nums";
 
 /**
  * The footer of every long table. "Showing 41–50 of 1,234 visits", then

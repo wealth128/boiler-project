@@ -172,11 +172,11 @@ function EditForm({
                 className="flex flex-wrap items-center gap-2"
             >
                 {children}
-                <Button type="submit" size="sm" disabled={processing}>
+                <Button className="max-sm:w-full" type="submit" size="sm" disabled={processing}>
                     {processing && <Spinner />}
                     Save
                 </Button>
-                <Button
+                <Button className="max-sm:w-full"
                     type="button"
                     variant="outline"
                     size="sm"

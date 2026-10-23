@@ -16,8 +16,16 @@ export default function AuthLayout({
         <div className="grid min-h-svh place-items-center bg-page px-4 py-6 text-foreground">
             <main className="w-full max-w-[400px] rounded-lg border bg-card">
                 <div className="flex flex-col gap-0.5 border-b px-4 py-3">
+                    {hospital.login_logo_url && (
+                        // Decorative: the hospital name is written under it.
+                        <img
+                            src={hospital.login_logo_url}
+                            alt=""
+                            className="mx-auto mb-2 max-h-24 max-w-full object-contain"
+                        />
+                    )}
                     <h1 className="text-lg font-semibold">{hospital.name}</h1>
-                    <p className="text-xs text-muted-foreground">{name}</p>
+                    <p className="text-sm text-muted-foreground">{name}</p>
                 </div>
                 <div className="grid gap-4 p-4">
                     {(title || description) && (

@@ -1,7 +1,7 @@
-import { RotateCw } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
-import type { KeyboardEvent, PointerEvent } from 'react';
-import { Button } from '@/components/ui/button';
+import { RotateCw } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import type { KeyboardEvent, PointerEvent } from "react";
+import { Button } from "@/components/ui/button";
 import {
     Dialog,
     DialogContent,
@@ -9,8 +9,8 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-} from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import {
     OUTPUT_SIZE,
     clampPlacement,
@@ -20,8 +20,8 @@ import {
     removeWhiteBackground,
     startPlacement,
     turnedSize,
-} from '@/features/hospital/crop-math';
-import type { CropKind, Placement } from '@/features/hospital/crop-math';
+} from "@/features/hospital/crop-math";
+import type { CropKind, Placement } from "@/features/hospital/crop-math";
 
 type CropDialogProps = {
     /** The file just chosen. The dialog is open while there is one. */
@@ -39,7 +39,7 @@ type CropDialogProps = {
 const KEY_STEP = 15;
 
 const CHECKERBOARD =
-    'repeating-conic-gradient(#e5e7eb 0% 25%, #ffffff 0% 50%) 50% / 12px 12px';
+    "repeating-conic-gradient(#e5e7eb 0% 25%, #ffffff 0% 50%) 50% / 12px 12px";
 
 /**
  * Crop a picture before it is uploaded (logo: square, signature: wide strip).
@@ -85,9 +85,9 @@ function CropBody({
     maxBytes,
     onSave,
     onCancel,
-}: Omit<CropDialogProps, 'file'> & { file: File }) {
+}: Omit<CropDialogProps, "file"> & { file: File }) {
     const frame = OUTPUT_SIZE[kind];
-    const noun = kind === 'logo' ? 'logo' : 'signature';
+    const noun = kind === "logo" ? "logo" : "signature";
 
     const [image, setImage] = useState<HTMLImageElement | null>(null);
     const [placement, setPlacement] = useState<Placement | null>(null);
@@ -117,7 +117,7 @@ function CropBody({
             );
         };
         picture.onerror = () =>
-            setProblem('This file could not be opened as a picture.');
+            setProblem("This file could not be opened as a picture.");
         picture.src = url;
 
         return () => URL.revokeObjectURL(url);
@@ -126,7 +126,7 @@ function CropBody({
     // The editing view: exactly what will be saved, on white.
     useEffect(() => {
         if (image && placement && editCanvas.current) {
-            drawCrop(editCanvas.current, image, placement, frame, 1, '#ffffff');
+            drawCrop(editCanvas.current, image, placement, frame, 1, "#ffffff");
         }
     }, [image, placement, frame]);
 
@@ -135,7 +135,7 @@ function CropBody({
         if (image && placement && previewCanvas.current) {
             drawCrop(previewCanvas.current, image, placement, frame, 0.5);
 
-            if (kind === 'signature' && clearWhite) {
+            if (kind === "signature" && clearWhite) {
                 removeWhiteBackground(previewCanvas.current);
             }
         }
@@ -159,7 +159,8 @@ function CropBody({
 
     function zoomTo(zoom: number) {
         if (placement && natural) {
-            const max = coverZoom(turnedSize(natural, placement.turns), frame) * 4;
+            const max =
+                coverZoom(turnedSize(natural, placement.turns), frame) * 4;
 
             change({ ...placement, zoom: Math.min(max, Math.max(1, zoom)) });
         }
@@ -204,10 +205,10 @@ function CropBody({
         if (moves[event.key]) {
             event.preventDefault();
             moveBy(...moves[event.key]);
-        } else if (event.key === '+' || event.key === '=') {
+        } else if (event.key === "+" || event.key === "=") {
             event.preventDefault();
             zoomTo((placement?.zoom ?? 1) * 1.1);
-        } else if (event.key === '-' || event.key === '_') {
+        } else if (event.key === "-" || event.key === "_") {
             event.preventDefault();
             zoomTo((placement?.zoom ?? 1) / 1.1);
         }
@@ -225,7 +226,7 @@ function CropBody({
             image,
             placement,
             kind,
-            kind === 'signature' && clearWhite,
+            kind === "signature" && clearWhite,
             maxBytes,
         );
 
@@ -251,16 +252,15 @@ function CropBody({
                 <DialogTitle>Crop the {noun}</DialogTitle>
                 <DialogDescription>
                     Drag the picture to move it, use the slider to zoom, and
-                    turn it if needed. Save uploads what you see in the
-                    preview.
+                    turn it if needed. Save uploads what you see in the preview.
                 </DialogDescription>
             </DialogHeader>
 
             <div
                 className={
-                    kind === 'logo'
-                        ? 'mx-auto w-full max-w-[360px]'
-                        : 'mx-auto w-full max-w-[480px]'
+                    kind === "logo"
+                        ? "mx-auto w-full max-w-[360px]"
+                        : "mx-auto w-full max-w-[480px]"
                 }
             >
                 <canvas
@@ -306,12 +306,14 @@ function CropBody({
                 </Button>
             </div>
 
-            {kind === 'signature' && (
+            {kind === "signature" && (
                 <label className="flex cursor-pointer items-center gap-2 text-sm">
                     <input
                         type="checkbox"
                         checked={clearWhite}
-                        onChange={(event) => setClearWhite(event.target.checked)}
+                        onChange={(event) =>
+                            setClearWhite(event.target.checked)
+                        }
                         className="size-4 accent-primary"
                     />
                     Remove white background (saved as PNG)
@@ -326,7 +328,7 @@ function CropBody({
                     className="h-auto rounded-md border"
                     style={{
                         background: CHECKERBOARD,
-                        width: kind === 'logo' ? 96 : 240,
+                        width: kind === "logo" ? 96 : 240,
                         aspectRatio: `${frame.width} / ${frame.height}`,
                     }}
                 />
@@ -339,7 +341,7 @@ function CropBody({
             )}
 
             <DialogFooter>
-                <Button
+                <Button className="max-sm:w-full"
                     type="button"
                     variant="outline"
                     onClick={onCancel}
@@ -347,7 +349,7 @@ function CropBody({
                 >
                     Cancel
                 </Button>
-                <Button
+                <Button className="max-sm:w-full"
                     type="button"
                     onClick={save}
                     disabled={!placement || saving}

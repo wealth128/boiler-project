@@ -359,7 +359,7 @@ export default function ListsIndex({
                                     setActive(null);
                                 }}
                                 className={cn(
-                                    'rounded-full border px-3 py-1 text-[13px] font-semibold text-muted-foreground outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
+                                    'rounded-full border px-3 py-1 text-sm font-semibold text-muted-foreground outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
                                     b.id === branch?.id &&
                                         'border-navy bg-navy text-navy-foreground',
                                 )}

@@ -125,6 +125,14 @@ class HospitalSettings
         };
     }
 
+    /** The address of the logo for the login page (public, logo-only route), or null when none is set. */
+    public function publicLogoUrl(): ?string
+    {
+        $file = $this->imageFile('logo');
+
+        return $file === null ? null : route('hospital.logo.public', ['v' => Storage::disk('local')->lastModified($file)], false);
+    }
+
     /** A picture as a data address for the PDF (dompdf does not fetch pages), or null. */
     public function imageDataUri(string $image): ?string
     {

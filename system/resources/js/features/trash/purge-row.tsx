@@ -96,7 +96,7 @@ export function PurgeRow({
                 aria-invalid={message ? true : undefined}
                 aria-describedby={message ? `${id}-error` : undefined}
             />
-            <Button
+            <Button className="max-sm:w-full"
                 type="submit"
                 variant="destructive"
                 size="sm"
@@ -105,7 +105,7 @@ export function PurgeRow({
                 {processing && <Spinner />}
                 Delete permanently
             </Button>
-            <Button
+            <Button className="max-sm:w-full"
                 type="button"
                 variant="outline"
                 size="sm"

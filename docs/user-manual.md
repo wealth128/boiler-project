@@ -6,6 +6,12 @@ _Version: DRAFT (Step 6j) · Matches system: Step 6j · Only the Admin section o
 
 ## Admin
 
+### Hospital settings: the preview (Admin)
+
+Under **Settings > Hospital settings**, the **Preview** shows the report header and the signature block on a sheet of A4 paper, centred and shrunk to fit the panel, as they will print. What you type, and a picture you just chose, show in it at once, before you click **Save settings**. The title and the month are a sample.
+
+On a wide screen (1280 px and up) the form is on the left and the preview stays in view on the right while you scroll. On a smaller screen the preview is under the form. On a phone the sheet is small to fit; the form above it is the readable part.
+
 ### Importing visits after a downtime (draft)
 
 **When to use it.** The system was down and the offices wrote their visits in the downtime template (or on paper). Now the system is back and you bring those visits in. It is only for visits written during a downtime. It does not import old Google Sheets history.
@@ -64,6 +70,22 @@ Under **Past imports** every import is listed with its file name, who imported i
 See `docs/troubleshooting.md`, section 9: every message and what to do. The operations steps (what to do before and during a downtime) are in `docs/operations-guide.md`, section 8.
 
 ## All users
+
+### Using the system on a phone, a tablet or a laptop
+
+Every screen fits the screen it is opened on. Nothing makes the whole page slide sideways.
+
+- **Menu.** On a screen narrower than 1024 px (phones and tablets) the left menu becomes a **menu button** (three lines) at the top left of the blue bar. Tap it to slide the menu in. It has the same links and the same **ADMINISTRATION** heading, which you can hide or show. The menu closes when you choose a page or tap outside it. On a wider screen the left menu is always there.
+- **Lists with many columns** (Trash, Audit Log, Backups, System health, User Accounts, Patients and the import preview) slide sideways inside their own box on a small screen. The first column stays in view while you slide.
+- **Patient Records, Visits** shows one card per visit on a phone (name, category, date, IDs, branch and rank, diagnosis, who encoded it, and **Edit** and **Delete**). From 768 px up it is the table.
+- **Encode Patient.** The boxes are in one column on a phone, two on a tablet and three on a laptop. **Save & New** and **Clear** are full width on a phone. **My entries today** goes under the form on a screen narrower than 1280 px.
+- **Reports.** The category tabs (OPD, ER, Admission, Summary) slide sideways when they do not fit. The report page fits the width of the screen. Print and PDF look the same as before.
+- **Warning bars, messages and dialogs** fit the screen. A tall dialog scrolls inside itself.
+- Text is at least 14 px and every button, box and menu link is at least 40 px high on a phone or tablet.
+
+### The hospital logo
+
+When the Admin has set a logo in **Hospital settings**, it also shows in the blue bar at the top of every page, next to the hospital name (every role), and above the form on the login page. With no logo, only the hospital name shows.
 
 ### Long lists: pages and rows per page
 

@@ -190,7 +190,7 @@ export function UploadPanel({ limits, hasPreview }: UploadPanelProps) {
                         </p>
                     )}
                     <div>
-                        <Button
+                        <Button className="max-sm:w-full"
                             type="submit"
                             size="lg"
                             disabled={

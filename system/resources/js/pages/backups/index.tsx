@@ -150,7 +150,7 @@ export default function BackupsIndex({
                 title="Backups"
                 description="The database is backed up every day. Admin only."
                 actions={
-                    <Button type="button" onClick={() => setAsking(true)}>
+                    <Button className="max-sm:w-full" type="button" onClick={() => setAsking(true)}>
                         Run backup now
                     </Button>
                 }

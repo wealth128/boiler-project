@@ -15,6 +15,11 @@
     --font-mono:
         'IBM Plex Mono', Consolas, 'Courier New', ui-monospace, monospace;
 
+    /* No text under 14 px on screen (Step 7c). "text-xs" used to be 12 px; it is
+     * put back to 12 px for print below, so the printed report is unchanged. */
+    --text-xs: 0.875rem;
+    --text-xs--line-height: calc(1.25 / 0.875);
+
     --radius-lg: var(--radius);
     --radius-md: calc(var(--radius) - 2px);
     --radius-sm: calc(var(--radius) - 4px);
@@ -173,9 +178,49 @@
     --bad-soft: #3a1d1b;
 }
 
+/* A sheet of paper on screen (the Hospital settings preview): always the
+ * light colours and the 12 px small text of the printout, in either theme. */
+.paper {
+    --background: #ffffff;
+    --foreground: #16202e;
+    --card: #ffffff;
+    --card-foreground: #16202e;
+    --muted: #eef1f6;
+    --muted-foreground: #5b6678;
+    --border: #d6dce6;
+    --text-xs: 0.75rem;
+    --text-xs--line-height: calc(1 / 0.75);
+    background: #ffffff;
+    color: #16202e;
+}
+
 @layer base {
     * {
         @apply border-border;
+    }
+
+    /* Tap targets of at least 40 px on phones and tablets (below 1024 px):
+     * buttons, fields, tabs, and the row of a checkbox or radio. */
+    @media (max-width: 1023px) {
+        button:not([role='checkbox']):not([role='switch']),
+        select,
+        input:not([type='checkbox']):not([type='radio']):not([type='hidden']),
+        [role='tab'],
+        summary {
+            min-height: 2.5rem;
+        }
+
+        button:has(> svg:only-child) {
+            min-width: 2.5rem;
+        }
+
+        label:has(input[type='checkbox']),
+        label:has(input[type='radio']),
+        label:has([role='checkbox']) {
+            min-height: 2.5rem;
+            display: flex;
+            align-items: center;
+        }
     }
 
     body {
@@ -239,5 +284,11 @@
 
     body {
         background: #fff;
+    }
+
+    /* The printed report keeps its 12 px small text. */
+    :root {
+        --text-xs: 0.75rem;
+        --text-xs--line-height: calc(1 / 0.75);
     }
 }

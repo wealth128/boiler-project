@@ -71,7 +71,7 @@ export function ReportPage({
             // Print: the whole page width, no frame, and no table row split
             // across two pages.
             className={cn(
-                "max-w-[980px] rounded-lg border bg-card px-4 pt-5 pb-8 sm:px-7 sm:pt-7 print:max-w-none print:rounded-none print:border-0 print:p-0 print:[&_tr]:break-inside-avoid",
+                "max-w-[980px] min-w-0 rounded-lg border bg-card px-3 pt-5 pb-8 break-words sm:px-7 sm:pt-7 print:max-w-none print:rounded-none print:border-0 print:p-0 print:[&_tr]:break-inside-avoid",
                 className,
             )}
         >
@@ -187,7 +187,7 @@ function CategorySection({
                     </Box>
                     <div className="md:col-span-2">
                         <h4 className={boxTitle}>Branch of service and rank</h4>
-                        <div className="overflow-x-auto">
+                        <div className="relative overflow-x-auto">
                             <table className="w-full border-collapse text-sm">
                                 <thead>
                                     <tr>

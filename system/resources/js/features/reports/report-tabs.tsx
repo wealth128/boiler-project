@@ -81,7 +81,7 @@ export function ReportTabs({ filters }: { filters: ReportFilters }) {
             role="tablist"
             aria-label="Report category"
             onKeyDown={onKeyDown}
-            className="mb-3 flex flex-wrap gap-1 border-b print:hidden"
+            className="mb-3 flex gap-1 overflow-x-auto overscroll-x-contain border-b print:hidden"
         >
             {REPORT_TABS.map((tab) => {
                 const selected = tab.key === filters.category;
@@ -101,7 +101,7 @@ export function ReportTabs({ filters }: { filters: ReportFilters }) {
                         tabIndex={selected ? 0 : -1}
                         onClick={() => open(tab.key)}
                         className={cn(
-                            "-mb-px cursor-pointer rounded-t-md border-b-2 px-4 py-2 text-sm focus-visible:outline-2 focus-visible:outline-ring",
+                            "-mb-px shrink-0 cursor-pointer rounded-t-md border-b-2 px-4 py-2 text-sm whitespace-nowrap focus-visible:outline-2 focus-visible:outline-ring",
                             selected
                                 ? "border-primary font-semibold text-primary"
                                 : "border-transparent font-medium text-muted-foreground hover:bg-muted hover:text-foreground",

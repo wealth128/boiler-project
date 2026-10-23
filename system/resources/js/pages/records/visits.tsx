@@ -43,7 +43,8 @@ type Props = {
 const SEARCH_DELAY_MS = 300;
 const DATE_DELAY_MS = 400;
 
-const actionClass = "h-auto px-1.5 py-0.5 text-xs";
+const actionClass =
+    "h-auto px-1.5 py-0.5 text-xs max-md:h-10 max-md:px-3 max-md:text-sm";
 
 /**
  * The URL for these filters. From and To are always sent: an empty value
@@ -135,6 +136,42 @@ export default function RecordsVisits({
         });
     }
 
+    /** Edit and Delete, or "Month closed". Used by the table and by the phone card. */
+    const actions = (visit: VisitRecord) =>
+        visit.month_closed ? (
+            <span className="text-xs whitespace-nowrap text-muted-foreground">
+                Month closed
+            </span>
+        ) : (
+            <div className="flex flex-nowrap gap-1">
+                <Button
+                    asChild
+                    variant="link"
+                    size="sm"
+                    className={actionClass}
+                >
+                    <Link
+                        href={EncodeController.index.url({
+                            query: { edit: visit.id, return: url },
+                        })}
+                        aria-label={`Edit ${visit.visit_no}, ${visit.patient_name}`}
+                    >
+                        Edit
+                    </Link>
+                </Button>
+                <Button
+                    id={`delete-visit-${visit.id}`}
+                    variant="link"
+                    size="sm"
+                    className={`${actionClass} text-bad`}
+                    onClick={() => startTrash(visit)}
+                    aria-label={`Delete ${visit.visit_no}, ${visit.patient_name}`}
+                >
+                    Delete
+                </Button>
+            </div>
+        );
+
     const columns: DataTableColumn<VisitRecord>[] = [
         {
             key: "visited_at",
@@ -216,40 +253,7 @@ export default function RecordsVisits({
         {
             key: "actions",
             header: <span className="sr-only">Actions</span>,
-            cell: (visit) =>
-                visit.month_closed ? (
-                    <span className="text-xs whitespace-nowrap text-muted-foreground">
-                        Month closed
-                    </span>
-                ) : (
-                    <div className="flex flex-nowrap gap-1">
-                        <Button
-                            asChild
-                            variant="link"
-                            size="sm"
-                            className={actionClass}
-                        >
-                            <Link
-                                href={EncodeController.index.url({
-                                    query: { edit: visit.id, return: url },
-                                })}
-                                aria-label={`Edit ${visit.visit_no}, ${visit.patient_name}`}
-                            >
-                                Edit
-                            </Link>
-                        </Button>
-                        <Button
-                            id={`delete-visit-${visit.id}`}
-                            variant="link"
-                            size="sm"
-                            className={`${actionClass} text-bad`}
-                            onClick={() => startTrash(visit)}
-                            aria-label={`Delete ${visit.visit_no}, ${visit.patient_name}`}
-                        >
-                            Delete
-                        </Button>
-                    </div>
-                ),
+            cell: actions,
         },
     ];
 
@@ -347,6 +351,43 @@ export default function RecordsVisits({
                     rows={visits.data}
                     rowKey={(visit) => visit.id}
                     caption="Visits"
+                    card={(visit) => (
+                        <div className="grid gap-1.5 text-sm">
+                            <div className="flex items-start justify-between gap-2">
+                                <span className="font-semibold">
+                                    {visit.patient_name}
+                                </span>
+                                <CategoryChip category={visit.category} />
+                            </div>
+                            <div className="font-mono text-muted-foreground">
+                                {formatDateTime(visit.visited_at)}
+                            </div>
+                            <div className="font-mono text-muted-foreground">
+                                {visit.visit_no} · {visit.patient_no}
+                            </div>
+                            <div>
+                                {visit.sex}, {visit.age} · {visit.branch} ·{" "}
+                                {visit.rank}
+                            </div>
+                            <div>
+                                {visit.diagnosis}
+                                {visit.remarks && (
+                                    <div className="text-muted-foreground">
+                                        {visit.remarks}
+                                    </div>
+                                )}
+                            </div>
+                            <div className="text-muted-foreground">
+                                Encoded by {visit.encoded_by}
+                                {visit.imported && " · Imported"}
+                                {visit.written_by &&
+                                    ` · Written by ${visit.written_by}`}
+                            </div>
+                            <div className="-mx-1.5 flex flex-wrap gap-1">
+                                {actions(visit)}
+                            </div>
+                        </div>
+                    )}
                     empty={
                         <EmptyState message="No visits match these filters." />
                     }

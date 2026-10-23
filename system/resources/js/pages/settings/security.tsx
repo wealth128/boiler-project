@@ -107,7 +107,7 @@ export default function Security({ passwordRules }: Props) {
                             </div>
 
                             <div className="flex items-center gap-4">
-                                <Button
+                                <Button className="max-sm:w-full"
                                     disabled={processing}
                                     data-test="update-password-button"
                                 >
