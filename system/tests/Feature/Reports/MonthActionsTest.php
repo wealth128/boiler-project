@@ -53,7 +53,7 @@ function closeSeptember(object $test): void
 
 // --- Close ------------------------------------------------------------------
 
-it('closes a month, saves a version 3 snapshot and shows it on the report', function () {
+it('closes a month, saves a version 4 snapshot and shows it on the report', function () {
     monthVisit($this, '2026-09-03 09:00', 'ER');
     monthVisit($this, '2026-09-04 09:00', 'OPD');
 
@@ -65,8 +65,8 @@ it('closes a month, saves a version 3 snapshot and shows it on the report', func
     $snapshot = ReportSnapshot::query()->where('period', '2026-09')->sole();
 
     expect(MonthClosure::isClosed('2026-09'))->toBeTrue()
-        ->and(ReportBuilder::VERSION)->toBe(3)
-        ->and($snapshot->data['version'])->toBe(3)
+        ->and(ReportBuilder::VERSION)->toBe(4)
+        ->and($snapshot->data['version'])->toBe(4)
         ->and(array_keys($snapshot->data['categories']))->toEqualCanonicalizing(['OPD', 'ER', 'Admission'])
         ->and($snapshot->data['totals'])->toMatchArray(['patients' => 2, 'visits' => 2]);
 

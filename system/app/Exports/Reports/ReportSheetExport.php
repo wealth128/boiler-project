@@ -39,13 +39,24 @@ abstract class ReportSheetExport extends DefaultValueBinder implements FromArray
 
     private const LINE = '9AA5B8';
 
-    /** Widest a table may be and still print portrait. */
-    private const PORTRAIT_COLUMNS = 4;
+    /** The last column used: tables have up to five. */
+    private const LAST_COLUMN = 'E';
 
-    /** @var list<list<string|int>> */
+    /** Column widths (characters) that still fit an A4 portrait page; a wider sheet prints landscape. */
+    private const PORTRAIT_WIDTH = 100;
+
+    /** How a column of each type is shown. */
+    private const FORMATS = [
+        'int' => '#,##0',
+        'pct' => '0.0"%"',
+        'delta' => '+#,##0;-#,##0;0',
+        'deltapct' => '+0.0"%";-0.0"%";0.0"%"',
+    ];
+
+    /** @var list<list<string|int|float>> */
     private array $rows = [];
 
-    /** @var array<int, array{kind: string, zebra: bool}> Row number (1-based) => how it looks. */
+    /** @var array<int, array{kind: string, zebra: bool, types: list<string>}> Row number (1-based) => how it looks. */
     private array $kinds = [];
 
     private int $tableRows = 0;
@@ -56,7 +67,8 @@ abstract class ReportSheetExport extends DefaultValueBinder implements FromArray
 
     private int $periodRow = 0;
 
-    private int $widest = 0;
+    /** @var list<string> The column types of the table being built. */
+    private array $types = [];
 
     /**
      * @param  array{hospital_name: string, office: string, prepared_by: string, prepared_by_title: string, noted_by: string, noted_by_title: string, period_label: string, status: string, generated: string}  $meta
@@ -75,7 +87,7 @@ abstract class ReportSheetExport extends DefaultValueBinder implements FromArray
         return $this->sheetTitle;
     }
 
-    /** @return list<list<string|int>> */
+    /** @return list<list<string|int|float>> */
     public function array(): array
     {
         return $this->rows;
@@ -113,34 +125,35 @@ abstract class ReportSheetExport extends DefaultValueBinder implements FromArray
 
     /**
      * Column A fits its longest label (a table row, not a heading that may
-     * spill over the empty cells beside it); the number columns fit their
-     * header and figures.
+     * spill over the empty cells beside it); the others fit their header and
+     * figures. Wrapping takes care of anything longer than the limit.
      *
      * @return array<string, int>
      */
     public function columnWidths(): array
     {
-        $longest = 0;
-        $numbers = 0;
+        $longest = array_fill(0, 5, 0);
 
         foreach ($this->kinds as $row => $look) {
             if (! in_array($look['kind'], ['header', 'body', 'total', 'group'], true)) {
                 continue;
             }
 
-            $cells = $this->rows[$row - 1];
-            $longest = max($longest, mb_strlen((string) $cells[0]));
-
-            foreach (array_slice($cells, 1) as $cell) {
-                $numbers = max($numbers, mb_strlen(is_int($cell) ? number_format($cell) : (string) $cell));
+            foreach ($this->rows[$row - 1] as $index => $cell) {
+                $text = is_int($cell) ? number_format($cell) : (string) $cell;
+                // A header may wrap onto two lines, so it counts for half.
+                $length = $look['kind'] === 'header' && $index > 0 ? (int) ceil(mb_strlen($text) / 2) : mb_strlen($text);
+                $longest[$index] = max($longest[$index], $length + ($look['kind'] === 'header' ? 2 : 0));
             }
         }
 
-        return [
-            'A' => min(60, max(26, $longest + 4)),
-            'B' => max(14, $numbers + 4),
-            'C' => max(14, $numbers + 4),
-        ];
+        $widths = ['A' => min(60, max(26, $longest[0] + 4))];
+
+        foreach (['B', 'C', 'D', 'E'] as $index => $column) {
+            $widths[$column] = min(24, max(12, $longest[$index + 1] + 4));
+        }
+
+        return $widths;
     }
 
     /** @return array<int, array<string, mixed>> */
@@ -179,15 +192,18 @@ abstract class ReportSheetExport extends DefaultValueBinder implements FromArray
         $this->tableRows = 0;
     }
 
-    /** @param  list<string>  $cells */
-    protected function headerRow(array $cells): void
+    /**
+     * @param  list<string>  $cells
+     * @param  list<string>  $types  the type of each column (text, int, pct, delta, deltapct)
+     */
+    protected function headerRow(array $cells, array $types = []): void
     {
+        $this->types = $types;
         $this->push($cells, 'header');
         $this->tableRows = 0;
-        $this->widest = max($this->widest, count($cells));
     }
 
-    /** @param  list<string|int>  $cells */
+    /** @param  list<string|int|float>  $cells */
     protected function bodyRow(array $cells, bool $bold = false): void
     {
         $this->push($cells, $bold ? 'total' : 'body', $this->tableRows % 2 === 1);
@@ -195,9 +211,41 @@ abstract class ReportSheetExport extends DefaultValueBinder implements FromArray
     }
 
     /**
+     * Every table of a page, as ReportSections gives them: heading, header row, rows, note.
+     * A figure that is not there is written as a dash.
+     *
+     * @param  list<array<string, mixed>>  $sections
+     */
+    protected function sectionTables(array $sections): void
+    {
+        foreach ($sections as $section) {
+            $this->sectionRow($section['title']);
+            $this->headerRow(
+                array_column($section['columns'], 'label'),
+                array_column($section['columns'], 'type'),
+            );
+
+            foreach ($section['rows'] as $row) {
+                $cells = array_map(fn ($cell) => $cell ?? '–', $row['cells']);
+
+                match ($row['style']) {
+                    'group' => $this->groupRow($cells),
+                    'child' => $this->bodyRow(['    '.$cells[0], ...array_slice($cells, 1)]),
+                    'total' => $this->bodyRow($cells, bold: true),
+                    default => $this->bodyRow($cells),
+                };
+            }
+
+            if ($section['note'] !== null) {
+                $this->noteRow($section['note']);
+            }
+        }
+    }
+
+    /**
      * A bold line inside a table, like a branch above its ranks.
      *
-     * @param  list<string|int>  $cells
+     * @param  list<string|int|float>  $cells
      */
     protected function groupRow(array $cells): void
     {
@@ -225,12 +273,12 @@ abstract class ReportSheetExport extends DefaultValueBinder implements FromArray
         $this->push(['Noted by · '.$this->meta['noted_by_title'], $this->meta['noted_by']], 'sign');
     }
 
-    /** @param  list<string|int>  $cells */
+    /** @param  list<string|int|float>  $cells */
     private function push(array $cells, string $kind, bool $zebra = false): void
     {
         // A row with no cell at all is dropped by the writer, which would shift every row below it.
         $this->rows[] = $cells === [] ? [''] : $cells;
-        $this->kinds[count($this->rows)] = ['kind' => $kind, 'zebra' => $zebra];
+        $this->kinds[count($this->rows)] = ['kind' => $kind, 'zebra' => $zebra, 'types' => $this->types];
     }
 
     private function buildTitleBlock(): void
@@ -255,7 +303,7 @@ abstract class ReportSheetExport extends DefaultValueBinder implements FromArray
 
     private function styleTitleLine(Worksheet $sheet, int $row, int $size, bool $bold = false): void
     {
-        $sheet->mergeCells("A{$row}:C{$row}");
+        $sheet->mergeCells("A{$row}:".self::LAST_COLUMN.$row);
         $sheet->getStyle("A{$row}")->getFont()->setSize($size)->setBold($bold);
         $sheet->getStyle("A{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_CENTER);
         $sheet->getRowDimension($row)->setRowHeight($size + 8);
@@ -263,7 +311,7 @@ abstract class ReportSheetExport extends DefaultValueBinder implements FromArray
 
     private function styleNote(Worksheet $sheet, int $row): void
     {
-        $sheet->mergeCells("A{$row}:C{$row}");
+        $sheet->mergeCells("A{$row}:".self::LAST_COLUMN.$row);
         $sheet->getStyle("A{$row}")->getAlignment()->setWrapText(true)->setVertical(Alignment::VERTICAL_TOP)->setHorizontal(Alignment::HORIZONTAL_LEFT);
         $sheet->getStyle("A{$row}")->getFont()->setItalic(true)->setSize(10);
 
@@ -314,21 +362,29 @@ abstract class ReportSheetExport extends DefaultValueBinder implements FromArray
         return "A{$row}:".chr(64 + max(1, count($this->rows[$row - 1]))).$row;
     }
 
-    /** Numbers right-aligned with thousands separators, text left-aligned and wrapped. */
+    /**
+     * Numbers right-aligned in their own format (thousands separators,
+     * percentages, signed changes), text left-aligned and wrapped. A dash for
+     * a missing figure is aligned like the figures of its column.
+     */
     private function alignCells(Worksheet $sheet, int $row): void
     {
         $sheet->getStyle("A{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)->setWrapText(true);
 
+        $types = $this->kinds[$row]['types'];
+        $header = $this->kinds[$row]['kind'] === 'header';
+
         foreach (array_slice($this->rows[$row - 1], 1, null, true) as $index => $value) {
             $cell = $sheet->getStyle(chr(65 + $index).$row);
+            $type = $types[$index] ?? (is_string($value) ? 'text' : 'int');
 
-            if ($this->kinds[$row]['kind'] === 'header') {
-                $cell->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-            } elseif (is_int($value)) {
-                $cell->getNumberFormat()->setFormatCode('#,##0');
-                $cell->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-            } else {
+            if ($header) {
+                $cell->getAlignment()->setHorizontal($type === 'text' ? Alignment::HORIZONTAL_LEFT : Alignment::HORIZONTAL_RIGHT)->setWrapText(true);
+            } elseif ($type === 'text') {
                 $cell->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)->setWrapText(true);
+            } else {
+                $cell->getNumberFormat()->setFormatCode(self::FORMATS[$type] ?? self::FORMATS['int']);
+                $cell->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
             }
         }
     }
@@ -350,7 +406,8 @@ abstract class ReportSheetExport extends DefaultValueBinder implements FromArray
     {
         $setup = $sheet->getPageSetup();
         $setup->setPaperSize(PageSetup::PAPERSIZE_A4);
-        $setup->setOrientation($this->widest > self::PORTRAIT_COLUMNS ? PageSetup::ORIENTATION_LANDSCAPE : PageSetup::ORIENTATION_PORTRAIT);
+        // Fit to one page wide shrinks a sheet that is too wide, so one that is wider than a portrait page prints landscape.
+        $setup->setOrientation(array_sum($this->columnWidths()) > self::PORTRAIT_WIDTH ? PageSetup::ORIENTATION_LANDSCAPE : PageSetup::ORIENTATION_PORTRAIT);
         $setup->setFitToPage(true);
         $setup->setFitToWidth(1);
         $setup->setFitToHeight(0);

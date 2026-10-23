@@ -5,18 +5,18 @@ namespace App\Exports\Reports;
 use Carbon\CarbonInterface;
 
 /**
- * The "Summary" sheet: title block, grand totals, Patients and Visits for
- * each category, then the signature lines.
+ * The "Summary" sheet: the saved-copy note of a closed month, every table of
+ * the Summary page (all categories together), then the signature lines.
  */
 class SummarySheet extends ReportSheetExport
 {
     /**
-     * @param  array<string, mixed>  $report  from ReportSheetResolver
+     * @param  list<array<string, mixed>>  $sections  the Summary page's tables
      * @param  array<string, mixed>  $sheet
      * @param  array{month_label: string, taken_at: CarbonInterface}|null  $snapshot
      * @param  array<string, string>  $meta  see ReportSheetExport
      */
-    public function __construct(array $report, array $sheet, ?array $snapshot, array $meta, ?string $logoPath)
+    public function __construct(array $sections, array $sheet, ?array $snapshot, array $meta, ?string $logoPath)
     {
         parent::__construct('Summary', $sheet['title'], $meta, $logoPath);
 
@@ -25,17 +25,7 @@ class SummarySheet extends ReportSheetExport
             $this->noteRow('Saved copy, taken when '.$snapshot['month_label'].' was closed on '.$snapshot['taken_at']->format('d-M-Y H:i').'. Later changes to lists or records do not affect it.');
         }
 
-        $this->sectionRow('Grand totals (all categories)');
-        $this->headerRow(['Summary', 'Patients', 'Visits']);
-        $this->bodyRow(['Total', $report['totals']['patients'], $report['totals']['visits']], bold: true);
-
-        $this->sectionRow('By category');
-        $this->headerRow(['Category', 'Patients', 'Visits']);
-
-        foreach ($report['categories'] as $name => $data) {
-            $this->bodyRow([$name, $data['patients'], $data['visits']]);
-        }
-
+        $this->sectionTables($sections);
         $this->signatureRows();
     }
 }

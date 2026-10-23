@@ -27,11 +27,12 @@ class ReportSheetResolver
         private readonly ReportBuilder $builder,
         private readonly HospitalSettings $hospital,
         private readonly FrozenSignatures $frozenSignatures,
+        private readonly ReportSections $sections,
     ) {}
 
     /**
      * @param  array<string, mixed>  $query  the query string
-     * @return array{filters: ReportFilters, report: array<string, mixed>, sheet: array<string, mixed>, snapshot: array{month_label: string, taken_at: CarbonImmutable}|null, frozen: array{period: string, block: array<string, string|null>}|null}
+     * @return array{filters: ReportFilters, report: array<string, mixed>, sections: array<string, list<array<string, mixed>>>, sheet: array<string, mixed>, snapshot: array{month_label: string, taken_at: CarbonImmutable}|null, frozen: array{period: string, block: array<string, string|null>}|null}
      */
     public function resolve(array $query): array
     {
@@ -69,6 +70,8 @@ class ReportSheetResolver
         return [
             'filters' => $filters,
             'report' => $report,
+            // The tables of every page (summary and each category), drawn the same by screen, Print, PDF and Excel.
+            'sections' => $this->sections->pages($report),
             'sheet' => $sheet,
             'snapshot' => $saved === null ? null : [
                 'month_label' => $filters->label,
@@ -187,7 +190,13 @@ class ReportSheetResolver
         $allClosed = $closed === count($periods);
 
         if ($filters->type === ReportFilters::MONTHLY) {
-            return $allClosed ? null : 'Not final – month still open';
+            if (! $allClosed) {
+                return 'Not final – month still open';
+            }
+
+            // Closed, but its saved copy is in an older shape (made before the
+            // report grew): counted live, so it is not the closed figure.
+            return $hasSavedCopy ? null : 'Not final – no saved copy';
         }
 
         if ($hasSavedCopy) {

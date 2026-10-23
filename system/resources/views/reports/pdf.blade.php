@@ -38,6 +38,9 @@
     .lines .br td { font-weight: bold; background: #eee; }
     .lines .rk td:first-child { padding-left: 16pt; }
     .none { font-size: 9pt; }
+    .sec { page-break-inside: avoid; }
+    .lines .n { width: 14%; white-space: nowrap; }
+    .tnote { font-size: 8pt; font-style: italic; margin-top: 3pt; }
 
     .sign { margin-top: 26pt; page-break-inside: avoid; }
     .sign td { width: 50%; vertical-align: top; padding-right: 30pt; }
@@ -77,6 +80,7 @@
                 @endforeach
                 <td></td>
             </tr></table>
+            @include('reports._tables', ['tables' => $sections['summary']])
         @endif
 
         @if ($page !== 'summary')
@@ -92,44 +96,7 @@
                 @if ($data['patients'] === 0)
                     <p class="none">No visits encoded for {{ $name }} in this period.</p>
                 @else
-                    <table class="grid"><tr>
-                        <td class="l">
-                            <h4>Sex</h4>
-                            <table class="lines">
-                                @foreach ($data['sex'] as $line)
-                                    <tr><td>{{ $line['label'] }}</td><td class="n">{{ number_format($line['count']) }}</td></tr>
-                                @endforeach
-                                <tr class="total"><td>Total</td><td class="n">{{ number_format($data['patients']) }}</td></tr>
-                            </table>
-                        </td>
-                        <td class="r">
-                            <h4>Age range</h4>
-                            <table class="lines">
-                                @foreach ($data['age'] as $line)
-                                    <tr><td>{{ $line['label'] }}</td><td class="n">{{ number_format($line['count']) }}</td></tr>
-                                @endforeach
-                            </table>
-                        </td>
-                    </tr></table>
-
-                    <h4>Diagnosis (per visit)</h4>
-                    <table class="lines">
-                        @foreach ($data['diagnoses'] as $line)
-                            <tr><td>{{ $line['label'] }}</td><td class="n">{{ number_format($line['count']) }}</td></tr>
-                        @endforeach
-                        <tr class="total"><td>Total</td><td class="n">{{ number_format($data['visits']) }}</td></tr>
-                    </table>
-
-                    <h4>Branch of service and rank</h4>
-                    <table class="lines">
-                        <tr><th>Branch / Rank</th><th class="n">Patients</th></tr>
-                        @foreach ($data['branches'] as $branch)
-                            <tr class="br"><td>{{ $branch['name'] }}</td><td class="n">{{ number_format($branch['total']) }}</td></tr>
-                            @foreach ($branch['ranks'] as $rank)
-                                <tr class="rk"><td>{{ $rank['label'] }}</td><td class="n">{{ number_format($rank['count']) }}</td></tr>
-                            @endforeach
-                        @endforeach
-                    </table>
+                    @include('reports._tables', ['tables' => $sections[$name]])
                 @endif
             </div>
         @endif

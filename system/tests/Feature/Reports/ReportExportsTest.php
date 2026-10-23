@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Worksheet\PageSetup;
 
 /*
  * Report exports: GET /reports/export/pdf and /reports/export/excel
@@ -155,8 +156,8 @@ it('has a Summary sheet and one sheet per category, with the same numbers as the
     $summary = sheetRows($book, 'Summary');
 
     expect(collect($summary)->pluck(0)->all())->toContain('[Hospital Name]', 'Admission / Administrative Office', 'Monthly Patient Census Report', 'September 2026')
-        ->and(valueNextTo($summary, 'Total'))->toBe($screen['totals']['patients'])
-        ->and(collect($summary)->first(fn ($r) => $r[0] === 'Total')[2])->toBe($screen['totals']['visits']);
+        ->and(valueNextTo($summary, 'Total (all categories)'))->toBe($screen['totals']['patients'])
+        ->and(collect($summary)->first(fn ($r) => $r[0] === 'Total (all categories)')[2])->toBe($screen['totals']['visits']);
 
     foreach ($screen['categories'] as $name => $data) {
         $sheet = sheetRows($book, $name);
@@ -248,7 +249,7 @@ it('exports the saved copy of a closed month', function () {
     $summary = sheetRows($book, 'Summary');
     $er = sheetRows($book, 'ER');
 
-    expect(valueNextTo($summary, 'Total'))->toBe(1)
+    expect(valueNextTo($summary, 'Total (all categories)'))->toBe(1)
         ->and(valueNextTo($er, 'Hypertension'))->toBe(1)
         ->and(valueNextTo($er, 'High blood pressure'))->toBeNull()
         ->and(collect($summary)->pluck(0)->first(fn ($v) => str_starts_with((string) $v, 'Saved copy')))->toStartWith('Saved copy, taken when September 2026 was closed on 15-Oct-2026 10:00');
@@ -359,60 +360,8 @@ function exportBook(object $test, string $query = 'type=monthly&month=2026-09'):
     return workbookOf($test->actingAs($test->admin)->get('/reports/export/excel?'.$query)->assertOk());
 }
 
-/** The label and number pairs of a sheet, in order: what the old export held. */
-function labelCountPairs(Spreadsheet $book, string $sheet): array
-{
-    return collect(sheetRows($book, $sheet))
-        ->filter(fn ($r) => is_string($r[0] ?? null) && is_int($r[1] ?? null))
-        ->map(fn ($r) => array_values(array_filter($r, fn ($v) => $v !== null)))
-        ->values()
-        ->all();
-}
-
-it('keeps every label and number of a category sheet the same as the screen', function () {
-    exportVisit($this, '2026-09-05 09:00');
-    exportVisit($this, '2026-09-06 09:00');
-
-    $screen = $this->actingAs($this->admin)->get('/reports?type=monthly&month=2026-09')->inertiaProps('report')['categories']['ER'];
-    $expected = [['Patients', $screen['patients']], ['Visits', $screen['visits']]];
-
-    foreach ($screen['sex'] as $l) {
-        $expected[] = [$l['label'], $l['count']];
-    }
-    $expected[] = ['Total', $screen['patients']];
-
-    foreach ($screen['age'] as $l) {
-        $expected[] = [$l['label'], $l['count']];
-    }
-
-    foreach ($screen['diagnoses'] as $l) {
-        $expected[] = [$l['label'], $l['count']];
-    }
-    $expected[] = ['Total', $screen['visits']];
-
-    foreach ($screen['branches'] as $branch) {
-        $expected[] = [$branch['name'], $branch['total']];
-
-        foreach ($branch['ranks'] as $rank) {
-            $expected[] = ['    '.$rank['label'], $rank['count']];
-        }
-    }
-
-    expect(labelCountPairs(exportBook($this), 'ER'))->toBe($expected)
-        ->and($screen['visits'])->toBe(2);
-});
-
-it('keeps the summary numbers: grand total and each category', function () {
-    exportVisit($this, '2026-09-05 09:00');
-    exportVisit($this, '2026-09-07 09:00', category: 'OPD');
-
-    expect(labelCountPairs(exportBook($this), 'Summary'))->toBe([
-        ['Total', 2, 2],
-        ['OPD', 1, 1],
-        ['ER', 1, 1],
-        ['Admission', 0, 0],
-    ]);
-});
+// The sections of each page and their figures are checked against a hand count, on screen,
+// in the PDF and in Excel, in ReportContentTest. Here: the look of the workbook.
 
 it('puts the title block on every sheet', function (string $sheet) {
     Setting::query()->updateOrCreate(['key' => 'hospital_name'], ['value' => 'AFP Medical Center']);
@@ -491,7 +440,7 @@ it('sets up the page: A4, one page wide, 1.5 cm margins, footer, frozen title bl
     $worksheet = exportBook($this)->getSheetByNameOrThrow($sheet);
     $setup = $worksheet->getPageSetup();
 
-    expect($setup->getPaperSize())->toBe(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::PAPERSIZE_A4)
+    expect($setup->getPaperSize())->toBe(PageSetup::PAPERSIZE_A4)
         ->and($setup->getOrientation())->toBe('portrait')
         ->and($setup->getFitToPage())->toBeTrue()
         ->and($setup->getFitToWidth())->toBe(1)

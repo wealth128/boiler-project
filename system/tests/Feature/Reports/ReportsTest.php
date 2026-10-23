@@ -368,8 +368,11 @@ it('shows a category with no patients as zero', function () {
         'visits' => 0,
         'sex' => [['label' => 'Male', 'count' => 0], ['label' => 'Female', 'count' => 0]],
         'age' => [['label' => '0–17', 'count' => 0], ['label' => '18–59', 'count' => 0]],
+        'age_sex' => [['label' => '0–17', 'male' => 0, 'female' => 0], ['label' => '18–59', 'male' => 0, 'female' => 0]],
         'diagnoses' => [],
         'branches' => [],
+        'afp' => ['afp' => 0, 'others' => 0],
+        'returning' => ['new' => 0, 'returning' => 0],
     ]);
 });
 
@@ -603,7 +606,7 @@ it('counts live when the saved copy is version 2 (Top 10 diagnoses)', function (
 
     $props = $this->actingAs($this->admin)->get('/reports?month=2026-09')->inertiaProps();
 
-    expect(ReportBuilder::VERSION)->toBe(3)
+    expect(ReportBuilder::VERSION)->toBe(4)
         ->and($props['snapshot'])->toBeNull()
         ->and($props['report']['categories']['ER']['visits'])->toBe(1);
 });
