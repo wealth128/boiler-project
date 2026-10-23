@@ -114,6 +114,8 @@ If the update stops with an error, the site stays in maintenance mode on purpose
 
 If there is no picture file for that backup, the window warns you. The logo and signature pictures then have to be added again in Hospital settings.
 
+The backup file does not hold the rows of three throwaway tables: remembered reports (`cache`), locks (`cache_locks`) and login sessions (`sessions`). Their structure is in the file, so after a restore the tables are there, empty. Everyone logs in again, and the first report of each period is counted again. Nothing of value is lost. This keeps the backup file from growing with old rows. Every night at 1:30 AM the system also deletes the expired rows of the `cache` and `cache_locks` tables by itself. There is nothing to do.
+
 ### 5. "The system is not working"
 
 1. Do not restart anything yet.
@@ -205,10 +207,24 @@ These are set once at install and are checked by **System health** ("Safe settin
 
 Always on, not settable (so a wrong value in `.env` cannot weaken them):
 - The login cookie is **HttpOnly** (page scripts cannot read it) and **SameSite=Lax** (other sites cannot use it).
-- Every page carries the headers `X-Frame-Options: SAMEORIGIN`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: same-origin` and a `Content-Security-Policy` that allows scripts, fonts and pictures from the system itself only.
+- Every page carries the headers `X-Frame-Options: SAMEORIGIN`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: same-origin` and a `Content-Security-Policy` that allows scripts, fonts and pictures from the system itself only. When a page is opened over HTTPS it also carries `Strict-Transport-Security` (one year, this server only). Over plain HTTP the header is not sent, because a browser ignores it there.
+- The hospital logo on the login page is sent without a cookie or a session. Opening the login page of a signed-out visitor still starts the login session, but the logo picture itself does not.
 - The log files (`storage/logs`) hide passwords, password hashes, the `APP_KEY` and the database passwords, even if an error message repeats them.
 
 If an office PC shows a blank page after an update and the browser console mentions "Content Security Policy", run `php artisan census:update` again (the page files and the server must be the same version) and tell the developer.
+
+### 10. After a report change: rebuild the saved copies
+
+**You only need this when the developer tells you to.** It is not needed on a new server, where no month has been closed yet.
+
+When a month, quarter or year is closed, the system saves its report as a copy, so the submitted numbers never change. If a later update changes how a report is made up (the developer will say so), the old copies are still in the old shape. This command counts every saved copy again in the new shape. The names, titles and signature pictures that were saved with each period are kept exactly as they were.
+
+1. On the server PC, open a Command Prompt as administrator in the `system` folder.
+2. Type `php artisan census:rebuild-snapshots` and press Enter.
+3. It shows how many saved copies there are and how many are in an older shape. Type `REBUILD` and press Enter. Anything else changes nothing.
+4. It says "Rebuilt N saved copies". The Audit log shows one entry, **Saved report copies rebuilt**, with the number.
+
+If it says a month is being closed or reopened, nothing was changed. Wait a minute and run it again. If it fails halfway, nothing is changed: all copies are rebuilt together or none.
 
 ---
 

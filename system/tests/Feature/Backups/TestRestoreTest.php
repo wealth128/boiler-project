@@ -5,7 +5,10 @@ use App\Enums\BackupStatus;
 use App\Models\AuditLog;
 use App\Models\BackupMark;
 use App\Models\BackupRun;
+use App\Models\Patient;
 use App\Models\TestRestoreRun;
+use App\Models\User;
+use App\Models\Visit;
 use App\Services\BackupMonitor;
 use App\Services\BackupService;
 use App\Services\Setup\MysqlAdmin;
@@ -437,8 +440,8 @@ it('saves the patient, visit, user and closed-month counts on every successful b
         return Process::result();
     });
 
-    \App\Models\Patient::factory()->count(3)->create();
-    $before = ['users' => \App\Models\User::count(), 'patients' => \App\Models\Patient::count(), 'visits' => \App\Models\Visit::count()];
+    Patient::factory()->count(3)->create();
+    $before = ['users' => User::count(), 'patients' => Patient::count(), 'visits' => Visit::count()];
 
     $this->actingAs($this->admin)->post('/backups/run');
 
@@ -471,15 +474,17 @@ it('accepts any restored count between the lowest and highest the backup saw', f
 });
 
 it('saves the lowest and highest count when a patient is encoded while the dump runs', function () {
-    \App\Models\Patient::factory()->count(2)->create();
-    $patients = \App\Models\Patient::count();
+    Patient::factory()->count(2)->create();
+    $patients = Patient::count();
 
     Process::fake(function ($process) {
         $result = collect((array) $process->command)->first(fn ($a) => str_starts_with($a, '--result-file='));
         file_put_contents(substr($result, strlen('--result-file=')), "-- MySQL dump\n-- Dump completed on x\n");
 
-        // Someone encodes a patient while mysqldump is running.
-        \App\Models\Patient::factory()->create();
+        // Someone encodes a patient while the main mysqldump runs (the second run only dumps table structures).
+        if (! in_array('--no-data', (array) $process->command, true)) {
+            Patient::factory()->create();
+        }
 
         return Process::result();
     });

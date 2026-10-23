@@ -126,6 +126,7 @@ class MonthService
 
                 // The month's copy, and the copies of its quarter and year, which are no longer final.
                 ReportSnapshot::query()->whereIn('period', $keys)->delete();
+                ReportDataVersion::bump(); // a query delete fires no model events
 
                 return $closure;
             });
@@ -214,6 +215,7 @@ class MonthService
     private function saveSnapshot(string $key, array $data, User $by, array &$made): void
     {
         ReportSnapshot::query()->where('period', $key)->delete();
+        ReportDataVersion::bump(); // a query delete fires no model events
 
         // Noted before the copies are made, so a failure removes them too.
         $made[] = $key;
@@ -255,6 +257,82 @@ class MonthService
 
             $this->saveSnapshot($key, $this->reports->build($from, $to), $by, $made);
         }
+    }
+
+    /**
+     * How many saved copies there are, and how many of them are not in the
+     * current ReportBuilder::VERSION.
+     *
+     * @return array{0: int, 1: int}
+     */
+    public function snapshotCounts(): array
+    {
+        $old = ReportSnapshot::query()->get(['data'])
+            ->filter(fn (ReportSnapshot $snapshot): bool => ($snapshot->data['version'] ?? null) !== ReportBuilder::VERSION)
+            ->count();
+
+        return [ReportSnapshot::query()->count(), $old];
+    }
+
+    /**
+     * Count the saved copy of every closed month, quarter and year again with
+     * the current ReportBuilder::VERSION (census:rebuild-snapshots, after a
+     * report change). Only the numbers (data) are replaced. The frozen signature
+     * block, the signature pictures, who saved it and when stay as they were.
+     * All or none: one failure changes nothing. The year locks of closing and
+     * reopening are held, so nothing is closed or reopened meanwhile.
+     *
+     * @return int how many saved copies were rebuilt
+     *
+     * @throws ValidationException when a year is busy (a month is being closed or reopened)
+     */
+    public function rebuildSnapshots(): int
+    {
+        $keys = ReportSnapshot::query()->orderBy('period')->pluck('period')->all();
+        $locks = self::lockYears(array_map(fn (string $key): string => substr($key, 0, 4), $keys));
+
+        try {
+            return DB::transaction(function (): int {
+                $count = 0;
+
+                foreach (ReportSnapshot::query()->orderBy('period')->lockForUpdate()->get() as $snapshot) {
+                    [$from, $to] = self::rangeOfSnapshotKey($snapshot->period);
+
+                    $snapshot->data = $to === null ? $this->reports->build($from) : $this->reports->build($from, $to);
+                    $snapshot->save();
+                    $count++;
+                }
+
+                return $count;
+            });
+        } finally {
+            self::releaseLocks($locks);
+        }
+    }
+
+    /**
+     * The time a snapshot key covers: a month "2026-09" (returned as the text
+     * the builder takes, with null), a quarter "2026-Q3" or a year "2026".
+     *
+     * @return array{0: CarbonImmutable|string, 1: CarbonImmutable|null}
+     */
+    private static function rangeOfSnapshotKey(string $key): array
+    {
+        $timezone = config('app.timezone');
+
+        if (preg_match('/^(\d{4})-Q([1-4])$/', $key, $match) === 1) {
+            $from = CarbonImmutable::create((int) $match[1], ((int) $match[2] - 1) * 3 + 1, 1, 0, 0, 0, $timezone);
+
+            return [$from, $from->addMonths(3)];
+        }
+
+        if (preg_match('/^\d{4}$/', $key) === 1) {
+            $from = CarbonImmutable::create((int) $key, 1, 1, 0, 0, 0, $timezone);
+
+            return [$from, $from->addYear()];
+        }
+
+        return [$key, null];
     }
 
     /** Is every month from `$from` up to (not including) `$to` closed? */

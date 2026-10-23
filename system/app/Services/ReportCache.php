@@ -4,7 +4,6 @@ namespace App\Services;
 
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Remembers the report ReportBuilder counted for a period, so showing the
@@ -13,11 +12,12 @@ use Illuminate\Support\Facades\DB;
  *
  * A remembered report is only used while nothing it is made from has
  * changed. The key holds the period, ReportBuilder::VERSION (a new report
- * shape never reads an old copy) and a "data changed" stamp: a checksum of
- * every table the figures come from. Any change to a visit, a patient, a
- * branch, rank, diagnosis or age range, a month closed or reopened, or a
- * saved copy, whether made by the application or by hand in the database,
- * gives a new stamp, so the next request counts again.
+ * shape never reads an old copy) and the "report data version", a number
+ * that goes up on any change to a visit, a patient, a branch, rank,
+ * diagnosis or age range, a month closed or reopened, a saved copy or an
+ * import (see ReportDataVersion). The next request then counts again. A
+ * change made by hand in the database, outside the application, is not seen
+ * until the hour is over.
  *
  * Closed months do not come here: they are shown from their saved copy
  * (ReportSheetResolver). Nothing in the cache is shared between periods or
@@ -27,11 +27,6 @@ class ReportCache
 {
     /** How long an unchanged report is kept: one hour, then it is counted again anyway. */
     private const SECONDS = 3600;
-
-    /** The tables the figures of a report come from. */
-    private const TABLES = ['visits', 'patients', 'branches', 'ranks', 'diagnoses', 'age_brackets', 'month_closures', 'report_snapshots'];
-
-    private ?string $stamp = null;
 
     public function __construct(private readonly ReportBuilder $builder) {}
 
@@ -55,22 +50,11 @@ class ReportCache
     }
 
     /**
-     * Changes whenever any table the report is made from changes. One query,
-     * read once per request.
+     * Changes whenever any data the report is made from changes: the "report
+     * data version" (ReportDataVersion). One small query, no table is read.
      */
     public function stamp(): string
     {
-        if ($this->stamp !== null) {
-            return $this->stamp;
-        }
-
-        $sums = [];
-
-        // Table names are fixed above; CHECKSUM TABLE takes names, not bindings.
-        foreach (DB::select('CHECKSUM TABLE '.implode(', ', self::TABLES)) as $row) {
-            $sums[] = $row->Table.'='.($row->Checksum ?? 'x');
-        }
-
-        return $this->stamp = md5(implode('|', $sums));
+        return ReportDataVersion::current();
     }
 }

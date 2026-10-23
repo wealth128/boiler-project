@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BumpsReportVersion;
 use App\Models\Concerns\MovesToTrash;
 use Database\Factories\DiagnosisFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -21,7 +22,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Diagnosis extends Model
 {
     /** @use HasFactory<DiagnosisFactory> */
-    use HasFactory, MovesToTrash;
+    use BumpsReportVersion, HasFactory, MovesToTrash;
 
     protected $table = 'diagnoses';
 

@@ -151,6 +151,7 @@ class TrashService
                 'delete_reason' => $reason,
                 'month_deletion_id' => $entry->id,
             ]);
+            ReportDataVersion::bump();
 
             $this->audit->log('month.report_deleted', $entry, [
                 'period' => $period,
@@ -179,6 +180,7 @@ class TrashService
                     'delete_reason' => null,
                     'month_deletion_id' => null,
                 ]);
+                ReportDataVersion::bump();
 
                 $this->audit->log('month.report_restored', $item, [
                     'period' => $item->period,
@@ -219,6 +221,7 @@ class TrashService
                     ], by: $by);
 
                     $item->visits()->onlyTrashed()->forceDelete();
+                    ReportDataVersion::bump();
                     $item->delete();
 
                     return;

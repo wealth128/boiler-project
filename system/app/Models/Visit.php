@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\Category;
+use App\Models\Concerns\BumpsReportVersion;
 use App\Models\Concerns\MovesToTrash;
 use Database\Factories\VisitFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -45,7 +46,7 @@ use Illuminate\Support\Carbon;
 class Visit extends Model
 {
     /** @use HasFactory<VisitFactory> */
-    use HasFactory, MovesToTrash;
+    use BumpsReportVersion, HasFactory, MovesToTrash;
 
     protected function casts(): array
     {

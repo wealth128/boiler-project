@@ -123,6 +123,24 @@ class BackupService
                 throw new RuntimeException($error !== '' ? $error : 'mysqldump stopped with exit code '.$result->exitCode().'.');
             }
 
+            // The throwaway tables (cache, locks, sessions) come back empty: the
+            // second run adds only their structure to the end of the same file.
+            $structure = $file.'.structure';
+            $second = Process::timeout(self::PROCESS_TIMEOUT)
+                ->env(self::windowsEnvironment())
+                ->run($this->structureCommand($optionFile, $structure));
+
+            if ($second->failed()) {
+                $error = trim($second->errorOutput());
+
+                throw new RuntimeException($error !== '' ? $error : 'mysqldump stopped with exit code '.$second->exitCode().'.');
+            }
+
+            if (is_file($structure)) {
+                file_put_contents($file, (string) file_get_contents($structure), FILE_APPEND);
+                @unlink($structure);
+            }
+
             $counts = BackupCounts::range($before, BackupCounts::forConnection(DB::connection()));
 
             clearstatcache(true, $file);
@@ -151,7 +169,7 @@ class BackupService
                 $zipName, $zipSize, $counts);
         } catch (Throwable $e) {
             // Never leave half a backup behind: both files go, or neither stays.
-            foreach ([$file, $zipFile] as $partial) {
+            foreach ([$file, $file.'.structure', $zipFile] as $partial) {
                 if (is_file($partial)) {
                     @unlink($partial);
                 }
@@ -204,8 +222,48 @@ class BackupService
             '--no-tablespaces', // needs no extra MySQL privilege
             '--default-character-set=utf8mb4',
             '--result-file='.$file,
+            ...array_map(
+                fn (string $table): string => '--ignore-table='.$this->connection()['database'].'.'.$table,
+                self::throwawayTables(),
+            ),
             (string) $this->connection()['database'],
         ];
+    }
+
+    /**
+     * Second mysqldump: only the structure (no rows) of the throwaway tables,
+     * so a restore still finds them, empty.
+     *
+     * @return list<string>
+     */
+    private function structureCommand(string $optionFile, string $file): array
+    {
+        return [
+            (string) config('census.backup.mysqldump_path'),
+            '--defaults-extra-file='.$optionFile, // must come first
+            '--no-data',
+            '--no-tablespaces',
+            '--default-character-set=utf8mb4',
+            '--result-file='.$file,
+            (string) $this->connection()['database'],
+            ...self::throwawayTables(),
+        ];
+    }
+
+    /**
+     * Tables that only hold throwaway rows: remembered reports and locks, and
+     * login sessions. They are not saved in a backup (only their structure),
+     * so a backup does not grow with them, and nothing in them is worth keeping.
+     *
+     * @return list<string>
+     */
+    public static function throwawayTables(): array
+    {
+        return array_values(array_unique([
+            (string) (config('cache.stores.database.table') ?: 'cache'),
+            (string) (config('cache.stores.database.lock_table') ?: 'cache_locks'),
+            (string) (config('session.table') ?: 'sessions'),
+        ]));
     }
 
     /**

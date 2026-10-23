@@ -82,6 +82,7 @@ final class AuditActions
 
         'system.updated' => ['System updated', self::SYSTEM],
         'system.restored' => ['System restored from a backup', self::SYSTEM],
+        'snapshots.rebuilt' => ['Saved report copies rebuilt', self::SYSTEM],
 
         'visit.deleted' => ['Visit moved to Trash', self::TRASH],
         'visit.restored' => ['Visit restored', self::TRASH],

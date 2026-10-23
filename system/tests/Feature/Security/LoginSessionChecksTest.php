@@ -4,7 +4,6 @@ use App\Models\AuditLog;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 use Tests\Support\SecurityWorld;
 
@@ -102,7 +101,8 @@ it('sends every route to "Choose your new password" while the password is tempor
     $this->world = $w = SecurityWorld::boot('must_change');
     $this->actingAs($w->actor);
 
-    $open = ['password.choose', 'password.choose.update', 'logout'];
+    // The public logo has no session at all, so a temporary password cannot stop it.
+    $open = ['password.choose', 'password.choose.update', 'logout', 'hospital.logo.public'];
     $checked = 0;
 
     foreach (Route::getRoutes()->getRoutes() as $route) {

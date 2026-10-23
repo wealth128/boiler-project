@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BumpsReportVersion;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -26,6 +27,8 @@ use Illuminate\Support\Carbon;
 #[Fillable(['file_name', 'original_rows', 'imported_count', 'skipped_count', 'imported_by', 'created_at', 'undone_at', 'undone_by'])]
 class ImportBatch extends Model
 {
+    use BumpsReportVersion;
+
     public $timestamps = false;
 
     protected function casts(): array
