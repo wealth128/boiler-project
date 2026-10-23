@@ -12,6 +12,7 @@ use App\Services\ReportSheetResolver;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Excel as ExcelWriter;
 use Maatwebsite\Excel\Facades\Excel;
 use Symfony\Component\HttpFoundation\Response;
@@ -61,7 +62,7 @@ class ReportExportController extends Controller
         ]);
     }
 
-    public function excel(Request $request, ReportSheetResolver $resolver, AuditLogger $audit): Response
+    public function excel(Request $request, ReportSheetResolver $resolver, AuditLogger $audit, HospitalSettings $hospital): Response
     {
         Gate::authorize(Permission::ViewReports->value);
 
@@ -69,7 +70,17 @@ class ReportExportController extends Controller
         $filters = $data['filters'];
 
         // Always every category: a Summary sheet and one sheet per category.
-        $workbook = new ReportWorkbook($data['report'], [...$data['sheet'], 'category' => null], $data['snapshot'], now());
+        // The logo is not frozen when a month is closed, so it is always the current one.
+        $logo = $hospital->imageFile('logo');
+
+        $workbook = new ReportWorkbook(
+            $data['report'],
+            [...$data['sheet'], 'category' => null],
+            $data['snapshot'],
+            now(),
+            $request->user()->name,
+            $logo === null ? null : Storage::disk('local')->path($logo),
+        );
 
         $this->logExport($audit, $request, 'excel', $filters, 'All');
 
