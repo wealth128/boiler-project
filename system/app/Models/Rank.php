@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BumpsReportVersion;
 use App\Models\Concerns\MovesToTrash;
 use Database\Factories\RankFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -25,7 +26,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Rank extends Model
 {
     /** @use HasFactory<RankFactory> */
-    use HasFactory, MovesToTrash;
+    use BumpsReportVersion, HasFactory, MovesToTrash;
 
     public $timestamps = false;
 

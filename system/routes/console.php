@@ -1,6 +1,7 @@
 <?php
 
 use App\Services\BackupMonitor;
+use App\Services\CacheCleaner;
 use App\Services\Import\ImportFileStore;
 use App\Services\SchedulerHeartbeat;
 use Illuminate\Support\Facades\Schedule;
@@ -26,6 +27,12 @@ Schedule::command('backup:test-restore')
 Schedule::call(fn () => app(SchedulerHeartbeat::class)->beat())
     ->name('scheduler-heartbeat')
     ->everyMinute();
+
+// Remembered reports and locks that have expired are never removed by Laravel itself:
+// every night they are deleted, so the cache table does not grow for years.
+Schedule::call(fn () => app(CacheCleaner::class)->purgeExpired())
+    ->name('cache-purge-expired')
+    ->dailyAt('01:30');
 
 // Uploaded import files wait at most an hour (Records > Import). Every 15 minutes anything
 // older is deleted, also when nobody opens the import page again (so no file stays more than about 75 minutes).

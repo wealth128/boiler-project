@@ -22,7 +22,17 @@ use App\Http\Controllers\System\HealthController;
 use App\Http\Controllers\Trash\TrashController;
 use App\Http\Controllers\Users\UserAccountController;
 use App\Http\Controllers\Users\UserController;
+use App\Http\Middleware\EndSessionAtDailyCutoff;
+use App\Http\Middleware\EndSessionWhenAccessRemoved;
+use App\Http\Middleware\HandleAppearance;
+use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\RequirePasswordChange;
+use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
+use Illuminate\Cookie\Middleware\EncryptCookies;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
+use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Route;
+use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 /*
 |--------------------------------------------------------------------------
@@ -51,7 +61,22 @@ Route::pattern('batch', '[0-9]{1,18}');
 
 // The hospital logo for the login page: public, read-only, cached, and it serves
 // ONLY the logo file (never a signature). 404 when no logo is set.
+// No session, no cookie and no CSRF check for this one route: a visitor who only
+// loads the login page's logo gets no Set-Cookie from it. The throttle (by IP) and
+// the security headers (a global middleware) stay.
 Route::get('hospital-logo', PublicLogoController::class)
+    ->withoutMiddleware([
+        EncryptCookies::class,
+        AddQueuedCookiesToResponse::class,
+        StartSession::class,
+        ShareErrorsFromSession::class,
+        PreventRequestForgery::class,
+        HandleAppearance::class,
+        HandleInertiaRequests::class,
+        EndSessionWhenAccessRemoved::class,
+        EndSessionAtDailyCutoff::class,
+        RequirePasswordChange::class,
+    ])
     ->middleware('throttle:120,1')
     ->name('hospital.logo.public');
 

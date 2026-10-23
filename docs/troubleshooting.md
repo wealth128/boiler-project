@@ -247,7 +247,7 @@ If the template is missing on every PC and the system is down, use any spreadshe
 
 **Normal times** on the server PC with a year of busy ER data (about 60 visits a day): a month's PDF about 2 seconds, its Excel file under 1 second, a year's PDF under 4 seconds. The button says **Preparing the file…** while it works and cannot be clicked twice.
 
-**A period you just looked at is not counted again.** The figures of an open period are kept for up to one hour, and thrown away as soon as any visit, patient, list or month changes (the system compares a checksum of those tables, so a change made by hand in MySQL also counts). Nothing to clear. To force a fresh count, change nothing and wait an hour, or run `php artisan cache:clear`.
+**A period you just looked at is not counted again.** The figures of an open period are kept for up to one hour, and thrown away as soon as any visit, patient, list or month changes (the system keeps one "data changed" number that every change made in the system raises; a change made by hand in MySQL, outside the system, is not noticed until the hour is over). Nothing to clear. To force a fresh count, change nothing and wait an hour, or run `php artisan cache:clear`.
 
 **Still slow (more than 10 seconds for a month)?**
 1. Check that the folder `system\storage\fonts` exists and is writable (it is in the update). The PDF keeps its font data there.

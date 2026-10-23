@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BumpsReportVersion;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -21,6 +22,8 @@ use Illuminate\Support\Carbon;
 #[Fillable(['period', 'is_closed', 'closed_by', 'closed_at', 'reopened_by', 'reopened_at'])]
 class MonthClosure extends Model
 {
+    use BumpsReportVersion;
+
     public $timestamps = false;
 
     protected function casts(): array

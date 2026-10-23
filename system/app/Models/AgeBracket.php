@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BumpsReportVersion;
 use App\Models\Concerns\MovesToTrash;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -21,7 +22,7 @@ use Illuminate\Database\Eloquent\Model;
 #[Fillable(['min_age', 'max_age', 'sort_order'])]
 class AgeBracket extends Model
 {
-    use MovesToTrash;
+    use BumpsReportVersion, MovesToTrash;
 
     public $timestamps = false;
 

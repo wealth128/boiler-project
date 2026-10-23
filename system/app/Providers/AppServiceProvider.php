@@ -4,10 +4,9 @@ namespace App\Providers;
 
 use App\Enums\Permission;
 use App\Http\Middleware\EndSessionAtDailyCutoff;
-use App\Models\AgeBracket;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Models\AgeBracket;
 use App\Models\BackupMark;
-use App\Models\TestRestoreRun;
 use App\Models\BackupRun;
 use App\Models\Branch;
 use App\Models\Diagnosis;
@@ -18,6 +17,7 @@ use App\Models\Patient;
 use App\Models\Rank;
 use App\Models\ReportSnapshot;
 use App\Models\Setting;
+use App\Models\TestRestoreRun;
 use App\Models\User;
 use App\Models\Visit;
 use App\Observers\AuditObserver;
@@ -25,12 +25,14 @@ use App\Policies\TrashPolicy;
 use App\Policies\UserPolicy;
 use App\Policies\VisitPolicy;
 use App\Services\AuditLogger;
+use App\Services\TablePaging;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -58,6 +60,13 @@ class AppServiceProvider extends ServiceProvider
         $this->configureAuthorization();
         $this->configureAuditEvents();
         $this->configureRateLimits();
+        $this->configurePaging();
+    }
+
+    /** Every paginate() call reads ?page= through TablePaging::page (1 to 100000). */
+    protected function configurePaging(): void
+    {
+        Paginator::currentPageResolver(fn (string $pageName = 'page'): int => TablePaging::page(request(), $pageName));
     }
 
     /**

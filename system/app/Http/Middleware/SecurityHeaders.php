@@ -21,6 +21,10 @@ use Symfony\Component\HttpFoundation\Response;
  *   Everything loads from this server: no CDN, no external fonts (the app has no
  *   internet). img-src also allows data: and blob: for the logo cropper preview.
  *
+ * - Strict-Transport-Security, only when the request came over HTTPS (a browser
+ *   ignores it over plain HTTP, and the hospital network may stay on HTTP). It
+ *   is ready if the hospital chooses HTTPS: one year, this host only.
+ *
  * A response that already set its own Content-Security-Policy (the logo and
  * signature pictures send a stricter one) keeps it.
  *
@@ -41,6 +45,10 @@ class SecurityHeaders
         $headers->set('X-Frame-Options', 'SAMEORIGIN');
         $headers->set('X-Content-Type-Options', 'nosniff');
         $headers->set('Referrer-Policy', 'same-origin');
+
+        if ($request->isSecure()) {
+            $headers->set('Strict-Transport-Security', 'max-age=31536000');
+        }
 
         if (! $headers->has('Content-Security-Policy')) {
             $headers->set('Content-Security-Policy', self::policy($nonce, self::devServer()));

@@ -4,7 +4,6 @@ namespace App\Services;
 
 use Illuminate\Log\Logger;
 use Monolog\Formatter\FormatterInterface;
-use Monolog\Formatter\LineFormatter;
 use Monolog\Handler\FormattableHandlerInterface;
 use Monolog\LogRecord;
 
@@ -21,7 +20,10 @@ use Monolog\LogRecord;
  * - the APP_KEY, the database passwords, the restore-test password and the seed
  *   passwords from the settings, wherever they appear;
  * - any bcrypt password hash;
- * - the value after "password" or "remember_token" in "name = value" text.
+ * - the value of any name that contains password, passwd, token or secret
+ *   (password, DB_PASSWORD, RESTORE_TEST_PASSWORD, remember_token, token),
+ *   written as name=value, name: value or JSON ("password":"x"), also inside
+ *   nested context arrays and JSON that is itself inside a JSON string.
  */
 class RedactSecretsInLogs
 {
@@ -58,11 +60,12 @@ class RedactSecretsInLogs
 
         $text = (string) preg_replace('/\$2[abxy]\$\d{2}\$[.\/A-Za-z0-9]{53}/', self::HIDDEN, $text);
 
-        return (string) preg_replace(
-            '/(`?(?:password|remember_token)`?\s*[=:]\s*)(\'[^\']*\'|"[^"]*"|[^\s,)\'"]+)/i',
-            '$1'.self::HIDDEN,
-            $text,
-        );
+        // name, optional closing quote (also backslash-escaped, for JSON inside JSON), then = or :
+        $name = '(?:[A-Za-z0-9_.\-]*(?:password|passwd|token|secret)[A-Za-z0-9_.\-]*(?:\\\\*["\'`])?\s*[=:]\s*)';
+        // "plain JSON string", \"string inside a JSON string\", 'single quoted', or a bare word or number.
+        $value = '("(?:[^"\\\\]|\\\\.)*"|\\\\+"(?:[^"\\\\]|\\\\(?!"))*\\\\+"|\'[^\']*\'|[^\s,)\'"}\]\\\\]+)';
+
+        return (string) preg_replace('/(`?'.$name.')'.$value.'/i', '$1'.self::HIDDEN, $text);
     }
 
     /** @return list<string> */
@@ -70,16 +73,16 @@ class RedactSecretsInLogs
     {
         $found = [];
 
-        $key = (string) config('app.key');
+        $key = is_scalar(config('app.key')) ? (string) config('app.key') : '';
         $found[] = $key;
         $found[] = str_starts_with($key, 'base64:') ? substr($key, 7) : '';
 
         foreach ((array) config('app.previous_keys', []) as $previous) {
-            $found[] = (string) $previous;
+            $found[] = is_scalar($previous) ? (string) $previous : '';
         }
 
         foreach ((array) config('database.connections', []) as $connection) {
-            $found[] = (string) ($connection['password'] ?? '');
+            $found[] = is_array($connection) && is_scalar($connection['password'] ?? null) ? (string) $connection['password'] : '';
         }
 
         $found[] = (string) config('census.restore_test.password');

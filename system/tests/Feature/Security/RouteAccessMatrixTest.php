@@ -6,6 +6,7 @@ use App\Enums\MonthReportDeleteReason;
 use App\Enums\PatientDeleteReason;
 use App\Enums\UserDeleteReason;
 use App\Enums\VisitDeleteReason;
+use App\Models\AgeBracket;
 use App\Models\AuditLog;
 use App\Models\BackupMark;
 use App\Models\BackupRun;
@@ -13,18 +14,17 @@ use App\Models\Diagnosis;
 use App\Models\MonthClosure;
 use App\Models\MonthDeletion;
 use App\Models\Patient;
-use App\Models\Rank;
 use App\Models\ReportSnapshot;
 use App\Models\Setting;
 use App\Models\TestRestoreRun;
 use App\Models\User;
 use App\Models\Visit;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia as Assert;
+use Tests\Support\ImportFile;
 use Tests\Support\SecurityWorld;
 
 /*
@@ -66,7 +66,7 @@ function secAccessMatrix(): array
         $w->withLogo();
 
         return '/hospital-logo';
-    }, [], 'as' => ['guest' => 'ok', 'encoder' => 'ok', 'admin' => 'ok', 'system_admin' => 'ok', 'viewer' => 'ok'], 'verify' => fn ($w, TestResponse $r) => expect($r->headers->get('Content-Type'))->toBe('image/png')];
+    }, [], 'as' => array_fill_keys(SecurityWorld::ACTORS, 'ok'), 'verify' => fn ($w, TestResponse $r) => expect($r->headers->get('Content-Type'))->toBe('image/png')];
     $m['login'] = ['GET', '/login', [], 'as' => ['guest' => 'ok', 'encoder' => 'redirect', 'admin' => 'redirect', 'system_admin' => 'redirect', 'viewer' => 'redirect']];
     $m['login.store'] = ['POST', '/login', [],
         'data' => fn ($w) => ['username' => $w->loginUser->username, 'password' => 'password'],
@@ -127,7 +127,7 @@ function secAccessMatrix(): array
     $m['records.import'] = ['GET', '/records/import', $adm, 'verify' => $page];
     $m['records.import.template'] = ['GET', '/records/import/template', $adm,
         'verify' => fn ($w, TestResponse $r) => expect($r->headers->get('Content-Type'))->toContain('spreadsheetml')];
-    $m['records.import.upload'] = ['POST', '/records/import', $adm, 'data' => fn () => ['file' => Tests\Support\ImportFile::xlsx([Tests\Support\ImportFile::row()])],
+    $m['records.import.upload'] = ['POST', '/records/import', $adm, 'data' => fn () => ['file' => ImportFile::xlsx([ImportFile::row()])],
         'verify' => fn ($w, TestResponse $r) => expect((string) $r->headers->get('Location'))->toMatch('/records\/import\?file=[A-Za-z0-9]{40}/')];
     $m['records.import.confirm'] = ['POST', '/records/import/confirm', $adm, 'needsTest' => true,
         'data' => fn ($w, $t) => ['token' => $w->stagedToken($t), 'rows' => [2]],
@@ -170,7 +170,7 @@ function secAccessMatrix(): array
     $m['lists.update'] = ['PUT', fn ($w) => "/settings/ranks/{$w->rank->id}", $adm, 'data' => fn () => ['name' => 'MAJ'],
         'verify' => fn ($w) => expect($w->rank->fresh()->name)->toBe('MAJ')];
     $m['lists.destroy'] = ['DELETE', fn ($w) => "/settings/age-brackets/{$w->bracket->id}", $adm, 'data' => fn () => ['reason' => SecurityWorld::reason(ListItemDeleteReason::class)],
-        'verify' => fn ($w) => expect(App\Models\AgeBracket::onlyTrashed()->whereKey($w->bracket->id)->exists())->toBeTrue()];
+        'verify' => fn ($w) => expect(AgeBracket::onlyTrashed()->whereKey($w->bracket->id)->exists())->toBeTrue()];
     $m['lists.ranks.move'] = ['PUT', fn ($w) => "/settings/ranks/{$w->rankB->id}/move", $adm, 'data' => fn () => ['direction' => 'up'],
         'verify' => fn ($w) => expect($w->rankB->fresh()->sort_order)->toBeLessThan($w->rank->fresh()->sort_order)];
 

@@ -831,8 +831,8 @@ it('counts again as soon as a visit, a patient, a list or a month changes', func
     Patient::query()->where('sex', 'Male')->first()->update(['sex' => 'Female']);
     $afterSex = $counting(fn () => chartsResolved());
 
-    // A list changed without the application: by hand in the database.
-    DB::table('branches')->where('id', $this->navy->id)->update(['name' => 'Philippine Navy']);
+    // A list item renamed (the model raises the report data version).
+    $this->navy->update(['name' => 'Philippine Navy']);
     $afterList = $counting(fn () => chartsResolved());
     $branchLabels = array_column(chartsResolved()['charts']['summary']['branches']['rows'], 'label');
 
@@ -856,7 +856,7 @@ it('does not remember a report across ReportBuilder versions, and gives every pe
 
     expect($sept['totals']['visits'])->toBe(7)
         ->and($aug['totals']['visits'])->toBe(2)
-        ->and($cache->stamp())->toMatch('/^[0-9a-f]{32}$/');
+        ->and($cache->stamp())->toMatch('/^\d+$/');
 });
 
 it('reads a closed month from its saved copy without counting', function () {

@@ -35,6 +35,29 @@ final class TablePaging
         return self::DEFAULT_PER_PAGE;
     }
 
+    /** The highest page number accepted from ?page=. */
+    public const MAX_PAGE = 100000;
+
+    /**
+     * The page number from ?page=, between 1 and 100000. Missing, not a number
+     * or a list is page 1; a huge number is 100000 (and then the page past the
+     * end goes to the last page), so it can never overflow a database offset.
+     */
+    public static function page(Request $request, string $name = 'page'): int
+    {
+        $value = $request->query($name);
+
+        if (! is_string($value) || ! ctype_digit($value)) {
+            return 1;
+        }
+
+        if (strlen(ltrim($value, '0')) > 6) {
+            return self::MAX_PAGE;
+        }
+
+        return min(max(1, (int) $value), self::MAX_PAGE);
+    }
+
     /** Page numbers shown at once around the current page: 4 5 6. */
     public const WINDOW = 3;
 
@@ -64,7 +87,7 @@ final class TablePaging
     public static function fromCollection(Request $request, Collection $items): LengthAwarePaginator
     {
         $perPage = self::perPage($request);
-        $current = max(1, (int) $request->query('page', 1));
+        $current = self::page($request);
 
         return (new LengthAwarePaginator(
             $items->forPage($current, $perPage)->values(),

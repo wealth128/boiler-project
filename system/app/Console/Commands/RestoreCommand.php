@@ -11,6 +11,7 @@ use App\Services\AuditLogger;
 use App\Services\BackupMonitor;
 use App\Services\BackupService;
 use App\Services\FolderZipper;
+use App\Services\ReportDataVersion;
 use App\Services\Setup\AppMaintenance;
 use App\Services\Setup\BackupFileChecker;
 use App\Services\Setup\EnvFile;
@@ -173,6 +174,7 @@ class RestoreCommand extends Command
         DB::table(config('session.table') ?: 'sessions')->delete();
         DB::table(config('cache.stores.database.table') ?: 'cache')->delete();
         DB::table(config('cache.stores.database.lock_table') ?: 'cache_locks')->delete();
+        ReportDataVersion::bump(); // the loaded data is new: no remembered report may match it
 
         $this->auditSystem($audit, 'system.restored', [
             'label' => 'System restored from '.basename($dump),

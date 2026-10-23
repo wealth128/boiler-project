@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\Sex;
+use App\Models\Concerns\BumpsReportVersion;
 use App\Models\Concerns\MovesToTrash;
 use Carbon\CarbonInterface;
 use Database\Factories\PatientFactory;
@@ -32,7 +33,7 @@ use Illuminate\Support\Carbon;
 class Patient extends Model
 {
     /** @use HasFactory<PatientFactory> */
-    use HasFactory, MovesToTrash;
+    use BumpsReportVersion, HasFactory, MovesToTrash;
 
     protected function casts(): array
     {
