@@ -388,3 +388,11 @@ function tabExcelPath(TestResponse $response): string
 
     return $path;
 }
+
+it('has a Year list next to Month on a monthly report, and the Month list shows only that year', function () {
+    $controls = file_get_contents(resource_path('js/features/reports/report-controls.tsx'));
+
+    expect($controls)->toContain('const monthYear = values.month.slice(0, 4)')
+        ->toContain('startsWith(`${monthYear}-`)')
+        ->toContain('onChange={changeMonthYear}');
+});

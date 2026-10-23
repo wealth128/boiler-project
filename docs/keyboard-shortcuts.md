@@ -262,8 +262,8 @@ Nothing is counted until you press **Generate**. The choices are then kept in th
 
 | Key | What it does |
 |---|---|
-| **Tab** / **Shift + Tab** | Next / previous box. Order: Period type → Month (or Quarter and Year, or Year, or From and To) → Generate → the open category tab → Print / PDF choice → Export PDF → Export Excel → Print |
-| Type the first letters, or **↑ / ↓** | Choose in Period type, Month, Quarter or Year |
+| **Tab** / **Shift + Tab** | Next / previous box. Order: Period type → Month → Year (or Quarter and Year, or Year, or From and To) → Generate → the open category tab → Print / PDF choice → Export PDF → Export Excel → Print |
+| Type the first letters, or **↑ / ↓** | Choose in Period type, Month, Year or Quarter. In a monthly report, **Year** changes which months the Month list shows, and keeps the same month when that year has it. |
 | **Alt + ↓** | Open a list |
 | **Enter** | Generate, from any box |
 | Type in From / To | Dates go day, month, year in the order your browser shows. **↑ / ↓** change the part the cursor is in. |
