@@ -171,6 +171,110 @@ it('lists every check with a result and one "what to do" line', function () {
             ->has('checks.data.0.todo'));
 });
 
+// --- Paging, order and filter (Step 7b) ---------------------------------------
+
+/** A server with two warnings (low disk space) and one problem (no database). */
+function unhealthyServer(object $test): void
+{
+    healthyServer($test, ['database_down' => true, 'free_server' => 5 * GB, 'free_backup' => 5 * GB]);
+}
+
+it('sorts Problems first, then Warnings, then OK, so page 2 never hides a problem', function () {
+    unhealthyServer($this);
+
+    $counts = HealthChecker::counts(app(HealthChecker::class)->checks());
+    expect($counts['problem'])->toBeGreaterThan(0)->and($counts['warning'])->toBeGreaterThan(0);
+
+    $this->actingAs(userWithRole('admin'))->get('/system/health?per_page=50')
+        ->assertInertia(function (Assert $page) use ($counts) {
+            $page->where('counts', $counts)->where('overall', 'problem');
+
+            $statuses = collect($page->toArray()['props']['checks']['data'])->pluck('status')->all();
+            $rank = ['problem' => 0, 'warning' => 1, 'ok' => 2];
+            $ranks = array_map(fn ($s) => $rank[$s], $statuses);
+            $sorted = $ranks;
+            sort($sorted);
+
+            expect($ranks)->toBe($sorted)->and($statuses[0])->toBe('problem');
+        });
+
+    // Page 1 of the default 10 rows holds every problem and warning.
+    $this->get('/system/health')->assertInertia(function (Assert $page) use ($counts) {
+        $first = collect($page->toArray()['props']['checks']['data'])->pluck('status');
+
+        expect($first->reject(fn (string $status) => $status === 'ok')->count())->toBe($counts['problem'] + $counts['warning']);
+    });
+});
+
+it('pages the checks 10 at a time and keeps the counts at the top for every page', function () {
+    unhealthyServer($this);
+    $counts = HealthChecker::counts(app(HealthChecker::class)->checks());
+
+    // Worked out from the real checks, never a fixed number.
+    $total = $counts['total'];
+    $lastPage = (int) ceil($total / 10);
+    expect($lastPage)->toBeGreaterThan(1);
+
+    $this->actingAs(userWithRole('admin'))->get('/system/health')
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('checks.data', 10)
+            ->where('checks.meta.total', $total)
+            ->where('checks.meta.last_page', $lastPage)
+            ->where('checks.meta.pages', array_slice(range(1, $lastPage), 0, 3))
+            ->where('counts', $counts));
+
+    $this->get('/system/health?page=2')
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('checks.data', min(10, $total - 10))
+            ->where('checks.meta.current_page', 2)
+            ->where('counts', $counts));
+
+    $this->get('/system/health?page=999')->assertRedirect('/system/health?page='.$lastPage);
+});
+
+it('filters by All, Problems, Warnings or OK from ?status= and keeps it in the paging', function () {
+    unhealthyServer($this);
+    $counts = HealthChecker::counts(app(HealthChecker::class)->checks());
+
+    $admin = userWithRole('admin');
+
+    foreach (['problem', 'warning', 'ok'] as $status) {
+        $this->actingAs($admin)->get('/system/health?status='.$status.'&per_page=50')
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('filter', $status)
+                ->where('checks.meta.total', $counts[$status])
+                ->where('counts', $counts)
+                ->etc());
+
+        $this->get('/system/health?status='.$status.'&per_page=50')->assertInertia(function (Assert $page) use ($status) {
+            expect(collect($page->toArray()['props']['checks']['data'])->pluck('status')->unique()->all())->toBe([$status]);
+        });
+    }
+
+    // Unknown values fall back to All.
+    foreach (['bogus', '', ['problem']] as $odd) {
+        $this->get('/system/health?'.http_build_query(['status' => $odd]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->where('filter', 'all')->where('checks.meta.total', $counts['total']));
+    }
+
+    // Past the end of a filtered list goes to its last page, keeping the filter.
+    $this->get('/system/health?status=ok&per_page=10&page=5')
+        ->assertRedirect('/system/health?status=ok&per_page=10&page=2');
+});
+
+it('accepts only 10, 20 or 50 rows per page', function (string $query, int $expected) {
+    $this->actingAs(userWithRole('admin'))->get('/system/health'.$query)
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->where('checks.meta.per_page', $expected));
+})->with([
+    '20' => ['?per_page=20', 20],
+    '50' => ['?per_page=50', 50],
+    '999' => ['?per_page=999', 10],
+    'text' => ['?per_page=abc', 10],
+    'a list' => ['?per_page[]=20', 10],
+]);
+
 it('does not show passwords, .env contents or connection details', function () {
     healthyServer($this, ['database_down' => true]);
 
