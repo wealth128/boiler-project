@@ -151,7 +151,7 @@ it('has a Summary sheet and one sheet per category, with the same numbers as the
 
     $book = workbookOf($this->actingAs($this->admin)->get('/reports/export/excel?type=monthly&month=2026-09'));
 
-    expect($book->getSheetNames())->toBe(['Summary', 'OPD', 'ER', 'Admission']);
+    expect($book->getSheetNames())->toBe(['Summary', 'OPD', 'ER', 'Admission', 'Chart data']);
 
     $summary = sheetRows($book, 'Summary');
 
@@ -181,7 +181,7 @@ it('writes a Summary sheet and one sheet per category, whichever tab is open', f
 
     $book = workbookOf($this->actingAs($this->admin)->get('/reports/export/excel?type=monthly&month=2026-09&category='.$tab));
 
-    expect($book->getSheetNames())->toBe(['Summary', 'OPD', 'ER', 'Admission'])
+    expect($book->getSheetNames())->toBe(['Summary', 'OPD', 'ER', 'Admission', 'Chart data'])
         ->and(collect(sheetRows($book, 'Summary'))->pluck(0)->all())->toContain('September 2026');
 })->with(['opd', 'er', 'admission', 'summary', 'nonsense']);
 

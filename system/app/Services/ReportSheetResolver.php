@@ -15,7 +15,8 @@ use Carbon\CarbonImmutable;
  *
  * The choices come from the URL through ReportFilters (bad values fall back
  * to the defaults). A closed month gives its saved copy; every other
- * period is counted live by ReportBuilder.
+ * period is counted live by ReportBuilder, or remembered by ReportCache when
+ * nothing has changed since it was last counted.
  *
  * The report always holds every category: the tab (OPD, ER, Admission or
  * Summary) only chooses what the screen, Print and PDF show, so the numbers
@@ -24,15 +25,16 @@ use Carbon\CarbonImmutable;
 class ReportSheetResolver
 {
     public function __construct(
-        private readonly ReportBuilder $builder,
+        private readonly ReportCache $reports,
         private readonly HospitalSettings $hospital,
         private readonly FrozenSignatures $frozenSignatures,
         private readonly ReportSections $sections,
+        private readonly ReportCharts $charts,
     ) {}
 
     /**
      * @param  array<string, mixed>  $query  the query string
-     * @return array{filters: ReportFilters, report: array<string, mixed>, sections: array<string, list<array<string, mixed>>>, sheet: array<string, mixed>, snapshot: array{month_label: string, taken_at: CarbonImmutable}|null, frozen: array{period: string, block: array<string, string|null>}|null}
+     * @return array{filters: ReportFilters, report: array<string, mixed>, sections: array<string, list<array<string, mixed>>>, charts: array<string, array<string, array<string, mixed>>>, sheet: array<string, mixed>, snapshot: array{month_label: string, taken_at: CarbonImmutable}|null, frozen: array{period: string, block: array<string, string|null>}|null}
      */
     public function resolve(array $query): array
     {
@@ -41,7 +43,7 @@ class ReportSheetResolver
         $saved = $this->savedCopy($filters);
         $report = $saved !== null
             ? $this->inCategoryOrder($saved['data'])
-            : $this->builder->build($filters->from, $filters->to);
+            : $this->reports->build($filters->from, $filters->to);
 
         // Signature pictures only on a final report. Otherwise the names and
         // titles stay, over a blank line, with a note.
@@ -67,11 +69,15 @@ class ReportSheetResolver
             $sheet = $this->withoutSignaturePictures($sheet);
         }
 
+        // The tables of every page (summary and each category), drawn the same by screen, Print, PDF and Excel,
+        // and the charts that sit above them. Both are made once here and used by every format.
+        $sections = $this->sections->pages($report);
+
         return [
             'filters' => $filters,
             'report' => $report,
-            // The tables of every page (summary and each category), drawn the same by screen, Print, PDF and Excel.
-            'sections' => $this->sections->pages($report),
+            'sections' => $sections,
+            'charts' => $this->charts->pages($sections, $filters->label, $report['daily']),
             'sheet' => $sheet,
             'snapshot' => $saved === null ? null : [
                 'month_label' => $filters->label,

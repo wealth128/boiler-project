@@ -89,15 +89,19 @@ class ReportBuilder
         $categories = $category !== null ? [$category] : Category::cases();
         $names = array_map(fn (Category $c): string => $c->value, $categories);
 
-        $perCategory = $this->categoryTotals($start, $end, $names);
+        // Each patient's latest visit, worked out once (two queries) and counted
+        // in PHP, instead of once for every table of the report.
+        $latest = $this->latestVisits($start, $end, $names);
+
+        $perCategory = $this->categoryTotals($start, $end, $names, $latest);
         $brackets = AgeBracket::query()->ordered()->get();
 
-        $sex = $this->sexCounts($start, $end, $names);
-        $ageSex = $this->ageSexCounts($start, $end, $names);
+        $sex = $this->sexCounts($latest);
+        $ageSex = $this->ageSexCounts($latest);
         $diagnoses = $this->diagnosisCounts($start, $end, $names);
-        $branches = $this->branchRankCounts($start, $end, $names);
-        $afp = $this->afpCounts($start, $end, $names);
-        $returning = $this->returningCounts($start, $end, $names);
+        $branches = $this->branchRankCounts($latest);
+        $afp = $this->afpCounts($latest);
+        $returning = $this->returningCounts($latest);
 
         $result = [];
 
@@ -170,59 +174,75 @@ class ReportBuilder
     }
 
     /**
-     * One row per patient per category: their latest visit in the period
-     * (latest time, then highest id). A visit is left out when the same
-     * patient has a later visit in the same category and period. With
-     * $overall the categories are not told apart: one row per patient, their
-     * latest visit in any of the categories.
+     * The rows every patient-based table is counted from: each patient's
+     * latest visit in the period (latest time, then highest id), with the
+     * patient's sex, the visit's age, branch and rank, and whether the
+     * patient had an earlier visit.
+     *
+     *   each  one row per patient per category (their latest visit in that category)
+     *   all   one row per patient, their latest visit in any of the categories
+     *
+     * Two queries in all, whatever the size of the period. A row's "category"
+     * is the one of that visit.
+     *
+     * @return array{each: list<object>, all: list<object>}
      */
-    private function latestVisits(CarbonInterface $from, CarbonInterface $to, array $categories, bool $overall = false): Builder
+    private function latestVisits(CarbonInterface $from, CarbonInterface $to, array $categories): array
     {
-        return $this->visitsInPeriod($from, $to, $categories)->whereNotExists(
-            fn (Builder $later) => $later
-                ->select(DB::raw(1))
-                ->from('visits as later')
-                ->whereColumn('later.patient_id', 'visits.patient_id')
-                ->when(! $overall, fn (Builder $same) => $same->whereColumn('later.category', 'visits.category'))
-                ->whereNull('later.deleted_at')
-                ->whereIn('later.category', $categories)
-                ->where('later.visited_at', '>=', $from)
-                ->where('later.visited_at', '<', $to)
-                ->where(fn (Builder $newer) => $newer
-                    ->whereColumn('later.visited_at', '>', 'visits.visited_at')
-                    ->orWhere(fn (Builder $tie) => $tie
-                        ->whereColumn('later.visited_at', 'visits.visited_at')
-                        ->whereColumn('later.id', '>', 'visits.id'))),
+        return [
+            'each' => $this->latestSet($from, $to, $categories, overall: false),
+            'all' => $this->latestSet($from, $to, $categories, overall: true),
+        ];
+    }
+
+    /**
+     * @return list<object>
+     */
+    private function latestSet(CarbonInterface $from, CarbonInterface $to, array $categories, bool $overall): array
+    {
+        // A fixed text: nothing typed by anyone goes into the SQL.
+        $partition = $overall ? 'visits.patient_id' : 'visits.patient_id, visits.category';
+
+        $ranked = $this->visitsInPeriod($from, $to, $categories)->selectRaw(
+            'visits.id, visits.patient_id, visits.category, visits.age, visits.branch_id, visits.rank_id, visits.rank_other, '
+            ."ROW_NUMBER() OVER (PARTITION BY {$partition} ORDER BY visits.visited_at DESC, visits.id DESC) AS rn"
         );
+
+        return DB::query()
+            ->fromSub($ranked, 'v')
+            ->where('v.rn', 1)
+            ->join('patients', 'patients.id', '=', 'v.patient_id')
+            ->join('branches', 'branches.id', '=', 'v.branch_id')
+            ->join('ranks', 'ranks.id', '=', 'v.rank_id')
+            ->selectRaw(
+                'v.category AS category, patients.sex AS sex, v.age AS age, '
+                .'v.branch_id AS branch_id, branches.name AS branch, branches.sort_order AS branch_order, branches.is_afp AS afp, '
+                .'v.rank_id AS rank_id, ranks.name AS rank_name, ranks.is_other AS is_other, ranks.sort_order AS rank_order, v.rank_other AS rank_other, '
+                .'EXISTS (SELECT 1 FROM visits AS earlier WHERE earlier.patient_id = v.patient_id '
+                .($overall ? '' : 'AND earlier.category = v.category ')
+                .'AND earlier.deleted_at IS NULL AND earlier.visited_at < ?) AS is_returning',
+                [$from],
+            )
+            ->get()
+            ->all();
     }
 
     /**
-     * The same count made for each category and for every category together.
-     * The second set is filed under "All".
+     * Runs a counting step over both sets of latest visits. The first set
+     * is filed under each row's category, the second under "All".
      *
-     * @param  callable(bool): array<string, mixed>  $count  given $overall
-     * @return array<string, mixed>
+     * @param  array{each: list<object>, all: list<object>}  $latest
+     * @param  callable(object, string): void  $count  given the row and the key it is filed under
      */
-    private function both(callable $count): array
+    private function eachLatest(array $latest, callable $count): void
     {
-        return [...$count(false), ...$count(true)];
-    }
+        foreach ($latest['each'] as $row) {
+            $count($row, $row->category);
+        }
 
-    /** The key a row is filed under: its category, or "All" when the categories are counted together. */
-    private function bucket(bool $overall): string
-    {
-        return $overall ? "'".self::ALL."'" : 'visits.category';
-    }
-
-    /**
-     * GROUP BY columns: the category (unless every category is counted
-     * together), then the given ones.
-     *
-     * @return list<string>
-     */
-    private function groups(bool $overall, string ...$columns): array
-    {
-        return $overall ? array_values($columns) : ['visits.category', ...$columns];
+        foreach ($latest['all'] as $row) {
+            $count($row, self::ALL);
+        }
     }
 
     /**
@@ -242,7 +262,7 @@ class ReportBuilder
     /**
      * @return array<string, array{patients: int, visits: int}>
      */
-    private function categoryTotals(CarbonInterface $from, CarbonInterface $to, array $categories): array
+    private function categoryTotals(CarbonInterface $from, CarbonInterface $to, array $categories, array $latest): array
     {
         $totals = array_fill_keys($categories, ['patients' => 0, 'visits' => 0]);
 
@@ -251,10 +271,11 @@ class ReportBuilder
             ->selectRaw('visits.category AS category, COUNT(*) AS n')
             ->pluck('n', 'category');
 
-        $patients = $this->latestVisits($from, $to, $categories)
-            ->groupBy('visits.category')
-            ->selectRaw('visits.category AS category, COUNT(*) AS n')
-            ->pluck('n', 'category');
+        $patients = [];
+
+        foreach ($latest['each'] as $row) {
+            $patients[$row->category] = ($patients[$row->category] ?? 0) + 1;
+        }
 
         foreach ($categories as $name) {
             $totals[$name] = ['patients' => (int) ($patients[$name] ?? 0), 'visits' => (int) ($visits[$name] ?? 0)];
@@ -264,25 +285,18 @@ class ReportBuilder
     }
 
     /**
+     * @param  array{each: list<object>, all: list<object>}  $latest
      * @return array<string, array<string, int>> category (or "All") => sex => patients
      */
-    private function sexCounts(CarbonInterface $from, CarbonInterface $to, array $categories): array
+    private function sexCounts(array $latest): array
     {
-        return $this->both(function (bool $overall) use ($from, $to, $categories): array {
-            $counts = [];
+        $counts = [];
 
-            $rows = $this->latestVisits($from, $to, $categories, $overall)
-                ->join('patients', 'patients.id', '=', 'visits.patient_id')
-                ->groupBy(...$this->groups($overall, 'patients.sex'))
-                ->selectRaw($this->bucket($overall).' AS category, patients.sex AS sex, COUNT(*) AS n')
-                ->get();
-
-            foreach ($rows as $row) {
-                $counts[$row->category][$row->sex] = (int) $row->n;
-            }
-
-            return $counts;
+        $this->eachLatest($latest, function (object $row, string $key) use (&$counts): void {
+            $counts[$key][$row->sex] = ($counts[$key][$row->sex] ?? 0) + 1;
         });
+
+        return $counts;
     }
 
     /**
@@ -300,25 +314,19 @@ class ReportBuilder
     /**
      * Patients per exact age and sex. Placing ages into brackets happens in ageSexLines().
      *
+     * @param  array{each: list<object>, all: list<object>}  $latest
      * @return array<string, array<int, array<string, int>>> category (or "All") => age => sex => patients
      */
-    private function ageSexCounts(CarbonInterface $from, CarbonInterface $to, array $categories): array
+    private function ageSexCounts(array $latest): array
     {
-        return $this->both(function (bool $overall) use ($from, $to, $categories): array {
-            $counts = [];
+        $counts = [];
 
-            $rows = $this->latestVisits($from, $to, $categories, $overall)
-                ->join('patients', 'patients.id', '=', 'visits.patient_id')
-                ->groupBy(...$this->groups($overall, 'visits.age', 'patients.sex'))
-                ->selectRaw($this->bucket($overall).' AS category, visits.age AS age, patients.sex AS sex, COUNT(*) AS n')
-                ->get();
-
-            foreach ($rows as $row) {
-                $counts[$row->category][(int) $row->age][$row->sex] = (int) $row->n;
-            }
-
-            return $counts;
+        $this->eachLatest($latest, function (object $row, string $key) use (&$counts): void {
+            $age = (int) $row->age;
+            $counts[$key][$age][$row->sex] = ($counts[$key][$age][$row->sex] ?? 0) + 1;
         });
+
+        return $counts;
     }
 
     /**
@@ -485,7 +493,7 @@ class ReportBuilder
      *
      * @return array<string, list<array{name: string, total: int, ranks: list<array{label: string, count: int}>}>> category (or "All") => branches
      */
-    private function branchRankCounts(CarbonInterface $from, CarbonInterface $to, array $categories): array
+    private function branchRankCounts(array $latest): array
     {
         // Listed ranks by branch and name, including ones in Trash, to merge typed text into.
         $listedRanks = [];
@@ -494,30 +502,40 @@ class ReportBuilder
             $listedRanks[$listed->branch_id][self::nameKey($listed->name)] = $listed;
         }
 
-        return $this->both(fn (bool $overall): array => $this->branchTrees($from, $to, $categories, $overall, $listedRanks));
+        // The same lines as a GROUP BY branch and rank (and typed rank) would give.
+        $groups = [];
+
+        $this->eachLatest($latest, function (object $row, string $key) use (&$groups): void {
+            $id = $key.'|'.$row->rank_id.'|'.($row->rank_other ?? "\0");
+
+            if (! isset($groups[$id])) {
+                $groups[$id] = (object) [
+                    'category' => $key,
+                    'branch_id' => $row->branch_id,
+                    'branch' => $row->branch,
+                    'branch_order' => $row->branch_order,
+                    'rank_id' => $row->rank_id,
+                    'rank_name' => $row->rank_name,
+                    'is_other' => $row->is_other,
+                    'rank_order' => $row->rank_order,
+                    'rank_other' => $row->rank_other,
+                    'n' => 0,
+                ];
+            }
+
+            $groups[$id]->n++;
+        });
+
+        return $this->branchTrees($groups, $listedRanks);
     }
 
     /**
+     * @param  iterable<object>  $rows  patients per category (or "All"), branch and rank
      * @param  array<int, array<string, object>>  $listedRanks
      * @return array<string, list<array{name: string, total: int, ranks: list<array{label: string, count: int}>}>>
      */
-    private function branchTrees(CarbonInterface $from, CarbonInterface $to, array $categories, bool $overall, array $listedRanks): array
+    private function branchTrees(iterable $rows, array $listedRanks): array
     {
-        $rows = $this->latestVisits($from, $to, $categories, $overall)
-            ->join('branches', 'branches.id', '=', 'visits.branch_id')
-            ->join('ranks', 'ranks.id', '=', 'visits.rank_id')
-            ->groupBy(...$this->groups(
-                $overall,
-                'branches.id', 'branches.name', 'branches.sort_order',
-                'ranks.id', 'ranks.name', 'ranks.is_other', 'ranks.sort_order', 'visits.rank_other',
-            ))
-            ->selectRaw(
-                $this->bucket($overall).' AS category, branches.id AS branch_id, branches.name AS branch, branches.sort_order AS branch_order, '
-                .'ranks.id AS rank_id, ranks.name AS rank_name, ranks.is_other AS is_other, ranks.sort_order AS rank_order, '
-                .'visits.rank_other AS rank_other, COUNT(*) AS n'
-            )
-            ->get();
-
         // category => branch id => {name, order, total, listed: [...], typed: [...]}
         $tree = [];
 
@@ -578,26 +596,19 @@ class ReportBuilder
      * "Others" (Dependent, Retiree, Civilian Employee, Civilian, Other), by
      * the branch's is_afp flag, counted on each patient's latest visit.
      *
+     * @param  array{each: list<object>, all: list<object>}  $latest
      * @return array<string, array{afp: int, others: int}> category (or "All") => split
      */
-    private function afpCounts(CarbonInterface $from, CarbonInterface $to, array $categories): array
+    private function afpCounts(array $latest): array
     {
-        return $this->both(function (bool $overall) use ($from, $to, $categories): array {
-            $counts = [];
+        $counts = [];
 
-            $rows = $this->latestVisits($from, $to, $categories, $overall)
-                ->join('branches', 'branches.id', '=', 'visits.branch_id')
-                ->groupBy(...$this->groups($overall, 'branches.is_afp'))
-                ->selectRaw($this->bucket($overall).' AS category, branches.is_afp AS afp, COUNT(*) AS n')
-                ->get();
-
-            foreach ($rows as $row) {
-                $counts[$row->category] ??= ['afp' => 0, 'others' => 0];
-                $counts[$row->category][$row->afp ? 'afp' : 'others'] += (int) $row->n;
-            }
-
-            return $counts;
+        $this->eachLatest($latest, function (object $row, string $key) use (&$counts): void {
+            $counts[$key] ??= ['afp' => 0, 'others' => 0];
+            $counts[$key][$row->afp ? 'afp' : 'others']++;
         });
+
+        return $counts;
     }
 
     /**
@@ -606,31 +617,19 @@ class ReportBuilder
      * and the rest were seen before. For a category, "earlier" means an
      * earlier visit in that category; for the Summary, in any category.
      *
+     * @param  array{each: list<object>, all: list<object>}  $latest
      * @return array<string, array{new: int, returning: int}> category (or "All") => split
      */
-    private function returningCounts(CarbonInterface $from, CarbonInterface $to, array $categories): array
+    private function returningCounts(array $latest): array
     {
-        return $this->both(function (bool $overall) use ($from, $to, $categories): array {
-            $counts = [];
+        $counts = [];
 
-            $rows = $this->latestVisits($from, $to, $categories, $overall)
-                ->selectRaw(
-                    $this->bucket($overall).' AS category, COUNT(*) AS patients, '
-                    .'SUM(EXISTS (SELECT 1 FROM visits AS earlier WHERE earlier.patient_id = visits.patient_id '
-                    .($overall ? '' : 'AND earlier.category = visits.category ')
-                    .'AND earlier.deleted_at IS NULL AND earlier.visited_at < ?)) AS returning_patients',
-                    [$from],
-                )
-                ->groupBy(...$this->groups($overall))
-                ->get();
-
-            foreach ($rows as $row) {
-                $returning = (int) $row->returning_patients;
-                $counts[$row->category] = ['new' => (int) $row->patients - $returning, 'returning' => $returning];
-            }
-
-            return $counts;
+        $this->eachLatest($latest, function (object $row, string $key) use (&$counts): void {
+            $counts[$key] ??= ['new' => 0, 'returning' => 0];
+            $counts[$key][$row->is_returning ? 'returning' : 'new']++;
         });
+
+        return $counts;
     }
 
     /**

@@ -16,6 +16,7 @@ use App\Services\Setup\BackupFileChecker;
 use App\Services\Setup\EnvFile;
 use App\Services\Setup\Installation;
 use App\Services\Setup\MysqlAdmin;
+use App\Services\TableStatistics;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -54,6 +55,7 @@ class RestoreCommand extends Command
         MysqlAdmin $mysql,
         AppMaintenance $maintenance,
         AuditLogger $audit,
+        TableStatistics $statistics,
     ): int {
         if (! $installation->isInstalled()) {
             $this->error('The system is not installed yet. Run: php artisan census:install (a restore needs an installed system).');
@@ -164,6 +166,10 @@ class RestoreCommand extends Command
         // old logins, old locks (a backup lock that was held would block the next
         // backup) and the old scheduler heartbeat (it would hide a stopped scheduler).
         $mysql->refreshAppConnection();
+
+        // MySQL's statistics about visits and patients are out of date after a load: refresh them,
+        // so the first report afterwards is not slow.
+        $statistics->refresh();
         DB::table(config('session.table') ?: 'sessions')->delete();
         DB::table(config('cache.stores.database.table') ?: 'cache')->delete();
         DB::table(config('cache.stores.database.lock_table') ?: 'cache_locks')->delete();

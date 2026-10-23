@@ -1,6 +1,6 @@
 # Troubleshooting
 
-_Last updated: 2026-10-21 · For the developer and for hospital IT. Each problem says what you see, why it happens, and what to type._
+_Last updated: 2026-10-23 · For the developer and for hospital IT. Each problem says what you see, why it happens, and what to type._
 
 Run commands in the `system` folder. On the hospital server, use the same commands there. A quick overall check, any time:
 
@@ -243,6 +243,24 @@ If the template is missing on every PC and the system is down, use any spreadshe
 
 ---
 
-## 10. Still stuck
+## 10. Report files (PDF, Excel, Print) are slow, or a chart looks wrong
+
+**Normal times** on the server PC with a year of busy ER data (about 60 visits a day): a month's PDF about 2 seconds, its Excel file under 1 second, a year's PDF under 4 seconds. The button says **Preparing the file…** while it works and cannot be clicked twice.
+
+**A period you just looked at is not counted again.** The figures of an open period are kept for up to one hour, and thrown away as soon as any visit, patient, list or month changes (the system compares a checksum of those tables, so a change made by hand in MySQL also counts). Nothing to clear. To force a fresh count, change nothing and wait an hour, or run `php artisan cache:clear`.
+
+**Still slow (more than 10 seconds for a month)?**
+1. Check that the folder `system\storage\fonts` exists and is writable (it is in the update). The PDF keeps its font data there.
+2. Check the MySQL version in **System health**. The report needs MySQL 8 (it uses one query for each patient's latest visit). With MySQL 5.7 the report stops with a database error.
+3. Antivirus scanning of `storage` can double the time of a PDF. Ask IT to exclude the `system\storage` folder.
+4. Right after a very large load of visits (for example a bulk import of a whole year), the first report can take much longer, because MySQL has not yet gathered fresh statistics about the table. Ask IT to run `ANALYZE TABLE visits, patients;` once (or just wait a few minutes). Reports are normal after that.
+
+**A chart is missing.** On a category tab, a chart appears only with its table. A category with no patients shows "No visits encoded for ... in this period." instead of tables and charts. A period with nothing to chart says **No visits in this period**. The **This period vs previous** chart is left out for a period that starts in January 2026 or earlier, because nothing was encoded before.
+
+**The chart is blank in the PDF.** The PDF draws charts with its own drawing library. If one chart is missing in the PDF but shows on the screen, note the report, the tab and the time, and send the log `storage/logs/laravel-<date>.log` to the developer.
+
+---
+
+## 11. Still stuck
 
 Write down the exact message, the time, and what you clicked. Check `storage/logs/laravel-<date>.log` (no passwords are written there) and, for setup problems, `storage/logs/install.log`. Then tell the developer or hospital IT.

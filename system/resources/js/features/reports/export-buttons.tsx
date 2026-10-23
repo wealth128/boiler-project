@@ -15,12 +15,56 @@ import type { ReportFilters } from "@/features/reports/types";
  * (the summary and each category, every one on a new page with its own header
  * and signatures). Excel always holds every category, one sheet each.
  *
- * The downloads are plain links, so the browser saves the file and the page
- * stays where it is. Print opens the print view in a new tab and starts the
- * browser's Print dialog there.
+ * The files are fetched in the background and saved when ready, so the page
+ * stays where it is. While one is being made its button says "Preparing the
+ * file…" and both file buttons are off, so it can't be started twice. Print
+ * opens the print view in a new tab and starts the browser's Print dialog there.
  */
 export function ExportButtons({ filters }: { filters: ReportFilters }) {
     const [scope, setScope] = useState<"tab" | "all">("tab");
+    const [busy, setBusy] = useState<"pdf" | "excel" | null>(null);
+    const [failed, setFailed] = useState(false);
+
+    async function download(kind: "pdf" | "excel", url: string) {
+        if (busy !== null) {
+            return;
+        }
+
+        setBusy(kind);
+        setFailed(false);
+
+        try {
+            const response = await fetch(url, {
+                credentials: "same-origin",
+                headers: { "X-Requested-With": "XMLHttpRequest" },
+            });
+            const type = response.headers.get("content-type") ?? "";
+
+            // A sign-in page or an error page is not the file.
+            if (!response.ok || type.includes("text/html")) {
+                throw new Error("not a file");
+            }
+
+            const blob = await response.blob();
+            const name =
+                /filename="?([^";]+)"?/.exec(
+                    response.headers.get("content-disposition") ?? "",
+                )?.[1] ?? (kind === "pdf" ? "report.pdf" : "report.xlsx");
+            const address = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+
+            link.href = address;
+            link.download = name;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.setTimeout(() => URL.revokeObjectURL(address), 10000);
+        } catch {
+            setFailed(true);
+        } finally {
+            setBusy(null);
+        }
+    }
 
     const tab = REPORT_TABS.find((t) => t.key === filters.category);
     const thisLabel =
@@ -63,25 +107,39 @@ export function ExportButtons({ filters }: { filters: ReportFilters }) {
             </fieldset>
 
             <div className="flex flex-wrap items-center gap-2">
-                <Button className="max-sm:w-full" asChild variant="outline" size="sm">
-                    <a
-                        href={ReportExportController.pdf.url({
-                            query: pageQuery,
-                        })}
-                        download
-                    >
-                        Export PDF
-                    </a>
+                <Button
+                    type="button"
+                    className="max-sm:w-full"
+                    variant="outline"
+                    size="sm"
+                    disabled={busy !== null}
+                    aria-busy={busy === "pdf"}
+                    onClick={() =>
+                        download(
+                            "pdf",
+                            ReportExportController.pdf.url({ query: pageQuery }),
+                        )
+                    }
+                >
+                    {busy === "pdf" ? "Preparing the file…" : "Export PDF"}
                 </Button>
-                <Button className="max-sm:w-full" asChild variant="outline" size="sm">
-                    <a
-                        href={ReportExportController.excel.url({
-                            query: excelQuery,
-                        })}
-                        download
-                    >
-                        Export Excel
-                    </a>
+                <Button
+                    type="button"
+                    className="max-sm:w-full"
+                    variant="outline"
+                    size="sm"
+                    disabled={busy !== null}
+                    aria-busy={busy === "excel"}
+                    onClick={() =>
+                        download(
+                            "excel",
+                            ReportExportController.excel.url({
+                                query: excelQuery,
+                            }),
+                        )
+                    }
+                >
+                    {busy === "excel" ? "Preparing the file…" : "Export Excel"}
                 </Button>
                 <Button className="max-sm:w-full" asChild variant="outline" size="sm">
                     <a
@@ -95,6 +153,16 @@ export function ExportButtons({ filters }: { filters: ReportFilters }) {
                     </a>
                 </Button>
             </div>
+
+            <p className="sr-only" role="status">
+                {busy !== null ? "Preparing the file…" : ""}
+            </p>
+            {failed && (
+                <p role="alert" className="w-full text-sm text-destructive">
+                    The file could not be made. Check your connection and try
+                    again.
+                </p>
+            )}
         </div>
     );
 }

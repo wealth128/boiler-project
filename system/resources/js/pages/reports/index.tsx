@@ -15,6 +15,7 @@ import type {
     MonthStatus,
     Report,
     ReportFilters,
+    ReportCharts,
     ReportOptions,
     ReportSections,
     Sheet,
@@ -28,6 +29,8 @@ type Props = {
     report: Report;
     /** The tables of every page. */
     sections: ReportSections;
+    /** The charts above those tables. */
+    charts: ReportCharts;
     /** Only for a monthly report. */
     month_status: MonthStatus | null;
     /** Admin only: reasons for Delete month report. */
@@ -46,6 +49,7 @@ export default function Reports({
     sheet,
     report,
     sections,
+    charts,
     month_status,
     month_delete_reasons,
     snapshot,
@@ -97,6 +101,7 @@ export default function Reports({
                     sheet={sheet}
                     report={report}
                     sections={sections}
+                    charts={charts}
                     snapshot={snapshot}
                     collapsible
                 />

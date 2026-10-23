@@ -1,7 +1,9 @@
 import { useEffect, useRef } from "react";
+import { ChartFigure } from "@/features/reports/chart-figure";
 import type {
     ColumnType,
     ReportCell,
+    ReportChart,
     ReportTable,
 } from "@/features/reports/types";
 import { formatCount } from "@/lib/format";
@@ -45,6 +47,8 @@ export function formatCell(cell: ReportCell, type: ColumnType): string {
 
 type ReportTablesProps = {
     tables: ReportTable[];
+    /** The charts of this page by table key: each sits above its table. */
+    charts?: Record<string, ReportChart>;
     /** On screen each table is a panel that can be folded; in the print view they are plain. */
     collapsible: boolean;
 };
@@ -54,7 +58,11 @@ type ReportTablesProps = {
  * same order as the PDF and the Excel file). The big-numbers table is left
  * out: the page shows it as numbers above.
  */
-export function ReportTables({ tables, collapsible }: ReportTablesProps) {
+export function ReportTables({
+    tables,
+    charts,
+    collapsible,
+}: ReportTablesProps) {
     const container = useRef<HTMLDivElement>(null);
 
     // Printing the screen (Ctrl + P) always shows every panel open, even one
@@ -102,6 +110,7 @@ export function ReportTables({ tables, collapsible }: ReportTablesProps) {
                     <TablePanel
                         key={table.key}
                         table={table}
+                        chart={charts?.[table.key]}
                         collapsible={collapsible}
                     />
                 ))}
@@ -111,21 +120,26 @@ export function ReportTables({ tables, collapsible }: ReportTablesProps) {
 
 function TablePanel({
     table,
+    chart,
     collapsible,
 }: {
     table: ReportTable;
+    chart: ReportChart | undefined;
     collapsible: boolean;
 }) {
     const heading =
         "text-xs font-semibold tracking-wide text-muted-foreground uppercase";
+    // The chart sits above its table, and prints with it on one page when it fits.
     const body = <TableBody table={table} />;
 
     if (!collapsible) {
+        // Print: the chart, then the table's title and the table, like the PDF.
         return (
             <section
                 aria-label={table.title}
                 className="print:break-inside-avoid"
             >
+                {chart && <ChartFigure chart={chart} />}
                 <h4 className={cn(heading, "mb-1.5 print:break-after-avoid")}>
                     {table.title}
                 </h4>
@@ -137,7 +151,7 @@ function TablePanel({
     return (
         <details
             open
-            className="group rounded-md border"
+            className="group rounded-md border print:break-inside-avoid"
             aria-label={table.title}
         >
             <summary
@@ -154,7 +168,10 @@ function TablePanel({
                 </span>
                 {table.title}
             </summary>
-            <div className="border-t px-3 py-2">{body}</div>
+            <div className="border-t px-3 py-2">
+                {chart && <ChartFigure chart={chart} />}
+                {body}
+            </div>
         </details>
     );
 }

@@ -7,6 +7,7 @@ import { ReportTables } from "@/features/reports/report-tables";
 import type {
     CategoryReport,
     Report,
+    ReportCharts,
     ReportSections,
     Sheet,
     Snapshot,
@@ -25,6 +26,8 @@ type ReportPageProps = {
     report: Report;
     /** The tables of every page, from the server. */
     sections: ReportSections;
+    /** The charts above the tables, by page and table. */
+    charts: ReportCharts;
     snapshot: Snapshot | null;
     className?: string;
     /** On screen the tables are panels that can be folded; the print view shows them plain. */
@@ -57,6 +60,7 @@ export function ReportPage({
     sheet,
     report,
     sections,
+    charts,
     snapshot,
     className,
     collapsible = false,
@@ -107,6 +111,7 @@ export function ReportPage({
                     />
                     <ReportTables
                         tables={sections.summary ?? []}
+                        charts={charts.summary}
                         collapsible={collapsible}
                     />
                 </>
@@ -116,6 +121,7 @@ export function ReportPage({
                         name={page}
                         data={data}
                         tables={sections[page] ?? []}
+                        charts={charts[page]}
                         collapsible={collapsible}
                     />
                 )
@@ -164,11 +170,13 @@ function CategorySection({
     name,
     data,
     tables,
+    charts,
     collapsible,
 }: {
     name: Category;
     data: CategoryReport;
     tables: ReportSections[string];
+    charts: ReportCharts[string] | undefined;
     collapsible: boolean;
 }) {
     return (
@@ -189,7 +197,11 @@ function CategorySection({
                     No visits encoded for {name} in this period.
                 </p>
             ) : (
-                <ReportTables tables={tables} collapsible={collapsible} />
+                <ReportTables
+                    tables={tables}
+                    charts={charts}
+                    collapsible={collapsible}
+                />
             )}
         </section>
     );

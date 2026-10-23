@@ -35,6 +35,8 @@ class ReportPrintController extends Controller
             'sheet' => $data['sheet'],
             'report' => $data['report'],
             'sections' => $data['sections'],
+            // Only the pages that print.
+            'charts' => array_intersect_key($data['charts'], array_flip($filters->pages())),
             'snapshot' => $snapshot === null ? null : [
                 'month_label' => $snapshot['month_label'],
                 'taken_at' => $snapshot['taken_at']->toIso8601String(),

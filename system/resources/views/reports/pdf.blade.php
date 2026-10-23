@@ -41,6 +41,8 @@
     .sec { page-break-inside: avoid; }
     .lines .n { width: 14%; white-space: nowrap; }
     .tnote { font-size: 8pt; font-style: italic; margin-top: 3pt; }
+    .chart { margin: 6pt 0 2pt; }
+    .chart img { width: 100%; }
 
     .sign { margin-top: 26pt; page-break-inside: avoid; }
     .sign td { width: 50%; vertical-align: top; padding-right: 30pt; }
@@ -80,7 +82,7 @@
                 @endforeach
                 <td></td>
             </tr></table>
-            @include('reports._tables', ['tables' => $sections['summary']])
+            @include('reports._tables', ['tables' => $sections['summary'], 'charts' => $charts['summary'] ?? []])
         @endif
 
         @if ($page !== 'summary')
@@ -96,7 +98,7 @@
                 @if ($data['patients'] === 0)
                     <p class="none">No visits encoded for {{ $name }} in this period.</p>
                 @else
-                    @include('reports._tables', ['tables' => $sections[$name]])
+                    @include('reports._tables', ['tables' => $sections[$name], 'charts' => $charts[$name] ?? []])
                 @endif
             </div>
         @endif

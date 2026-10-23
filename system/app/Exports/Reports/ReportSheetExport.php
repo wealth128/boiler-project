@@ -3,6 +3,7 @@
 namespace App\Exports\Reports;
 
 use Maatwebsite\Excel\Concerns\FromArray;
+use Maatwebsite\Excel\Concerns\WithCharts;
 use Maatwebsite\Excel\Concerns\WithColumnWidths;
 use Maatwebsite\Excel\Concerns\WithCustomValueBinder;
 use Maatwebsite\Excel\Concerns\WithDrawings;
@@ -12,17 +13,16 @@ use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\DefaultValueBinder;
 use PhpOffice\PhpSpreadsheet\Cell\Cell;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
-use PhpOffice\PhpSpreadsheet\Style\Alignment;
-use PhpOffice\PhpSpreadsheet\Style\Border;
-use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Chart\Chart;
 use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
 use PhpOffice\PhpSpreadsheet\Worksheet\PageSetup;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 /**
  * One worksheet of the report workbook: a title block, then tables stacked
- * top to bottom, then the Prepared by / Noted by lines. Only the look is
- * decided here; the rows are the report's numbers and labels as given.
+ * top to bottom (each with its chart above it, when it has one), then the
+ * Prepared by / Noted by lines. Only the look is decided here; the rows are
+ * the report's numbers and labels as given.
  * A count of 0 is written as 0, not left empty (WithStrictNullComparison).
  *
  * Every text value is stored as plain text. A name or diagnosis that starts
@@ -30,8 +30,13 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
  * section 2, rule 7). Counts are integers, so they stay numbers.
  *
  * Signature pictures are never put in Excel (decided in 6h); the logo is.
+ *
+ * Speed: styles are not set cell by cell. Every row and cell is first put in
+ * a group of the same look (header, zebra row, number column ...), and each
+ * group gets its style once, over all its ranges. One style call for a whole
+ * table column instead of one for each cell is what keeps a big workbook fast.
  */
-abstract class ReportSheetExport extends DefaultValueBinder implements FromArray, WithColumnWidths, WithCustomValueBinder, WithDrawings, WithStrictNullComparison, WithStyles, WithTitle
+abstract class ReportSheetExport extends DefaultValueBinder implements FromArray, WithCharts, WithColumnWidths, WithCustomValueBinder, WithDrawings, WithStrictNullComparison, WithStyles, WithTitle
 {
     private const NAVY = '1F3864';
 
@@ -44,6 +49,9 @@ abstract class ReportSheetExport extends DefaultValueBinder implements FromArray
 
     /** Column widths (characters) that still fit an A4 portrait page; a wider sheet prints landscape. */
     private const PORTRAIT_WIDTH = 100;
+
+    /** Row height of Excel, in points, for a row that was not given one. */
+    private const ROW = 15;
 
     /** How a column of each type is shown. */
     private const FORMATS = [
@@ -69,6 +77,24 @@ abstract class ReportSheetExport extends DefaultValueBinder implements FromArray
 
     /** @var list<string> The column types of the table being built. */
     private array $types = [];
+
+    /** @var array<string, int> Table key => the sheet row of its header. */
+    private array $headerRows = [];
+
+    /** @var list<array{chart: array<string, mixed>, table: string, top: int, bottom: int}> The charts and the rows kept free for them. */
+    private array $placed = [];
+
+    /** @var array<string, array<string, list<array{0: int, 1: int}>>> Look => column span "A:C" => runs of rows (first, last). */
+    private array $groups = [];
+
+    /** @var list<string> */
+    private array $merges = [];
+
+    /** @var array<int, float> Row number => height in points (only the rows that have one). */
+    private array $heights = [];
+
+    /** @var array<string, int>|null */
+    private ?array $widths = null;
 
     /**
      * @param  array{hospital_name: string, office: string, prepared_by: string, prepared_by_title: string, noted_by: string, noted_by_title: string, period_label: string, status: string, generated: string}  $meta
@@ -124,6 +150,19 @@ abstract class ReportSheetExport extends DefaultValueBinder implements FromArray
     }
 
     /**
+     * The native charts, each over the rows kept free above its table.
+     *
+     * @return list<Chart>
+     */
+    public function charts(): array
+    {
+        return array_map(
+            fn (array $placed): Chart => SheetChart::make($placed['chart'], $this->sheetTitle, $this->headerRows[$placed['table']], $placed['top'], $placed['bottom'], self::LAST_COLUMN),
+            $this->placed,
+        );
+    }
+
+    /**
      * Column A fits its longest label (a table row, not a heading that may
      * spill over the empty cells beside it); the others fit their header and
      * figures. Wrapping takes care of anything longer than the limit.
@@ -132,6 +171,10 @@ abstract class ReportSheetExport extends DefaultValueBinder implements FromArray
      */
     public function columnWidths(): array
     {
+        if ($this->widths !== null) {
+            return $this->widths;
+        }
+
         $longest = array_fill(0, 5, 0);
 
         foreach ($this->kinds as $row => $look) {
@@ -153,7 +196,7 @@ abstract class ReportSheetExport extends DefaultValueBinder implements FromArray
             $widths[$column] = min(24, max(12, $longest[$index + 1] + 4));
         }
 
-        return $widths;
+        return $this->widths = $widths;
     }
 
     /** @return array<int, array<string, mixed>> */
@@ -163,18 +206,41 @@ abstract class ReportSheetExport extends DefaultValueBinder implements FromArray
 
         foreach ($this->kinds as $row => $look) {
             match ($look['kind']) {
-                'hospital' => $this->styleTitleLine($sheet, $row, 16, bold: true),
-                'office' => $this->styleTitleLine($sheet, $row, 11),
-                'report' => $this->styleTitleLine($sheet, $row, 13, bold: true),
-                'period', 'status', 'generated' => $this->styleTitleLine($sheet, $row, 10),
-                'note' => $this->styleNote($sheet, $row),
-                'section' => $this->styleSection($sheet, $row),
-                'header' => $this->styleHeader($sheet, $row),
-                'sign' => $this->styleSignature($sheet, $row),
-                'logo' => $sheet->getRowDimension($row)->setRowHeight(42),
-                'blank' => null,
-                default => $this->styleTableRow($sheet, $row, $look['zebra']),
+                'hospital' => $this->titleLine($row, 'hospital', 16),
+                'office' => $this->titleLine($row, 'office', 11),
+                'report' => $this->titleLine($row, 'report', 13),
+                'period', 'status', 'generated' => $this->titleLine($row, 'small', 10),
+                'note' => $this->noteLine($row),
+                'section' => $this->sectionLine($row),
+                'header' => $this->headerLine($row),
+                'sign' => $this->signatureLine($row),
+                'logo' => $this->heights[$row] = 42,
+                'blank', 'chart' => null,
+                default => $this->tableLine($row, $look['zebra'], $look['kind']),
             };
+        }
+
+        // One style call for each look, over all the ranges that share it.
+        foreach ($this->groups as $look => $spans) {
+            $ranges = [];
+
+            foreach ($spans as $span => $runs) {
+                [$from, $to] = explode(':', $span);
+
+                foreach ($runs as [$first, $last]) {
+                    $ranges[] = $from.$first.':'.$to.$last;
+                }
+            }
+
+            $sheet->getStyle(implode(',', $ranges))->applyFromArray($this->style($look));
+        }
+
+        foreach ($this->merges as $range) {
+            $sheet->mergeCells($range);
+        }
+
+        foreach ($this->heights as $row => $height) {
+            $sheet->getRowDimension($row)->setRowHeight($height);
         }
 
         $this->setUpPage($sheet);
@@ -211,19 +277,26 @@ abstract class ReportSheetExport extends DefaultValueBinder implements FromArray
     }
 
     /**
-     * Every table of a page, as ReportSections gives them: heading, header row, rows, note.
-     * A figure that is not there is written as a dash.
+     * Every table of a page, as ReportSections gives them: the chart above it
+     * when it has one, heading, header row, rows, note. A figure that is not
+     * there is written as a dash.
      *
      * @param  list<array<string, mixed>>  $sections
+     * @param  array<string, array<string, mixed>>  $charts  the page's charts by table key (ReportCharts)
      */
-    protected function sectionTables(array $sections): void
+    protected function sectionTables(array $sections, array $charts = []): void
     {
         foreach ($sections as $section) {
+            if (isset($charts[$section['key']])) {
+                $this->chartBlock($charts[$section['key']]);
+            }
+
             $this->sectionRow($section['title']);
             $this->headerRow(
                 array_column($section['columns'], 'label'),
                 array_column($section['columns'], 'type'),
             );
+            $this->headerRows[$section['key']] = count($this->rows);
 
             foreach ($section['rows'] as $row) {
                 $cells = array_map(fn ($cell) => $cell ?? '–', $row['cells']);
@@ -240,6 +313,31 @@ abstract class ReportSheetExport extends DefaultValueBinder implements FromArray
                 $this->noteRow($section['note']);
             }
         }
+    }
+
+    /**
+     * The rows kept free for a chart, which is drawn over them when the file
+     * is written; or a line saying there is nothing to chart.
+     *
+     * @param  array<string, mixed>  $chart
+     */
+    private function chartBlock(array $chart): void
+    {
+        $this->blank();
+
+        if ($chart['empty']) {
+            $this->noteRow($chart['title'].': '.$chart['message'].'.');
+
+            return;
+        }
+
+        $top = count($this->rows) + 1;
+
+        for ($row = 0; $row < SheetChart::ROWS[$chart['kind']]; $row++) {
+            $this->push([], 'chart');
+        }
+
+        $this->placed[] = ['chart' => $chart, 'table' => $chart['source']['table'], 'top' => $top, 'bottom' => count($this->rows)];
     }
 
     /**
@@ -301,65 +399,70 @@ abstract class ReportSheetExport extends DefaultValueBinder implements FromArray
 
     // --- Styling ---------------------------------------------------------------------
 
-    private function styleTitleLine(Worksheet $sheet, int $row, int $size, bool $bold = false): void
+    /** Puts the cells of a row (columns $from to $to) in a look. Rows that follow each other join into one range. */
+    private function mark(string $look, string $from, string $to, int $row): void
     {
-        $sheet->mergeCells("A{$row}:".self::LAST_COLUMN.$row);
-        $sheet->getStyle("A{$row}")->getFont()->setSize($size)->setBold($bold);
-        $sheet->getStyle("A{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_CENTER);
-        $sheet->getRowDimension($row)->setRowHeight($size + 8);
+        $runs = &$this->groups[$look]["{$from}:{$to}"];
+        $last = $runs === null ? null : array_key_last($runs);
+
+        if ($last !== null && $runs[$last][1] === $row - 1) {
+            $runs[$last][1] = $row;
+        } else {
+            $runs[] = [$row, $row];
+        }
     }
 
-    private function styleNote(Worksheet $sheet, int $row): void
+    private function titleLine(int $row, string $look, int $size): void
     {
-        $sheet->mergeCells("A{$row}:".self::LAST_COLUMN.$row);
-        $sheet->getStyle("A{$row}")->getAlignment()->setWrapText(true)->setVertical(Alignment::VERTICAL_TOP)->setHorizontal(Alignment::HORIZONTAL_LEFT);
-        $sheet->getStyle("A{$row}")->getFont()->setItalic(true)->setSize(10);
+        $this->merges[] = "A{$row}:".self::LAST_COLUMN.$row;
+        $this->mark($look, 'A', 'A', $row);
+        $this->heights[$row] = $size + 8;
+    }
+
+    private function noteLine(int $row): void
+    {
+        $this->merges[] = "A{$row}:".self::LAST_COLUMN.$row;
+        $this->mark('note', 'A', 'A', $row);
 
         $width = array_sum($this->columnWidths());
         $lines = max(1, (int) ceil(mb_strlen((string) $this->rows[$row - 1][0]) / max(1, $width - 4)));
-        $sheet->getRowDimension($row)->setRowHeight(15 * $lines);
+        $this->heights[$row] = 15 * $lines;
     }
 
-    private function styleSection(Worksheet $sheet, int $row): void
+    private function sectionLine(int $row): void
     {
-        $sheet->getStyle("A{$row}")->getFont()->applyFromArray(['bold' => true, 'size' => 12, 'color' => ['rgb' => self::NAVY]]);
-        $sheet->getStyle("A{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)->setVertical(Alignment::VERTICAL_BOTTOM);
-        $sheet->getRowDimension($row)->setRowHeight(22);
+        $this->mark('section', 'A', 'A', $row);
+        $this->heights[$row] = 22;
     }
 
-    private function styleHeader(Worksheet $sheet, int $row): void
+    private function headerLine(int $row): void
     {
-        $range = $this->tableRange($row);
-        $style = $sheet->getStyle($range);
-        $style->getFont()->applyFromArray(['bold' => true, 'color' => ['rgb' => 'FFFFFF']]);
-        $style->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB(self::NAVY);
-        $style->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
-        $style->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN)->getColor()->setRGB(self::LINE);
-        $this->alignCells($sheet, $row);
-        $sheet->getRowDimension($row)->setRowHeight(20);
+        $last = $this->lastColumn($row);
+        $this->mark('header', 'A', $last, $row);
+        $this->alignCells($row, header: true);
+        $this->heights[$row] = 20;
     }
 
-    private function styleTableRow(Worksheet $sheet, int $row, bool $zebra): void
+    private function tableLine(int $row, bool $zebra, string $kind): void
     {
-        $style = $sheet->getStyle($this->tableRange($row));
+        $last = $this->lastColumn($row);
+        $this->mark('table', 'A', $last, $row);
 
         if ($zebra) {
-            $style->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB(self::ZEBRA);
+            $this->mark('zebra', 'A', $last, $row);
         }
 
-        if (in_array($this->kinds[$row]['kind'], ['total', 'group'], true)) {
-            $style->getFont()->setBold(true);
+        if (in_array($kind, ['total', 'group'], true)) {
+            $this->mark('bold', 'A', $last, $row);
         }
 
-        $style->getAlignment()->setVertical(Alignment::VERTICAL_TOP);
-        $style->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN)->getColor()->setRGB(self::LINE);
-        $this->alignCells($sheet, $row);
+        $this->alignCells($row, header: false);
     }
 
     /** Only the cells the row really uses, so a 2-column table has no empty third column. */
-    private function tableRange(int $row): string
+    private function lastColumn(int $row): string
     {
-        return "A{$row}:".chr(64 + max(1, count($this->rows[$row - 1]))).$row;
+        return chr(64 + max(1, count($this->rows[$row - 1])));
     }
 
     /**
@@ -367,47 +470,87 @@ abstract class ReportSheetExport extends DefaultValueBinder implements FromArray
      * percentages, signed changes), text left-aligned and wrapped. A dash for
      * a missing figure is aligned like the figures of its column.
      */
-    private function alignCells(Worksheet $sheet, int $row): void
+    private function alignCells(int $row, bool $header): void
     {
-        $sheet->getStyle("A{$row}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)->setWrapText(true);
+        $this->mark('left', 'A', 'A', $row);
 
         $types = $this->kinds[$row]['types'];
-        $header = $this->kinds[$row]['kind'] === 'header';
 
         foreach (array_slice($this->rows[$row - 1], 1, null, true) as $index => $value) {
-            $cell = $sheet->getStyle(chr(65 + $index).$row);
+            $column = chr(65 + $index);
             $type = $types[$index] ?? (is_string($value) ? 'text' : 'int');
 
-            if ($header) {
-                $cell->getAlignment()->setHorizontal($type === 'text' ? Alignment::HORIZONTAL_LEFT : Alignment::HORIZONTAL_RIGHT)->setWrapText(true);
-            } elseif ($type === 'text') {
-                $cell->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)->setWrapText(true);
+            if ($type === 'text') {
+                $this->mark('left', $column, $column, $row);
+            } elseif ($header) {
+                $this->mark('right-wrap', $column, $column, $row);
             } else {
-                $cell->getNumberFormat()->setFormatCode(self::FORMATS[$type] ?? self::FORMATS['int']);
-                $cell->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+                $this->mark('number:'.(isset(self::FORMATS[$type]) ? $type : 'int'), $column, $column, $row);
             }
         }
     }
 
-    private function styleSignature(Worksheet $sheet, int $row): void
+    private function signatureLine(int $row): void
     {
-        $sheet->getRowDimension($row)->setRowHeight(32);
-        $sheet->getStyle("A{$row}")->getAlignment()->setVertical(Alignment::VERTICAL_TOP)->setHorizontal(Alignment::HORIZONTAL_LEFT);
+        $this->heights[$row] = 32;
+        $this->mark('sign-label', 'A', 'A', $row);
+        $this->merges[] = "B{$row}:C{$row}";
+        $this->mark('sign-name', 'B', 'C', $row);
+    }
 
-        $sheet->mergeCells("B{$row}:C{$row}");
-        $name = $sheet->getStyle("B{$row}:C{$row}");
-        $name->getFont()->setBold(true);
-        $name->getAlignment()->setVertical(Alignment::VERTICAL_TOP)->setHorizontal(Alignment::HORIZONTAL_CENTER)->setWrapText(true);
-        // The signature line, above the name.
-        $name->getBorders()->getTop()->setBorderStyle(Border::BORDER_THIN);
+    /**
+     * The style of a look, as the array PhpSpreadsheet takes.
+     *
+     * @return array<string, mixed>
+     */
+    private function style(string $look): array
+    {
+        $left = ['horizontal' => 'left', 'vertical' => 'center'];
+
+        return match (true) {
+            $look === 'hospital' => ['font' => ['size' => 16, 'bold' => true], 'alignment' => $left],
+            $look === 'office' => ['font' => ['size' => 11], 'alignment' => $left],
+            $look === 'report' => ['font' => ['size' => 13, 'bold' => true], 'alignment' => $left],
+            $look === 'small' => ['font' => ['size' => 10], 'alignment' => $left],
+            $look === 'note' => ['font' => ['italic' => true, 'size' => 10], 'alignment' => ['horizontal' => 'left', 'vertical' => 'top', 'wrapText' => true]],
+            $look === 'section' => ['font' => ['bold' => true, 'size' => 12, 'color' => ['rgb' => self::NAVY]], 'alignment' => ['horizontal' => 'left', 'vertical' => 'bottom']],
+            $look === 'header' => [
+                'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+                'fill' => ['fillType' => 'solid', 'startColor' => ['rgb' => self::NAVY]],
+                'alignment' => ['vertical' => 'center'],
+                'borders' => ['allBorders' => ['borderStyle' => 'thin', 'color' => ['rgb' => self::LINE]]],
+            ],
+            $look === 'table' => [
+                'alignment' => ['vertical' => 'top'],
+                'borders' => ['allBorders' => ['borderStyle' => 'thin', 'color' => ['rgb' => self::LINE]]],
+            ],
+            $look === 'zebra' => ['fill' => ['fillType' => 'solid', 'startColor' => ['rgb' => self::ZEBRA]]],
+            $look === 'bold' => ['font' => ['bold' => true]],
+            $look === 'left' => ['alignment' => ['horizontal' => 'left', 'wrapText' => true]],
+            $look === 'right-wrap' => ['alignment' => ['horizontal' => 'right', 'wrapText' => true]],
+            str_starts_with($look, 'number:') => [
+                'numberFormat' => ['formatCode' => self::FORMATS[substr($look, 7)]],
+                'alignment' => ['horizontal' => 'right'],
+            ],
+            $look === 'sign-label' => ['alignment' => ['vertical' => 'top', 'horizontal' => 'left']],
+            $look === 'sign-name' => [
+                'font' => ['bold' => true],
+                'alignment' => ['vertical' => 'top', 'horizontal' => 'center', 'wrapText' => true],
+                // The signature line, above the name.
+                'borders' => ['top' => ['borderStyle' => 'thin']],
+            ],
+            default => [],
+        };
     }
 
     private function setUpPage(Worksheet $sheet): void
     {
+        $landscape = array_sum($this->columnWidths()) > self::PORTRAIT_WIDTH;
+
         $setup = $sheet->getPageSetup();
         $setup->setPaperSize(PageSetup::PAPERSIZE_A4);
         // Fit to one page wide shrinks a sheet that is too wide, so one that is wider than a portrait page prints landscape.
-        $setup->setOrientation(array_sum($this->columnWidths()) > self::PORTRAIT_WIDTH ? PageSetup::ORIENTATION_LANDSCAPE : PageSetup::ORIENTATION_PORTRAIT);
+        $setup->setOrientation($landscape ? PageSetup::ORIENTATION_LANDSCAPE : PageSetup::ORIENTATION_PORTRAIT);
         $setup->setFitToPage(true);
         $setup->setFitToWidth(1);
         $setup->setFitToHeight(0);
@@ -422,5 +565,64 @@ abstract class ReportSheetExport extends DefaultValueBinder implements FromArray
 
         // Frozen below the title block so it stays in view.
         $sheet->freezePane('A'.($this->titleBlockEnd + 1));
+
+        $this->keepChartsOnOnePage($sheet, $landscape);
+    }
+
+    /**
+     * A chart is never cut by a page break: when it, its table heading and
+     * the first rows of its table would not fit in what is left of a printed
+     * page, a page break goes above it. The page is worked out from the
+     * paper size and how far "fit to one page wide" shrinks the sheet, with
+     * a margin, so it is a close estimate, not Excel's own count.
+     */
+    private function keepChartsOnOnePage(Worksheet $sheet, bool $landscape): void
+    {
+        if ($this->placed === []) {
+            return;
+        }
+
+        // Excel's column width in characters to points: 7 pixels a character and 5 of padding, 0.75 points a pixel.
+        $sheetWidth = array_sum(array_map(fn (int $width): float => ($width * 7 + 5) * 0.75, $this->columnWidths()));
+        $paperWidth = ($landscape ? 29.7 : 21.0) - 3.0;
+        $paperHeight = ($landscape ? 21.0 : 29.7) - 3.0;
+        $scale = min(1.0, $paperWidth / 2.54 * 72 / $sheetWidth);
+        $capacity = $paperHeight / 2.54 * 72 / $scale * 0.9;
+
+        $height = fn (int $row): float => (float) ($this->heights[$row] ?? self::ROW);
+        $repeated = $height($this->reportTitleRow) + $height($this->periodRow);
+
+        $starts = [];
+
+        foreach ($this->placed as $placed) {
+            // From the blank row above the chart to the first rows of its table.
+            $starts[$placed['top'] - 1] = $placed['bottom'] + 4;
+        }
+
+        $used = 0.0;
+
+        foreach (array_keys($this->rows) as $index) {
+            $row = $index + 1;
+
+            if (isset($starts[$row])) {
+                $block = 0.0;
+
+                for ($inside = $row; $inside <= min($starts[$row], count($this->rows)); $inside++) {
+                    $block += $height($inside);
+                }
+
+                if ($used > 0 && $used + $block > $capacity) {
+                    $sheet->setBreak('A'.($row - 1), Worksheet::BREAK_ROW);
+                    $used = $repeated;
+                }
+            }
+
+            $used += $height($row);
+
+            if ($used > $capacity) {
+                // A page ended inside a table: the next one starts with the repeated title.
+                $used = $repeated + $height($row);
+            }
+        }
     }
 }

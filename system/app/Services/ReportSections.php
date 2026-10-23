@@ -227,9 +227,12 @@ class ReportSections
     }
 
     /**
-     * The daily census (a monthly one when the period is long): visits in the
-     * given categories, one row for each day or month, a total row and the
-     * busiest day or month.
+     * The daily census. For a period of up to 31 days the table holds only
+     * the totals (visits in each of the given categories, and all together)
+     * and the busiest day: the day by day figures are in the chart above it
+     * (ReportCharts, from the report's daily census) and not repeated here.
+     * A longer period (a quarter, a year) keeps one row for each month, a
+     * total row and the busiest month.
      *
      * @param  array{by: string, rows: list<array{label: string, counts: array<string, int>}>}  $daily
      * @param  list<string>  $names  the categories to show, one column each
@@ -238,7 +241,7 @@ class ReportSections
     private function daily(array $daily, array $names, ?string $only): array
     {
         $byDay = $daily['by'] === 'day';
-        $columns = [[$byDay ? 'Day' : 'Month', 'text']];
+        $columns = [[$byDay ? 'Period' : 'Month', 'text']];
 
         foreach ($names as $name) {
             $columns[] = [$only === null ? $name : 'Visits', 'int'];
@@ -264,16 +267,24 @@ class ReportSections
                 $busiest = ['label' => $line['label'], 'total' => $total];
             }
 
-            $rows[] = $this->row([$line['label'], ...$counts, ...($only === null ? [$total] : [])]);
+            if (! $byDay) {
+                $rows[] = $this->row([$line['label'], ...$counts, ...($only === null ? [$total] : [])]);
+            }
         }
 
         $sumCells = array_values($sums);
-        $rows[] = $this->row(['Total', ...$sumCells, ...($only === null ? [array_sum($sumCells)] : [])], 'total');
+        $rows[] = $this->row([$byDay ? 'All days' : 'Total', ...$sumCells, ...($only === null ? [array_sum($sumCells)] : [])], 'total');
 
-        $word = $byDay ? 'day' : 'month';
-        $note = $busiest === null
-            ? 'No visits in this period.'
-            : sprintf('Busiest %s: %s, %s %s.', $word, $busiest['label'], number_format($busiest['total']), $busiest['total'] === 1 ? 'visit' : 'visits');
+        if ($byDay) {
+            // "04-Sep-2026 (Fri)" is written "04-Sep-2026": the weekday is on the chart's tooltip, not needed here.
+            $note = $busiest === null
+                ? 'No visits in this period.'
+                : sprintf('Busiest day: %s (%s %s)', preg_replace('/ \(\w{3}\)$/', '', $busiest['label']), number_format($busiest['total']), $busiest['total'] === 1 ? 'visit' : 'visits');
+        } else {
+            $note = $busiest === null
+                ? 'No visits in this period.'
+                : sprintf('Busiest month: %s, %s %s.', $busiest['label'], number_format($busiest['total']), $busiest['total'] === 1 ? 'visit' : 'visits');
+        }
 
         return $this->table('daily', $byDay ? 'Daily census (visits)' : 'Monthly census (visits)', $columns, $rows, $note);
     }
