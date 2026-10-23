@@ -2,12 +2,15 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\Permission;
 use App\Enums\Role;
 use App\Models\Setting;
 use App\Models\User;
 use App\Services\BackupMonitor;
+use App\Services\HospitalSettings;
 use App\Services\SchedulerHeartbeat;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Inertia\Middleware;
 
@@ -51,7 +54,7 @@ class HandleInertiaRequests extends Middleware
                 'user' => $this->authUser($request),
                 'loginAt' => $this->loginAt($request),
             ],
-            'hospital' => fn (): array => $this->hospital(),
+            'hospital' => fn (): array => $this->hospital($request),
             // Backup warnings at the top of every page: Admin only.
             'backupAlerts' => fn (): array => $request->user()?->role === Role::Admin ? app(BackupMonitor::class)->alerts() : [],
             // Red bar when the scheduler stopped (no backup, no 8 PM sign-out): Admin only.
@@ -115,17 +118,29 @@ class HandleInertiaRequests extends Middleware
      * Hospital name and subtitle for the top bar and login screen, read in
      * one query from the settings table (seeded by SettingSeeder).
      *
-     * @return array{name: string, subtitle: string}
+     * @return array{name: string, subtitle: string, logo_url: string|null, login_logo_url: string|null}
      */
-    private function hospital(): array
+    private function hospital(Request $request): array
     {
         $values = Setting::query()
             ->whereIn('key', ['hospital_name', 'hospital_subtitle'])
             ->pluck('value', 'key');
 
+        $pictures = app(HospitalSettings::class);
+        $user = $request->user();
+
         return [
             'name' => $values->get('hospital_name') ?: '[Hospital Name]',
             'subtitle' => $values->get('hospital_subtitle') ?: '',
+            // Top bar logo, for every signed-in role: the signed-in route for the roles that may load it
+            // (Admin, Viewer), the public logo-only route for the others (Encoder, System Admin).
+            'logo_url' => $user === null
+                ? null
+                : (Gate::forUser($user)->allows(Permission::ViewReports->value)
+                    ? $pictures->imageUrl('logo')
+                    : $pictures->publicLogoUrl()),
+            // Login page logo: from the public, logo-only route. Null when no logo is set.
+            'login_logo_url' => $pictures->publicLogoUrl(),
         ];
     }
 }

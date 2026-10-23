@@ -1,6 +1,6 @@
 # Security Plan: AFP Hospital Patient Encoding & Reporting System
 
-_Last updated: 2026-10-21 · Applies to every build step and to deployment_
+_Last updated: 2026-10-23 · Applies to every build step and to deployment_
 
 The system holds patient names, birthdates and diagnoses, so it is treated as sensitive data (Philippine Data Privacy Act of 2012). It runs on the hospital LAN only, with no internet. The main risks are not outside hackers. They are: someone using another person's account, a user reaching data their role shouldn't see, records changed or deleted without a trace, data lost when the server PC fails, and the server PC itself being copied or stolen.
 
@@ -42,6 +42,7 @@ The system holds patient names, birthdates and diagnoses, so it is treated as se
 | **Log files hide secrets:** every file log channel cleans the `APP_KEY`, database and restore-test passwords, bcrypt hashes and `password=` / `remember_token=` values (`App\Services\RedactSecretsInLogs`); a failed backup's error text is cleaned before it is saved | Step 7a |
 | **Route x role matrix and tamper tests:** every route is in `tests/Feature/Security/RouteAccessMatrixTest.php` (a new route without an entry fails); every form is tested with wrong, missing, too long, list-shaped and extra values, other people's records, records in Trash and closed months. Code scans (raw SQL, redirects, files under `public/`, programs started, secrets, `$fillable`) fail when a new unlisted use appears | Step 7a |
 | **Ids in addresses are at most 18 digits** (`Route::pattern`), so a huge number is "not found", not a server error | Step 7a |
+| **Public logo route (Step 7c):** `GET /hospital-logo` has no sign-in because the login page needs the logo. It is read only, serves only the logo file (it takes no file name or other input, so it can never serve a signature or any other file), is cached for a day, answers 404 when no logo is set, has a 120 a minute limit, and sends `nosniff` and a `default-src 'none'` policy. The signatures stay behind sign-in and their role rule. The logo is meant to be seen by anyone who can open the login page, so it must not hold anything private. Tested in `PublicLogoTest` and `RouteAccessMatrixTest` | Step 7c |
 | AFP serial number not collected | Phase 1 |
 
 ## 2. Rules for Every New Screen (Claude Code follows these)

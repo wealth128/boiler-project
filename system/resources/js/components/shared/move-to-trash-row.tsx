@@ -126,7 +126,7 @@ export function MoveToTrashRow({
                     controlClassName="h-8 w-auto max-w-80"
                 />
             </div>
-            <Button
+            <Button className="max-sm:w-full"
                 type="submit"
                 variant="destructive"
                 size="sm"
@@ -135,7 +135,7 @@ export function MoveToTrashRow({
                 {processing && <Spinner />}
                 Move to Trash
             </Button>
-            <Button
+            <Button className="max-sm:w-full"
                 type="button"
                 variant="outline"
                 size="sm"

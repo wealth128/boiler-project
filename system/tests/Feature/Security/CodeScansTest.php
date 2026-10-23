@@ -220,6 +220,11 @@ it('puts a role rule on every route whose controller sends a file', function () 
             continue;
         }
 
+        // Step 7c: the login-page logo is public on purpose. It serves only the logo, never a signature (PublicLogoTest).
+        if ($route->getName() === 'hospital.logo.public') {
+            continue;
+        }
+
         expect(collect($route->gatherMiddleware())->contains(fn ($m) => is_string($m) && str_starts_with($m, 'role:')))
             ->toBeTrue("{$route->uri()} sends a file but has no role: rule");
     }

@@ -364,4 +364,17 @@ Problems come first, then Warnings, then OK, so a problem is never on page 2 whi
 | **Tab** to the **ADMINISTRATION** heading | Put the cursor on it |
 | **Enter** or **Space** | Hide / show the links under it (the arrow shows which). Your choice is remembered on this PC. |
 
-The group opens by itself when you go to one of its pages. On a narrow screen there are no headings and every link is always shown.
+The group opens by itself when you go to one of its pages.
+
+### Menu button (screens narrower than 1024 px)
+
+On a phone or small tablet the left menu is replaced by a **menu button** (three lines) at the top left of the blue bar. The panel has the same links and the same **ADMINISTRATION** heading as above.
+
+| Key | What it does |
+|---|---|
+| **Tab** to **Open menu** | Put the cursor on the button |
+| **Enter** or **Space** | Open the panel. The cursor moves into it and stays inside it while it is open. |
+| **Tab** / **Shift + Tab** | Move through the links, **ADMINISTRATION** and **Log out** |
+| **Esc** | Close the panel and go back to the menu button |
+
+The panel also closes when you choose a page.

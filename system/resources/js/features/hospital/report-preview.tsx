@@ -1,11 +1,12 @@
 import {
     ReportHeader,
     ReportSignatures,
-} from '@/components/shared/report-sheet-parts';
+} from "@/components/shared/report-sheet-parts";
+import { ScaledPage } from "@/features/hospital/scaled-page";
 import type {
     HospitalDefaults,
     HospitalValues,
-} from '@/features/hospital/types';
+} from "@/features/hospital/types";
 
 type ReportPreviewProps = {
     values: HospitalValues;
@@ -19,13 +20,14 @@ type ReportPreviewProps = {
 
 /** An empty box means the default, as on the real report. */
 function textOr(value: string, fallback: string): string {
-    return value.trim() !== '' ? value.trim() : fallback;
+    return value.trim() !== "" ? value.trim() : fallback;
 }
 
 /**
  * How the report header and the signature block will look on Reports, PDF
- * and Print, with the values being typed. It uses the same components as the
- * report itself. The title and period are a sample.
+ * and Print, with the values being typed: an A4 page, centred and scaled to
+ * the width of its panel. It uses the same components as the report itself.
+ * The title and period are a sample.
  */
 export function ReportPreview({
     values,
@@ -34,24 +36,24 @@ export function ReportPreview({
     preparedSignatureUrl,
     notedSignatureUrl,
 }: ReportPreviewProps) {
-    const sample = new Intl.DateTimeFormat('en-PH', {
-        month: 'long',
-        year: 'numeric',
+    const sample = new Intl.DateTimeFormat("en-PH", {
+        month: "long",
+        year: "numeric",
     }).format(new Date());
 
     return (
-        <article
-            aria-label="Preview of the report header and signatures"
-            className="max-w-[980px] rounded-lg border bg-card px-4 pt-5 pb-8 sm:px-7 sm:pt-7"
-        >
+        <ScaledPage label="Preview of the report header and signatures">
             <ReportHeader
                 sheet={{
                     hospital_name: textOr(
                         values.hospital_name,
                         defaults.hospital_name,
                     ),
-                    office: textOr(values.report_office, defaults.report_office),
-                    title: 'Monthly Patient Census Report',
+                    office: textOr(
+                        values.report_office,
+                        defaults.report_office,
+                    ),
+                    title: "Monthly Patient Census Report",
                     period_label: sample,
                     logo_url: logoUrl,
                 }}
@@ -62,6 +64,7 @@ export function ReportPreview({
             </p>
 
             <ReportSignatures
+                fixedColumns
                 sheet={{
                     prepared_by: values.prepared_by.trim(),
                     prepared_by_title: textOr(
@@ -77,6 +80,6 @@ export function ReportPreview({
                     noted_signature_url: notedSignatureUrl,
                 }}
             />
-        </article>
+        </ScaledPage>
     );
 }

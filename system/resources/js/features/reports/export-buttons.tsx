@@ -63,7 +63,7 @@ export function ExportButtons({ filters }: { filters: ReportFilters }) {
             </fieldset>
 
             <div className="flex flex-wrap items-center gap-2">
-                <Button asChild variant="outline" size="sm">
+                <Button className="max-sm:w-full" asChild variant="outline" size="sm">
                     <a
                         href={ReportExportController.pdf.url({
                             query: pageQuery,
@@ -73,7 +73,7 @@ export function ExportButtons({ filters }: { filters: ReportFilters }) {
                         Export PDF
                     </a>
                 </Button>
-                <Button asChild variant="outline" size="sm">
+                <Button className="max-sm:w-full" asChild variant="outline" size="sm">
                     <a
                         href={ReportExportController.excel.url({
                             query: excelQuery,
@@ -83,7 +83,7 @@ export function ExportButtons({ filters }: { filters: ReportFilters }) {
                         Export Excel
                     </a>
                 </Button>
-                <Button asChild variant="outline" size="sm">
+                <Button className="max-sm:w-full" asChild variant="outline" size="sm">
                     <a
                         href={ReportPrintController.show.url({
                             query: pageQuery,

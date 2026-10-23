@@ -32,7 +32,7 @@ export function PageHeader({
                 <p className="text-sm text-muted-foreground">{description}</p>
             )}
             {actions && (
-                <div className="ml-auto flex flex-wrap items-center gap-2 self-center">
+                <div className="ml-auto flex flex-wrap items-center gap-2 self-center max-sm:w-full max-sm:[&>*]:flex-1">
                     {actions}
                 </div>
             )}

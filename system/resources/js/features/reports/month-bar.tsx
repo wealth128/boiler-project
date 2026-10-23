@@ -91,7 +91,7 @@ export function MonthBar({
 
                     {status.can_manage && (
                         <>
-                            <Button
+                            <Button className="max-sm:w-full"
                                 type="button"
                                 variant="outline"
                                 size="sm"
@@ -115,7 +115,7 @@ export function MonthBar({
                                     type="button"
                                     variant="outline"
                                     size="sm"
-                                    className="text-bad"
+                                    className="text-bad max-sm:w-full"
                                     disabled={processing}
                                     onClick={() => {
                                         setErrors({});

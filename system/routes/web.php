@@ -17,6 +17,7 @@ use App\Http\Controllers\Reports\ReportPrintController;
 use App\Http\Controllers\Reports\SignatureController;
 use App\Http\Controllers\Settings\HospitalController;
 use App\Http\Controllers\Settings\ListController;
+use App\Http\Controllers\Settings\PublicLogoController;
 use App\Http\Controllers\System\HealthController;
 use App\Http\Controllers\Trash\TrashController;
 use App\Http\Controllers\Users\UserAccountController;
@@ -47,6 +48,12 @@ Route::pattern('period', '\d{4}-(0[1-9]|1[0-2])'); // e.g. 2026-09
 // Whole numbers of at most 18 digits (fits a PHP integer): a longer one is a 404, not a type error.
 Route::pattern('id', '[0-9]{1,18}');
 Route::pattern('batch', '[0-9]{1,18}');
+
+// The hospital logo for the login page: public, read-only, cached, and it serves
+// ONLY the logo file (never a signature). 404 when no logo is set.
+Route::get('hospital-logo', PublicLogoController::class)
+    ->middleware('throttle:120,1')
+    ->name('hospital.logo.public');
 
 Route::middleware('auth')->group(function () {
     // --- Choose your new password -------------------------------- Everyone

@@ -95,7 +95,7 @@ export function AddNameForm({
                     aria-describedby={error ? `${id}-error` : undefined}
                     className="h-8 min-w-40 flex-1"
                 />
-                <Button
+                <Button className="max-sm:w-full"
                     type="submit"
                     variant="outline"
                     size="sm"
@@ -220,7 +220,7 @@ export function AddBracketForm({
                     aria-describedby={describedBy('max_age')}
                     className="h-8 min-w-48 flex-1"
                 />
-                <Button
+                <Button className="max-sm:w-full"
                     type="submit"
                     variant="outline"
                     size="sm"

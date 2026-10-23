@@ -31,7 +31,7 @@ export default function EncodeIndex({ office, todayEntries, ...form }: Props) {
                 description={`Office: ${office}. Each save records one visit.`}
             />
 
-            <div className="grid items-start gap-4 min-[1100px]:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
                 <section className="rounded-lg border bg-card">
                     {/* A new key starts the form fresh when switching visits. */}
                     <VisitForm key={form.editing?.id ?? 'new'} {...form} />

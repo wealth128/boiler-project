@@ -109,7 +109,7 @@ export function StatusPanel({ status, marks }: StatusPanelProps) {
                         <Button
                             type="button"
                             size="sm"
-                            className="mt-2 block"
+                            className="mt-2 block max-sm:w-full"
                             onClick={() => setAsking(item)}
                         >
                             Mark {noun(item)} done

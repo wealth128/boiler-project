@@ -21,7 +21,10 @@ export function Toast() {
             position="bottom-center"
             duration={3000}
             className="toaster group"
-            toastOptions={{ className: 'font-sans font-medium' }}
+            toastOptions={{
+                className: 'font-sans font-medium',
+                style: { fontSize: '0.875rem' },
+            }}
             style={
                 {
                     '--normal-bg': 'var(--foreground)',

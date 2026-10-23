@@ -198,7 +198,7 @@ export function ReportControls({ filters, options }: ReportControlsProps) {
                 </>
             )}
 
-            <Button type="submit" disabled={loading}>
+            <Button className="max-sm:w-full" type="submit" disabled={loading}>
                 Generate
             </Button>
 

@@ -55,7 +55,7 @@ export function TodayEntries({ entries, editingId }: TodayEntriesProps) {
                                             query: { edit: entry.id },
                                         })}
                                         preserveScroll
-                                        className="text-xs font-medium text-navy underline-offset-4 hover:underline"
+                                        className="inline-flex items-center px-1 text-xs font-medium text-navy underline-offset-4 hover:underline max-lg:min-h-10"
                                         aria-label={`Edit ${entry.visit_no}, ${entry.patient_name}`}
                                     >
                                         Edit

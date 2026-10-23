@@ -126,7 +126,7 @@ export function CarePanel({ testRestore, drives, hasBackup }: CarePanelProps) {
                     <Button
                         type="button"
                         size="sm"
-                        className="mt-2"
+                        className="mt-2 max-sm:w-full"
                         disabled={!hasBackup}
                         onClick={() => setAsking(true)}
                     >
@@ -150,7 +150,7 @@ export function CarePanel({ testRestore, drives, hasBackup }: CarePanelProps) {
                     <Button
                         type="button"
                         size="sm"
-                        className="mt-2"
+                        className="mt-2 max-sm:w-full"
                         disabled={!hasBackup}
                         onClick={openUsb}
                     >
@@ -223,7 +223,7 @@ export function CarePanel({ testRestore, drives, hasBackup }: CarePanelProps) {
                     )}
 
                     <DialogFooter>
-                        <Button
+                        <Button className="max-sm:w-full"
                             type="button"
                             variant="outline"
                             disabled={copying}
@@ -231,7 +231,7 @@ export function CarePanel({ testRestore, drives, hasBackup }: CarePanelProps) {
                         >
                             Cancel
                         </Button>
-                        <Button
+                        <Button className="max-sm:w-full"
                             type="button"
                             variant="outline"
                             disabled={copying || loadingDrives}
@@ -239,7 +239,7 @@ export function CarePanel({ testRestore, drives, hasBackup }: CarePanelProps) {
                         >
                             Look again
                         </Button>
-                        <Button
+                        <Button className="max-sm:w-full"
                             type="button"
                             disabled={copying || choice === ''}
                             onClick={copy}

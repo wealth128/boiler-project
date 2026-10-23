@@ -62,6 +62,11 @@ function secAccessMatrix(): array
 
     $m['home'] = ['GET', '/', SEC_MATRIX_ALL, 'status' => 302];
     $m['up'] = ['GET', '/up', [], 'as' => array_fill_keys(SecurityWorld::ACTORS, 'ok')];
+    $m['hospital.logo.public'] = ['GET', function ($w) {
+        $w->withLogo();
+
+        return '/hospital-logo';
+    }, [], 'as' => ['guest' => 'ok', 'encoder' => 'ok', 'admin' => 'ok', 'system_admin' => 'ok', 'viewer' => 'ok'], 'verify' => fn ($w, TestResponse $r) => expect($r->headers->get('Content-Type'))->toBe('image/png')];
     $m['login'] = ['GET', '/login', [], 'as' => ['guest' => 'ok', 'encoder' => 'redirect', 'admin' => 'redirect', 'system_admin' => 'redirect', 'viewer' => 'redirect']];
     $m['login.store'] = ['POST', '/login', [],
         'data' => fn ($w) => ['username' => $w->loginUser->username, 'password' => 'password'],
@@ -408,7 +413,7 @@ it('lists the same roles in the matrix as the role: rule on the route (matrix fr
 });
 
 it('puts the auth rule on every route that is not public', function () {
-    $public = ['home', 'login', 'login.store', 'up', 'storage.local', 'storage.local.upload', '{fallbackPlaceholder}'];
+    $public = ['home', 'hospital.logo.public', 'login', 'login.store', 'up', 'storage.local', 'storage.local.upload', '{fallbackPlaceholder}'];
 
     foreach (Route::getRoutes()->getRoutes() as $route) {
         $key = $route->getName() ?: $route->uri();

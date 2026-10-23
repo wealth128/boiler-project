@@ -414,7 +414,7 @@ export function VisitForm({
                 noValidate
                 className="grid gap-4"
             >
-                <div className="grid gap-4 sm:grid-cols-3">
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     <Field
                         id={FIELD_ID.last_name}
                         label="Last name"
@@ -475,7 +475,7 @@ export function VisitForm({
                     </Field>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-3">
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     <div className="grid content-start gap-1.5">
                         <span
                             id="encode-sex-label"
@@ -703,8 +703,8 @@ export function VisitForm({
                     />
                 )}
 
-                <div className="flex flex-wrap items-center gap-2.5">
-                    <Button
+                <div className="flex flex-wrap items-center gap-2.5 max-sm:flex-col max-sm:items-stretch">
+                    <Button className="max-sm:w-full"
                         id="encode-save"
                         type="submit"
                         disabled={form.processing}
@@ -716,7 +716,7 @@ export function VisitForm({
                         <Button
                             type="button"
                             variant="outline"
-                            className="border-primary font-semibold text-primary hover:bg-navy-soft hover:text-primary"
+                            className="border-primary font-semibold text-primary hover:bg-navy-soft hover:text-primary max-sm:w-full"
                             onClick={startOver}
                             disabled={form.processing}
                         >

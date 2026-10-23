@@ -1,18 +1,21 @@
-import { useEffect, useMemo, useState } from 'react';
-import type { RefObject } from 'react';
-import InputError from '@/components/input-error';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { CropDialog } from '@/features/hospital/crop-dialog';
-import type { CropKind } from '@/features/hospital/crop-math';
-import type { LogoLimits } from '@/features/hospital/types';
+import { useEffect, useMemo, useState } from "react";
+import type { RefObject } from "react";
+import InputError from "@/components/input-error";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { CropDialog } from "@/features/hospital/crop-dialog";
+import type { CropKind } from "@/features/hospital/crop-math";
+import type { LogoLimits } from "@/features/hospital/types";
 
 const MAX_ORIGINAL_BYTES = 25 * 1024 * 1024;
 
 /** An address for a picture just chosen, so it can show before it is saved. */
 export function usePickedUrl(file: File | null): string | null {
-    const url = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
+    const url = useMemo(
+        () => (file ? URL.createObjectURL(file) : null),
+        [file],
+    );
 
     useEffect(() => {
         return () => {
@@ -31,7 +34,7 @@ export function usePickedUrl(file: File | null): string | null {
  * Returns the problem in words, or null when the file looks fine.
  */
 export function pictureProblem(file: File, noun: string): string | null {
-    if (!['image/png', 'image/jpeg'].includes(file.type)) {
+    if (!["image/png", "image/jpeg"].includes(file.type)) {
         return `The ${noun} must be a PNG or JPG picture.`;
     }
 
@@ -90,7 +93,7 @@ export function PictureField({
 
         // Let the same file be chosen again.
         if (inputRef.current) {
-            inputRef.current.value = '';
+            inputRef.current.value = "";
         }
     }
 
@@ -111,7 +114,7 @@ export function PictureField({
             </div>
             <div className="grid min-w-56 flex-1 gap-2">
                 <Label htmlFor={id}>
-                    {label} {currentUrl ? '(replace)' : '(optional)'}
+                    {label} {currentUrl ? "(replace)" : "(optional)"}
                 </Label>
                 <Input
                     ref={inputRef}
@@ -131,7 +134,7 @@ export function PictureField({
                         const problem = pictureProblem(file, noun);
 
                         if (problem) {
-                            event.target.value = '';
+                            event.target.value = "";
                             onPick(null, problem);
 
                             return;
@@ -141,8 +144,8 @@ export function PictureField({
                     }}
                 />
                 <p className="text-sm text-muted-foreground">
-                    PNG or JPG. You crop it after choosing. The saved picture
-                    is at most {Math.round(limits.logo_max_kb / 1024)} MB and{' '}
+                    PNG or JPG. You crop it after choosing. The saved picture is
+                    at most {Math.round(limits.logo_max_kb / 1024)} MB and{" "}
                     {limits.logo_max_pixels} × {limits.logo_max_pixels} pixels.
                 </p>
                 {ready && (
@@ -153,7 +156,7 @@ export function PictureField({
                 <InputError message={error} />
                 {currentUrl && (
                     <div>
-                        <Button
+                        <Button className="max-sm:w-full"
                             type="button"
                             variant="outline"
                             onClick={onRemove}

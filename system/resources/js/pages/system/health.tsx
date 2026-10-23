@@ -127,7 +127,7 @@ export default function SystemHealth({
                 title="System health"
                 description="Is the system able to keep patient records safe? Admin only."
                 actions={
-                    <Button
+                    <Button className="max-sm:w-full"
                         type="button"
                         variant="outline"
                         onClick={checkAgain}

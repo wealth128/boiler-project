@@ -24,4 +24,8 @@ export type Auth = {
 export type Hospital = {
     name: string;
     subtitle: string;
+    /** Logo for the top bar (signed-in route), or null: none set, or this role may not load it. */
+    logo_url: string | null;
+    /** Logo for the login page (public, logo-only route), or null when none is set. */
+    login_logo_url: string | null;
 };

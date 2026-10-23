@@ -22,11 +22,11 @@ export default function AppLayout({
                 Skip to main content
             </a>
             <AppTopBar />
-            <div className="flex flex-1 flex-col md:flex-row print:block">
+            <div className="flex flex-1 print:block">
                 <AppSideNav />
                 <main
                     id="main"
-                    className="min-w-0 flex-1 px-4 pt-5 pb-10 md:px-6 print:p-0"
+                    className="min-w-0 flex-1 px-3 pt-4 pb-10 sm:px-4 md:px-6 md:pt-5 print:p-0"
                 >
                     {breadcrumbs.length > 0 && (
                         <div className="mb-3 print:hidden">

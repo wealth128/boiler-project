@@ -286,7 +286,7 @@ export function PreviewPanel({ preview }: PreviewPanelProps) {
                             <option value="errors">Errors only</option>
                         </NativeSelect>
                     </div>
-                    <Button
+                    <Button className="max-sm:w-full"
                         type="button"
                         variant="outline"
                         onClick={() => {
@@ -295,7 +295,7 @@ export function PreviewPanel({ preview }: PreviewPanelProps) {
                     >
                         Tick the usual rows
                     </Button>
-                    <Button
+                    <Button className="max-sm:w-full"
                         type="button"
                         variant="outline"
                         onClick={() => setTicked(new Set())}
@@ -321,14 +321,14 @@ export function PreviewPanel({ preview }: PreviewPanelProps) {
             />
 
             <div className="flex flex-wrap items-center gap-3 border-t p-4">
-                <Button
+                <Button className="max-sm:w-full"
                     type="button"
                     disabled={count === 0 || processing}
                     onClick={() => setConfirming(true)}
                 >
                     Import {plural(count, 'visit', 'visits')}
                 </Button>
-                <Button
+                <Button className="max-sm:w-full"
                     type="button"
                     variant="outline"
                     disabled={processing}

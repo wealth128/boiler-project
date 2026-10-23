@@ -44,16 +44,25 @@ export function ReportHeader({ sheet }: { sheet: SheetHeading }) {
             <h2 className="mt-1 mb-0.5 text-lg font-semibold">{sheet.title}</h2>
             <div className="font-mono text-sm">
                 {sheet.period_label}
-                {sheet.category ? ` · ${sheet.category}` : ''}
+                {sheet.category ? ` · ${sheet.category}` : ""}
             </div>
         </header>
     );
 }
 
-export function ReportSignatures({ sheet }: { sheet: SheetSignatories }) {
+export function ReportSignatures({
+    sheet,
+    fixedColumns = false,
+}: {
+    sheet: SheetSignatories;
+    /** Always two columns, whatever the window: for the A4 preview. */
+    fixedColumns?: boolean;
+}) {
     return (
         <div className="mt-9 break-inside-avoid">
-            <div className="grid items-end gap-10 sm:grid-cols-2">
+            <div
+                className={`grid items-end gap-10 ${fixedColumns ? "grid-cols-2" : "sm:grid-cols-2"}`}
+            >
                 <Signature
                     name={sheet.prepared_by}
                     caption={`Prepared by · ${sheet.prepared_by_title}`}
