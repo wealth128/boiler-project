@@ -77,6 +77,30 @@ export type ReportTable = {
 /** The tables of each page: "summary", and each category by its name. */
 export type ReportSections = Record<string, ReportTable[]>;
 
+/**
+ * A chart above a table (ReportCharts). Its key is the key of its table. The
+ * server draws it as SVG (a wide one, and a narrow one for phones); the
+ * rows are the numbers it shows, the same as the table's.
+ */
+export type ReportChart = {
+    key: string;
+    kind: 'columns' | 'share' | 'pyramid' | 'bars' | 'paired';
+    title: string;
+    subtitle: string;
+    /** What a screen reader says for the picture. */
+    aria: string;
+    /** True when there is nothing to draw: the SVG then holds the message. */
+    empty: boolean;
+    message: string;
+    series: { label: string; color: string }[];
+    rows: { label: string; values: number[]; tip: string }[];
+    svg: string;
+    svg_narrow: string;
+};
+
+/** The charts of each page ("summary" or a category), by table key. */
+export type ReportCharts = Record<string, Record<string, ReportChart>>;
+
 export type Report = {
     /** First and last day of the period, "2026-09-01". */
     from: string;

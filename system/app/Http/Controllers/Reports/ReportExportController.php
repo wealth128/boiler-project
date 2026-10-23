@@ -43,7 +43,8 @@ class ReportExportController extends Controller
             ->loadView('reports.pdf', [
                 ...$data,
                 'generatedAt' => $generatedAt,
-                'logoData' => $hospital->imageDataUri('logo'),
+                // The logo is drawn about 48 points high, so a small copy is enough.
+                'logoData' => $hospital->imageDataUri('logo', 160),
                 // Signature pictures only on a final report (every month closed);
                 // a closed month uses the copies frozen when it was closed.
                 'signatureData' => $resolver->signatureData($data),
@@ -76,6 +77,7 @@ class ReportExportController extends Controller
         $workbook = new ReportWorkbook(
             $data['report'],
             $data['sections'],
+            $data['charts'],
             [...$data['sheet'], 'category' => null],
             $data['snapshot'],
             now(),

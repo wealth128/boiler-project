@@ -9,7 +9,7 @@ use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 
 /**
  * The report as an Excel file: a "Summary" sheet, then one sheet for each
- * category included (OPD, ER, Admission). Built from the same resolved
+ * category included (OPD, ER, Admission), then the hidden sheet "Chart data" for the daily census charts. Built from the same resolved
  * report as the screen and the PDF; nothing is counted here.
  */
 class ReportWorkbook implements Export, WithMultipleSheets
@@ -19,12 +19,14 @@ class ReportWorkbook implements Export, WithMultipleSheets
     /**
      * @param  array<string, mixed>  $report
      * @param  array<string, list<array<string, mixed>>>  $sections  the tables of each page, from ReportSheetResolver
+     * @param  array<string, array<string, array<string, mixed>>>  $charts  the charts of each page, from ReportSheetResolver
      * @param  array<string, mixed>  $sheet
      * @param  array{month_label: string, taken_at: CarbonInterface}|null  $snapshot
      */
     public function __construct(
         private readonly array $report,
         private readonly array $sections,
+        private readonly array $charts,
         private readonly array $sheet,
         private readonly ?array $snapshot,
         private readonly CarbonInterface $generatedAt,
@@ -47,11 +49,14 @@ class ReportWorkbook implements Export, WithMultipleSheets
             'generated' => 'Generated '.$this->generatedAt->format('d-M-Y H:i').' by '.$this->generatedBy,
         ];
 
-        $sheets = [new SummarySheet($this->sections['summary'], $this->sheet, $this->snapshot, $meta, $this->logoPath)];
+        $sheets = [new SummarySheet($this->sections['summary'], $this->charts['summary'] ?? [], $this->sheet, $this->snapshot, $meta, $this->logoPath)];
 
         foreach ($this->report['categories'] as $name => $data) {
-            $sheets[] = new CategorySheet($name, $this->sections[$name], $this->sheet['title'], $meta, $this->logoPath);
+            $sheets[] = new CategorySheet($name, $this->sections[$name], $this->charts[$name] ?? [], $this->sheet['title'], $meta, $this->logoPath);
         }
+
+        // The day by day figures of the daily census charts: a hidden sheet, last, so the report sheets come first.
+        $sheets[] = new ChartDataSheet($this->report['daily']);
 
         return $sheets;
     }

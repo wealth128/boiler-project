@@ -1,7 +1,12 @@
-{{-- The tables of one report page (ReportSections), each kept together on one page where it fits. --}}
+{{-- The tables of one report page (ReportSections), each with its chart above it (ReportCharts), kept together on one page where it fits. --}}
 @foreach ($tables as $table)
     @continue($table['key'] === \App\Services\ReportSections::TOTALS)
     <div class="sec">
+        @php $chart = ($charts ?? [])[$table['key']] ?? null; @endphp
+        @if ($chart)
+            {{-- The same SVG as the screen, as one picture: dompdf draws it as vector, so it stays sharp. --}}
+            <div class="chart"><img src="data:image/svg+xml;base64,{{ base64_encode(\App\Services\Charts\PdfSvg::prepare($chart['svg'])) }}" alt="{{ $chart['aria'] }}"></div>
+        @endif
         <h4>{{ $table['title'] }}</h4>
         <table class="lines">
             <tr>

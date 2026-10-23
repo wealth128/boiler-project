@@ -181,6 +181,8 @@ it('does not touch the backup logic or any list: only a few classes use the snap
         'app/Providers/AppServiceProvider.php',
         // Only mentions the table in a comment.
         'app/Services/ReportBuilder.php',
+        // Only checksums the table, to know when a remembered report is out of date. It never reads a snapshot.
+        'app/Services/ReportCache.php',
     ];
 
     $found = [];

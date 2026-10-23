@@ -15,6 +15,7 @@ use App\Models\User;
 use App\Models\Visit;
 use App\Services\AuditLogger;
 use App\Services\MonthService;
+use App\Services\TableStatistics;
 use Illuminate\Contracts\Cache\Lock;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Support\Carbon;
@@ -56,7 +57,7 @@ use Throwable;
  */
 class ImportService
 {
-    public function __construct(private AuditLogger $audit, private ImportSheetReader $reader, private ImportFileStore $store) {}
+    public function __construct(private AuditLogger $audit, private ImportSheetReader $reader, private ImportFileStore $store, private TableStatistics $statistics) {}
 
     /**
      * Read and check a staged file.
@@ -271,6 +272,9 @@ class ImportService
 
             MonthService::releaseLocks($monthLocks);
         }
+
+        // New rows were added in bulk: let MySQL refresh what it knows about the tables, so the next report is not slow.
+        $this->statistics->refresh();
 
         return new ImportOutcome($batch, $heldBack);
     }

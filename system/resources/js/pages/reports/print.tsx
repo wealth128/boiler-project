@@ -5,6 +5,7 @@ import { ReportPage } from "@/features/reports/report-sheet";
 import type { ReportPageKey } from "@/features/reports/report-sheet";
 import type {
     Report,
+    ReportCharts,
     ReportFilters,
     ReportSections,
     Sheet,
@@ -16,6 +17,7 @@ type Props = {
     sheet: Sheet;
     report: Report;
     sections: ReportSections;
+    charts: ReportCharts;
     snapshot: Snapshot | null;
     /** What to print, in order: "summary" or a category name. */
     pages: ReportPageKey[];
@@ -32,6 +34,7 @@ export default function ReportPrint({
     sheet,
     report,
     sections,
+    charts,
     snapshot,
     pages,
 }: Props) {
@@ -72,6 +75,7 @@ export default function ReportPrint({
                         sheet={sheet}
                         report={report}
                         sections={sections}
+                        charts={charts}
                         snapshot={snapshot}
                         // Every page after the first starts on a new sheet.
                         className={index > 0 ? "print:break-before-page" : undefined}

@@ -5,17 +5,20 @@ use App\Models\ImportBatch;
 use App\Models\Patient;
 use App\Models\User;
 use App\Models\Visit;
-use App\Services\Import\ImportFileStore;
-use App\Services\ReportBuilder;
 use App\Services\AuditLogger;
+use App\Services\FolderZipper;
+use App\Services\Import\ImportFileStore;
 use App\Services\Import\ImportService;
 use App\Services\Import\ImportSheetReader;
+use App\Services\ReportBuilder;
+use App\Services\TableStatistics;
 use Illuminate\Database\Events\TransactionBeginning;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\Support\ImportFile;
 use Tests\Support\ImportScenario;
@@ -195,7 +198,7 @@ it('keeps the waiting files out of the backup zip', function () {
     $private = Storage::disk('local')->path('');
     $zip = tempnam(sys_get_temp_dir(), 'zip').'.zip';
 
-    (new App\Services\FolderZipper)->zip($private, $zip, [ImportFileStore::path()]);
+    (new FolderZipper)->zip($private, $zip, [ImportFileStore::path()]);
 
     $archive = new ZipArchive;
     $archive->open($zip);
@@ -208,11 +211,36 @@ it('keeps the waiting files out of the backup zip', function () {
 // --- Confirm ---------------------------------------------------------------------
 
 /** Confirm with these row numbers (and rows to save as new). */
-function confirmImport(object $test, string $token, array $rows, array $asNew = []): Illuminate\Testing\TestResponse
+function confirmImport(object $test, string $token, array $rows, array $asNew = []): TestResponse
 {
     return $test->actingAs($test->admin)->from("/records/import?file={$token}")
         ->post('/records/import/confirm', ['token' => $token, 'rows' => $rows, 'new_patient_rows' => $asNew]);
 }
+
+it('refreshes the MySQL table statistics once after a confirmed import, so the first report is not slow', function () {
+    $statistics = Mockery::mock(TableStatistics::class);
+    $statistics->shouldReceive('refresh')->once();
+    $this->instance(TableStatistics::class, $statistics);
+
+    $token = uploadImport($this, ImportFile::csv([ImportFile::row()]));
+
+    confirmImport($this, $token, [2])->assertSessionHasNoErrors();
+
+    expect(Visit::count())->toBe(1);
+});
+
+it('does not refresh the statistics when the import is refused or imports nothing', function () {
+    $statistics = Mockery::mock(TableStatistics::class);
+    $statistics->shouldReceive('refresh')->never();
+    $this->instance(TableStatistics::class, $statistics);
+
+    $token = uploadImport($this, ImportFile::csv([ImportFile::row()]));
+
+    // A row that is not in the file: refused, nothing saved.
+    confirmImport($this, $token, [9])->assertSessionHasErrors('import');
+
+    expect(Visit::count())->toBe(0);
+});
 
 it('imports the chosen rows as visits with a batch, a Visit No and the Written by', function () {
     $token = uploadImport($this, ImportFile::xlsx([
@@ -763,7 +791,7 @@ it('keeps the checked preview for the page, and checks again when something chan
         {
             throw new RuntimeException('the file was read again');
         }
-    }, $store);
+    }, $store, app(TableStatistics::class));
 
     // Paging and reloading do not read the file again.
     expect($service->preview($staged)['summary'])->toBe(['total' => 1, 'ok' => 1, 'warning' => 0, 'error' => 0]);

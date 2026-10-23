@@ -329,7 +329,8 @@ it('follows the same signature rules on every page: pictures only when the month
     // Open month: no pictures, and the note on every page.
     $open = tabPdfHtml(SEP.'&category=er&scope=all');
 
-    expect($open)->not->toContain('<img')
+    // (The charts are pictures too, as SVG; the signatures are PNG or JPEG.)
+    expect($open)->not->toMatch('/<img [^>]*src="data:image\/(png|jpeg)/')
         ->and(substr_count($open, 'Not final – month still open'))->toBe(4);
 
     // Closed month: both pictures on every page, no note.
@@ -342,7 +343,7 @@ it('follows the same signature rules on every page: pictures only when the month
     // A custom range is never final.
     $custom = tabPdfHtml('type=custom&from=2026-09-01&to=2026-09-30&scope=all');
 
-    expect($custom)->not->toContain('<img')
+    expect($custom)->not->toMatch('/<img [^>]*src="data:image\/(png|jpeg)/')
         ->and(substr_count($custom, 'Not final – custom range'))->toBe(4);
 });
 
@@ -362,11 +363,11 @@ it('writes what was taken to the audit log: the tab, or All', function () {
 it('has one sheet per category and a Summary sheet, for an open and a closed month', function () {
     $names = fn () => IOFactory::load(tabExcelPath($this->actingAs($this->admin)->get('/reports/export/excel?'.SEP.'&category=er')))->getSheetNames();
 
-    expect($names())->toBe(['Summary', 'OPD', 'ER', 'Admission']);
+    expect($names())->toBe(['Summary', 'OPD', 'ER', 'Admission', 'Chart data']);
 
     app(MonthService::class)->close('2026-09', $this->admin);
 
-    expect($names())->toBe(['Summary', 'OPD', 'ER', 'Admission']);
+    expect($names())->toBe(['Summary', 'OPD', 'ER', 'Admission', 'Chart data']);
 });
 
 it('has the same numbers in the Summary sheet as the Summary tab', function () {

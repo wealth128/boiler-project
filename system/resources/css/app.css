@@ -292,3 +292,23 @@
         --text-xs--line-height: calc(1 / 0.75);
     }
 }
+
+/*
+ * Report charts (ReportCharts, drawn on the server as SVG). Hover or keyboard
+ * focus on a bar outlines it; its exact value is the bar's tooltip and is
+ * already written beside it.
+ */
+.rc-chart svg .rc-bar {
+    outline: none;
+}
+
+.rc-chart svg .rc-bar:hover rect,
+.rc-chart svg .rc-bar:focus rect {
+    stroke: #111827;
+    stroke-width: 1.6;
+}
+
+.rc-chart svg .rc-bar:focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 1px;
+}

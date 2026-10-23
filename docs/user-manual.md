@@ -97,7 +97,7 @@ The **Summary** tab and the **OPD**, **ER** and **Admission** tabs show the same
 5. **Branch of service**: patients of each branch with the percent, then AFP personnel (Army, Navy, Air Force, Marines) against Others (Dependent, Retiree, Civilian Employee, Civilian, Other).
 6. **Ranks by branch**: patients of each rank, grouped by branch in seniority order, with the branch subtotal.
 7. **New and returning patients**: new means no earlier visit before the period; returning means seen before.
-8. **Daily census (visits)**: one row for each day with OPD, ER, Admission and total visits, a total row, and the busiest day. A period longer than 31 days (a quarter, a year or a long custom range) shows one row for each month instead.
+8. **Daily census (visits)**: the chart above it shows each day. The table holds only the totals: OPD, ER, Admission and Total visits for the whole period, and the busiest day, for example "Busiest day: 04-Sep-2026 (48 visits)". There are no day by day rows. A period longer than 31 days (a quarter, a year or a long custom range) keeps one row for each month, a total row and the busiest month.
 9. **Compared with the previous period**: patients and visits now and in the period of the same length just before (the month before, the quarter before, the year before, or the same number of days before a custom range), with the change and the percent change. It is left out when that earlier period starts before January 2026.
 
 **OPD, ER and Admission tabs**
@@ -106,7 +106,7 @@ The **Summary** tab and the **OPD**, **ER** and **Admission** tabs show the same
 3. **Diagnosis (per visit)**: every diagnosis, highest count first (equal counts by name), with the percent of the category's visits and a total row.
 4. **Branch of service and rank**: each branch with its subtotal and its ranks, then AFP personnel and Others.
 5. **New and returning patients**: new means no earlier visit in this category before the period.
-6. **Daily census** for the category (by month for a long period), with the busiest day.
+6. **Daily census** for the category: the chart shows each day; the table holds the total visits and the busiest day (by month for a long period, with one row for each month).
 
 A category with no patients shows "No visits encoded for ... in this period." on the screen, in Print and in the PDF. Its Excel sheet shows the same tables with zeros.
 
@@ -114,15 +114,44 @@ A category with no patients shows "No visits encoded for ... in this period." on
 
 **Print and PDF.** Each table is kept together on one page where it fits. With **All categories** the order is Summary, OPD, ER, Admission, each on a new page.
 
+**The buttons.** **Export PDF** and **Export Excel** save the file without leaving the page. While the file is being made the button says **Preparing the file…** and both buttons are off, so a second click cannot start it twice. If it fails, a red line says "The file could not be made. Check your connection and try again." A period you just looked at is not counted again: the file is made from the same figures, so it is quick (measured on the development PC with a year of busy ER data: a month's PDF about 1.5 to 2 seconds and its Excel file under 1 second, a year's PDF under 4 seconds). Anything that changes a visit, a patient, a list or a month makes the next file count again.
+
+### Reports: the charts (Admin and Viewer)
+
+Every chart sits **above the table it comes from**. It is made from that table's numbers, so a chart can never show a figure its table does not. The tables are unchanged.
+
+**Summary tab**
+1. **Daily census** (above Daily census): one column for each day, stacked OPD, ER and Admission, with the day's total on top. For a quarter or a year, one column for each month. This chart is where the day by day figures are: the table below shows only the totals and the busiest day. When the days are too narrow for every total, only the busiest column shows its total; point at a column to see its exact figures.
+2. **Male vs Female** (above Sex): one bar split by sex, with the counts and the percent of all patients.
+3. **Age range by sex** (above Age range by sex): a pyramid with males on the left, females on the right, one row for each age range (oldest at the top), and the count at the end of each bar.
+4. **Top 10 diagnoses** (above the Top 20 table): horizontal bars, highest first, the visits at the end of each bar. A long name wraps onto more lines and is never cut.
+5. **Branch of service** (above its table): one bar for each branch, with the patients and the percent.
+6. **This period vs previous** (above the comparison table): two bars each for patients and for visits, with the change and the percent change. It is left out when there is no earlier period to compare with.
+
+**OPD, ER and Admission tabs:** the **Top 10 diagnoses** and the **Daily census** of that category, each above its table.
+
+**Colors.** They are the same everywhere (screen, Print, PDF and Excel): **OPD** light blue, **ER** dark navy, **Admission** green; **Male** dark blue, **Female** amber. Nothing depends on color: every bar has its number written on or beside it, there is a legend when a chart has more than one series, and the shades differ a lot in brightness, so a black and white print still tells them apart.
+
+**On the screen.** The chart fits the screen, from a 360 px phone to a wide desktop (a phone gets a narrower drawing with the same readable text). Point at a bar, or Tab to it, to outline it and see its exact value. A screen reader reads a one line summary of each chart, for example "Daily census, September 2026. ER 120 visits, OPD 40, Admission 8."
+
+**No visits.** A chart with nothing to show says **No visits in this period** instead of drawing an empty chart.
+
+**Print and PDF.** A chart is kept with its table on one page when they fit, and a chart is never split across two pages. In the PDF the charts are drawn as sharp vector pictures, with text of at least 9 pt (chart titles are not bold in the PDF, they are larger). A sample is in `docs/samples/census-report-sample.pdf`.
+
+**A closed month** is drawn from its saved copy, so its charts never change after the month is closed.
+
+**Excel.** Each chart is a real Excel chart (click it to see its data), placed above its table on the same sheet, as wide as the table, with its title, the numbers on the bars and the same colors. It reads the cells of its own table, so changing a number in the table changes the chart. The daily census chart is the exception: its table holds only the totals, so it reads the hidden sheet **Chart data**. The **Age range by sex** chart in Excel shows the males and females side by side instead of back to back. When a chart has nothing to show, the sheet has a line such as "Daily census: No visits in this period." instead. When you print a sheet, a page break is put above a chart that would not fit on the rest of the page.
+
 ### Reports: the Excel file (Admin and Viewer)
 
-**Where.** Left menu **Reports**, choose the period, click **Generate**, then click **Export Excel**. The browser saves `census-report_<period>_all.xlsx`. A sample is in `docs/samples/census-report-sample.xlsx` (made-up names and a made-up logo).
+**Where.** Left menu **Reports**, choose the period, click **Generate**, then click **Export Excel**. The browser saves `census-report_<period>_all.xlsx`. A sample is in `docs/samples/census-report-sample.xlsx` (made-up names and a made-up logo, with the charts).
 
-**What is in it.** Four sheets: **Summary**, **OPD**, **ER** and **Admission**. The file always holds every category, whichever tab is open. The numbers are the ones on the screen; only the look is made for reading and printing.
+**What is in it.** Four sheets: **Summary**, **OPD**, **ER** and **Admission**. The file always holds every category, whichever tab is open. A fifth sheet, **Chart data**, is hidden (it is not in Excel's Unhide list): it holds the day by day figures that the daily census charts draw, because the daily census table shows only the totals. Do not delete the file's hidden sheet, or those charts go blank. The numbers are the ones on the screen; only the look is made for reading and printing.
 
 - **Top of every sheet.** The hospital logo (when one is set in Hospital settings), the hospital name, the office, the report title (for example "Monthly Patient Census Report – ER"), the period, **Final** or **Not final – …** exactly as on the screen, and "Generated 23-Oct-2026 14:05 by <your name>".
 - **Tables.** Each table has a heading, a dark blue header row, thin borders, light stripes, bold totals, and numbers lined up on the right with thousands separators. Long names wrap.
 - **Bottom of every sheet.** Prepared by and Noted by, with their titles and a signature line above each name. No signature pictures are put in Excel; use the PDF for those.
+- **Charts.** Each chart sits above its table (see **Reports: the charts**), so a sheet is longer than before: the tables are exactly as they were.
 - **Printing from Excel.** A4 portrait, fitted to one page wide, 1.5 cm margins, footer with the hospital name and "Page x of y". The top rows stay in view while you scroll. Excel can repeat only one block of rows on each printed page, so the report title and period repeat, not each table header.
 
 ### The hospital logo

@@ -133,8 +133,13 @@ class HospitalSettings
         return $file === null ? null : route('hospital.logo.public', ['v' => Storage::disk('local')->lastModified($file)], false);
     }
 
-    /** A picture as a data address for the PDF (dompdf does not fetch pages), or null. */
-    public function imageDataUri(string $image): ?string
+    /**
+     * A picture as a data address for the PDF (dompdf does not fetch pages),
+     * or null. With $maxHeight (pixels) a taller picture is made smaller
+     * first: the PDF draws the logo about 48 points high, so a large file
+     * would only make the PDF slower and bigger.
+     */
+    public function imageDataUri(string $image, ?int $maxHeight = null): ?string
     {
         $file = $this->imageFile($image);
 
@@ -142,7 +147,46 @@ class HospitalSettings
             return null;
         }
 
-        return 'data:'.$this->imageMime($file).';base64,'.base64_encode(Storage::disk('local')->get($file));
+        $bytes = Storage::disk('local')->get($file);
+
+        if ($maxHeight !== null) {
+            $bytes = $this->shrunk($bytes, $maxHeight) ?? $bytes;
+        }
+
+        return 'data:'.$this->imageMime($file).';base64,'.base64_encode($bytes);
+    }
+
+    /** The picture no taller than $maxHeight pixels, in the same format (PNG keeps transparency), or null when it is small enough or cannot be read. */
+    private function shrunk(string $bytes, int $maxHeight): ?string
+    {
+        $info = @getimagesizefromstring($bytes);
+
+        if ($info === false || $info[1] <= $maxHeight || ! function_exists('imagescale')) {
+            return null;
+        }
+
+        $source = @imagecreatefromstring($bytes);
+
+        if ($source === false) {
+            return null;
+        }
+
+        $small = imagescale($source, max(1, (int) round($info[0] * $maxHeight / $info[1])), $maxHeight);
+
+        if ($small === false) {
+            return null;
+        }
+
+        ob_start();
+
+        if ($info[2] === IMAGETYPE_PNG) {
+            imagesavealpha($small, true);
+            imagepng($small);
+        } else {
+            imagejpeg($small, null, 90);
+        }
+
+        return (string) ob_get_clean();
     }
 
     public function imageMime(string $file): string

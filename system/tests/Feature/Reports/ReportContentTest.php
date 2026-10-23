@@ -158,25 +158,39 @@ it('draws the Summary ranks grouped by branch with subtotals, and the AFP split 
         ->and($branchStyles)->toBe(['body', 'body', 'body', 'total', 'total']);
 });
 
-it('counts the daily census of September by hand, with the busiest day', function () {
+it('counts the daily census of September by hand: the table holds only the totals and the busiest day', function () {
     seedSeptember($this);
     $pages = septemberPages();
     $table = tableOf($pages, 'summary', 'daily');
     $rows = array_column($table['rows'], 'cells');
 
-    expect(array_column($table['columns'], 'label'))->toBe(['Day', 'OPD', 'ER', 'Admission', 'Total visits'])
+    expect(array_column($table['columns'], 'label'))->toBe(['Period', 'OPD', 'ER', 'Admission', 'Total visits'])
         ->and($table['title'])->toBe('Daily census (visits)')
-        // 30 days, then the total row.
-        ->and($rows)->toHaveCount(31)
-        ->and($rows[0])->toBe(['01-Sep-2026 (Tue)', 0, 0, 0, 0])
-        ->and($rows[2])->toBe(['03-Sep-2026 (Thu)', 0, 1, 0, 1])
-        ->and($rows[3])->toBe(['04-Sep-2026 (Fri)', 0, 2, 0, 2])
-        ->and($rows[4])->toBe(['05-Sep-2026 (Sat)', 2, 0, 0, 2])
-        ->and($rows[5])->toBe(['06-Sep-2026 (Sun)', 0, 0, 1, 1])
-        ->and($rows[9])->toBe(['10-Sep-2026 (Thu)', 0, 1, 0, 1])
-        ->and($rows[30])->toBe(['Total', 2, 4, 1, 7])
-        // Two days have 2 visits; the earlier one is named.
-        ->and($table['note'])->toBe('Busiest day: 04-Sep-2026 (Fri), 2 visits.');
+        // No day by day rows: only the total of the period.
+        ->and($rows)->toBe([['All days', 2, 4, 1, 7]])
+        ->and(array_column($table['rows'], 'style'))->toBe(['total'])
+        // Two days have 2 visits; the earlier one is named, as DD-Mon-YYYY with its visits.
+        ->and($table['note'])->toBe('Busiest day: 04-Sep-2026 (2 visits)');
+
+    // The day by day figures are still in the report (the chart draws them), counted by hand.
+    $days = app(ReportBuilder::class)->build('2026-09')['daily']['rows'];
+
+    expect($days)->toHaveCount(30)
+        ->and($days[0])->toBe(['label' => '01-Sep-2026 (Tue)', 'counts' => ['OPD' => 0, 'ER' => 0, 'Admission' => 0]])
+        ->and($days[2]['counts'])->toBe(['OPD' => 0, 'ER' => 1, 'Admission' => 0])
+        ->and($days[3]['counts'])->toBe(['OPD' => 0, 'ER' => 2, 'Admission' => 0])
+        ->and($days[4]['counts'])->toBe(['OPD' => 2, 'ER' => 0, 'Admission' => 0])
+        ->and($days[5]['counts'])->toBe(['OPD' => 0, 'ER' => 0, 'Admission' => 1])
+        ->and($days[9]['counts'])->toBe(['OPD' => 0, 'ER' => 1, 'Admission' => 0]);
+});
+
+it('names a single visit as "1 visit" on the busiest day', function () {
+    contentVisit($this, Patient::factory()->create(), '2026-09-12 09:00', 'ER');
+
+    $table = tableOf(septemberPages(), 'summary', 'daily');
+
+    expect($table['note'])->toBe('Busiest day: 12-Sep-2026 (1 visit)')
+        ->and(array_column($table['rows'], 'cells'))->toBe([['All days', 0, 1, 0, 1]]);
 });
 
 it('compares with the previous period', function () {
@@ -254,10 +268,9 @@ it('counts the ER tables of the September dataset by hand', function () {
 
     $daily = tableOf($pages, 'ER', 'daily');
 
-    expect(array_column($daily['columns'], 'label'))->toBe(['Day', 'Visits'])
-        ->and(array_column($daily['rows'], 'cells')[3])->toBe(['04-Sep-2026 (Fri)', 2])
-        ->and(array_column($daily['rows'], 'cells')[30])->toBe(['Total', 4])
-        ->and($daily['note'])->toBe('Busiest day: 04-Sep-2026 (Fri), 2 visits.');
+    expect(array_column($daily['columns'], 'label'))->toBe(['Period', 'Visits'])
+        ->and(array_column($daily['rows'], 'cells'))->toBe([['All days', 4]])
+        ->and($daily['note'])->toBe('Busiest day: 04-Sep-2026 (2 visits)');
 });
 
 it('counts OPD and Admission, and a returning patient is returning only in the category seen before', function () {
@@ -565,8 +578,8 @@ it('puts every table, row and figure of every page in the PDF page', function ()
 
     // Spot checks against the hand count.
     expect($html)->toContain('57.1%')
-        ->toContain('04-Sep-2026 (Fri)')
-        ->toContain('Busiest day: 04-Sep-2026 (Fri), 2 visits.')
+        ->toContain('Busiest day: 04-Sep-2026 (2 visits)')
+        ->not->toContain('04-Sep-2026 (Fri)')
         ->toContain('Full list on each category page.')
         ->toContain('+150.0%')
         ->toContain('Top 20 diagnoses (per visit, all categories)');
@@ -594,7 +607,7 @@ it('writes the same tables and figures in the Excel sheets as on the screen', fu
     $book = excelBookOf($this->actingAs($this->admin)->get('/reports/export/excel?type=monthly&month=2026-09')->assertOk());
     $screen = screenSections($this);
 
-    expect($book->getSheetNames())->toBe(['Summary', 'OPD', 'ER', 'Admission']);
+    expect($book->getSheetNames())->toBe(['Summary', 'OPD', 'ER', 'Admission', 'Chart data']);
 
     foreach (['Summary' => 'summary', 'OPD' => 'OPD', 'ER' => 'ER', 'Admission' => 'Admission'] as $sheet => $page) {
         expect(sheetTableRows($book, $sheet))->toEqual(expectedSheetRows($screen[$page]), "sheet {$sheet}");

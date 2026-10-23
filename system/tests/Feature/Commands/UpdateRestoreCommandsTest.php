@@ -10,6 +10,7 @@ use App\Services\BackupService;
 use App\Services\FolderZipper;
 use App\Services\Setup\AppMaintenance;
 use App\Services\Setup\MysqlAdmin;
+use App\Services\TableStatistics;
 use Illuminate\Process\PendingProcess;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
@@ -199,6 +200,23 @@ it('restore: shows the date and size, and does nothing unless RESTORE is typed',
     expect(SetupLog::names())->toBe([])
         ->and(BackupRun::count())->toBe(0);
 })->with(['lowercase' => 'restore', 'no' => 'no', 'empty' => '', 'with spaces' => ' RESTORE ']);
+
+it('restore: refreshes the MySQL table statistics once, after the data is loaded, so the first report is not slow', function () {
+    putBackup($this);
+
+    $statistics = Mockery::mock(TableStatistics::class);
+    $statistics->shouldReceive('refresh')->once()->andReturnUsing(fn () => SetupLog::add('analyze'));
+    $this->instance(TableStatistics::class, $statistics);
+
+    restore($this)->assertSuccessful();
+
+    // After the new connection to the loaded data, and before the system comes back up.
+    $names = SetupLog::names();
+
+    expect($names)->toContain('analyze')
+        ->and(array_search('analyze', $names, true))->toBeGreaterThan(array_search('refresh-connection', $names, true))
+        ->and(array_search('analyze', $names, true))->toBeLessThan(array_search('up', $names, true));
+});
 
 it('restore: takes a safety backup first, then loads the data, the pictures and migrates', function () {
     $dump = putBackup($this);
