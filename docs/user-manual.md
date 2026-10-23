@@ -62,3 +62,25 @@ Under **Past imports** every import is listed with its file name, who imported i
 #### If something goes wrong
 
 See `docs/troubleshooting.md`, section 9: every message and what to do. The operations steps (what to do before and during a downtime) are in `docs/operations-guide.md`, section 8.
+
+## All users
+
+### Long lists: pages and rows per page
+
+Visits, Patients, Past imports, User Accounts, Trash, Audit Log, Backup history and System health all use the same footer under the table.
+
+- **Showing 41–50 of 1,234** tells you which rows you are looking at.
+- **« First**, **‹ Prev**, **Next ›** and **Last »** move one step or to the ends. Between them are at most three page numbers around the page you are on, for example 4 5 6. The page you are on is highlighted.
+- **Page [ ] of N** jumps to any page. Choose the page from the list. If there are more than 200 pages it is a small box: type the number and click **Go**. A number past the end opens the last page.
+- **Rows per page** shows 10, 20 or 50 rows (10 is the default). It goes back to page 1 and keeps your filters. The choice stays in the web address, so Refresh keeps it. Any other number typed in the address is treated as 10.
+- On a phone only **‹ Prev**, **Page x of N** and **Next ›** show.
+
+The footer is hidden when there are 10 rows or fewer.
+
+### System health (Admin)
+
+The top line always says how many problems and warnings there are, for example "1 problem, 2 warnings". The list shows Problems first, then Warnings, then OK, so a problem is never hidden on page 2. Use **Show** to look at All, Problems, Warnings or OK only. The choice stays in the web address.
+
+### User Accounts
+
+The list is paged, 10 accounts per page, ordered by name. After you add or edit an account, unlock it, reset its password, deactivate it or move it to Trash, you stay on the same page.

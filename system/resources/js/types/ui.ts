@@ -29,6 +29,8 @@ export type PageMeta = {
     /** Row number of the first row on this page, or null when empty. */
     from: number | null;
     to: number | null;
+    /** The (at most 3) page numbers to show around the current page. */
+    pages: number[];
 };
 
 export type Paged<T> = {

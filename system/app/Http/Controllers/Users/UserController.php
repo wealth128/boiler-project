@@ -10,6 +10,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Users\StoreUserRequest;
 use App\Http\Requests\Users\UpdateUserRequest;
 use App\Models\User;
+use App\Services\TablePaging;
 use App\Services\TrashService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -28,7 +29,7 @@ use Inertia\Response;
  */
 class UserController extends Controller
 {
-    public function index(Request $request): Response
+    public function index(Request $request): Response|RedirectResponse
     {
         Gate::authorize('viewAny', User::class);
 
@@ -36,10 +37,16 @@ class UserController extends Controller
         $actor = $request->user();
         $gate = Gate::forUser($actor);
 
-        $users = User::query()
-            ->orderBy('name')
-            ->get()
-            ->map(fn (User $user): array => [
+        $page = User::query()
+            ->orderBy('name')->orderBy('id')
+            ->paginate(TablePaging::perPage($request))
+            ->withQueryString();
+
+        if ($redirect = TablePaging::redirectPastLastPage($request, $page)) {
+            return $redirect;
+        }
+
+        $users = $page->getCollection()->map(fn (User $user): array => [
                 'id' => $user->id,
                 'name' => $user->name,
                 'username' => $user->username,
@@ -61,7 +68,7 @@ class UserController extends Controller
             ]);
 
         return Inertia::render('users/index', [
-            'users' => $users,
+            'users' => ['data' => $users->values()->all(), 'meta' => TablePaging::meta($page)],
             'roles' => array_map(fn (Role $role) => [
                 'value' => $role->value,
                 'label' => $role->label(),
@@ -89,7 +96,7 @@ class UserController extends Controller
             'message' => "Account {$user->username} added. Give the temporary password to the user privately.",
         ]);
 
-        return to_route('users.index');
+        return back(fallback: route('users.index'));
     }
 
     public function update(UpdateUserRequest $request, User $user): RedirectResponse
@@ -98,7 +105,7 @@ class UserController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => "Account {$user->username} saved."]);
 
-        return to_route('users.index');
+        return back(fallback: route('users.index'));
     }
 
     /**
@@ -115,6 +122,6 @@ class UserController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => "Account {$user->username} moved to Trash."]);
 
-        return to_route('users.index');
+        return back(fallback: route('users.index'));
     }
 }

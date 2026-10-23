@@ -41,6 +41,27 @@ export function ReportControls({ filters, options }: ReportControlsProps) {
         setError("");
     };
 
+    // Monthly: the Year list picks which months the Month list shows.
+    const monthYear = values.month.slice(0, 4);
+    const monthsOfYear = options.months.filter((month) =>
+        month.value.startsWith(`${monthYear}-`),
+    );
+
+    // A new year keeps the same month when that year has it (October 2025
+    // to October 2026), else the latest month it has.
+    function changeMonthYear(year: string) {
+        const wanted = `${year}-${values.month.slice(5, 7)}`;
+        const inYear = options.months.filter((month) =>
+            month.value.startsWith(`${year}-`),
+        );
+        const month =
+            inYear.find((m) => m.value === wanted) ?? inYear[0] ?? undefined;
+
+        if (month) {
+            set({ month: month.value });
+        }
+    }
+
     function generate(event: FormEvent) {
         event.preventDefault();
 
@@ -100,14 +121,18 @@ export function ReportControls({ filters, options }: ReportControlsProps) {
                             value={values.month}
                             onChange={(e) => set({ month: e.target.value })}
                         >
-                            {options.months.map((month) => (
+                            {monthsOfYear.map((month) => (
                                 <option key={month.value} value={month.value}>
-                                    {month.label}
+                                    {month.label.split(" ")[0]}
                                 </option>
                             ))}
                         </NativeSelect>
                     </div>
-                    <div className="hidden lg:block" />
+                    <YearSelect
+                        value={monthYear}
+                        years={options.years}
+                        onChange={changeMonthYear}
+                    />
                 </>
             )}
 

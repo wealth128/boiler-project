@@ -12,15 +12,18 @@ import type {
 } from '@/components/shared/delete-reason-field';
 import { ReasonConfirm } from '@/components/shared/reason-confirm';
 import type { ReasonConfirmErrors } from '@/components/shared/reason-confirm';
+import { Pagination } from '@/components/shared/pagination';
 import { Button } from '@/components/ui/button';
 import { DeactivateDialog } from '@/features/users/deactivate-dialog';
 import { ResetPasswordDialog } from '@/features/users/reset-password-dialog';
 import type { OfficeOption, RoleOption, UserRow } from '@/features/users/types';
 import { UserFormDialog } from '@/features/users/user-form-dialog';
 import { usePermissions } from '@/hooks/use-permissions';
+import { DEFAULT_PER_PAGE, pagingQuery } from '@/lib/paging';
+import type { Paged } from '@/types';
 
 type Props = {
-    users: UserRow[];
+    users: Paged<UserRow>;
     roles: RoleOption[];
     encoderOffices: OfficeOption[];
     maxAttempts: number;
@@ -30,6 +33,10 @@ type Props = {
 };
 
 const actionClass = 'h-auto px-1.5 py-0.5 text-xs';
+
+function usersUrl(page = 1, perPage = DEFAULT_PER_PAGE): string {
+    return UserController.index.url({ query: pagingQuery(perPage, page) });
+}
 
 /**
  * User Accounts (prototype/prototype.html, "User accounts"). Admin and
@@ -240,9 +247,21 @@ export default function UsersIndex({
 
                 <DataTable
                     columns={columns}
-                    rows={users}
+                    rows={users.data}
                     rowKey={(user) => user.id}
                     caption="User accounts"
+                    footer={
+                        users.meta.total > 0 ? (
+                            <Pagination
+                                meta={users.meta}
+                                pageUrl={(page) =>
+                                    usersUrl(page, users.meta.per_page)
+                                }
+                                perPageUrl={(size) => usersUrl(1, size)}
+                                noun="accounts"
+                            />
+                        ) : undefined
+                    }
                 />
             </section>
 

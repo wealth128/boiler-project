@@ -4,16 +4,55 @@ import { DataTable } from '@/components/shared/data-table';
 import type { DataTableColumn } from '@/components/shared/data-table';
 import { Chip } from '@/components/shared/chip';
 import type { ChipTone } from '@/components/shared/chip';
+import { EmptyState } from '@/components/shared/empty-state';
 import { PageHeader } from '@/components/shared/page-header';
 import { Button } from '@/components/ui/button';
-import type { HealthCheck, HealthStatus } from '@/features/system/types';
+import { Pagination } from '@/components/shared/pagination';
+import { NativeSelect } from '@/components/ui/native-select';
+import HealthController from '@/actions/App/Http/Controllers/System/HealthController';
+import type {
+    HealthCheck,
+    HealthCounts,
+    HealthFilter,
+    HealthStatus,
+} from '@/features/system/types';
 import { formatDateTime } from '@/lib/dates';
+import { DEFAULT_PER_PAGE, pagingQuery } from '@/lib/paging';
+import type { Paged } from '@/types';
 
 type Props = {
-    checks: HealthCheck[];
+    /** Problems first, then Warnings, then OK; one page of them. */
+    checks: Paged<HealthCheck>;
+    /** Every check counted, whatever the filter. */
+    counts: HealthCounts;
+    filter: HealthFilter;
     overall: HealthStatus;
     checked_at: string;
 };
+
+const FILTER_LABEL: Record<HealthFilter, string> = {
+    all: 'All',
+    problem: 'Problems',
+    warning: 'Warnings',
+    ok: 'OK',
+};
+
+function healthUrl(
+    filter: HealthFilter,
+    page = 1,
+    perPage = DEFAULT_PER_PAGE,
+): string {
+    return HealthController.url({
+        query: {
+            status: filter === 'all' ? undefined : filter,
+            ...pagingQuery(perPage, page),
+        },
+    });
+}
+
+function plural(count: number, one: string, many: string): string {
+    return `${count} ${count === 1 ? one : many}`;
+}
 
 const LABEL: Record<HealthStatus, string> = {
     ok: 'OK',
@@ -38,7 +77,13 @@ const SUMMARY: Record<HealthStatus, string> = {
  * plain "What to do" line. Nothing here shows passwords or settings. IT can
  * run the same checks with "php artisan census:health".
  */
-export default function SystemHealth({ checks, overall, checked_at }: Props) {
+export default function SystemHealth({
+    checks,
+    counts,
+    filter,
+    overall,
+    checked_at,
+}: Props) {
     const [checking, setChecking] = useState(false);
 
     const columns: DataTableColumn<HealthCheck>[] = [
@@ -98,18 +143,68 @@ export default function SystemHealth({ checks, overall, checked_at }: Props) {
                 className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border bg-card px-4 py-3 text-sm"
             >
                 <Chip tone={TONE[overall]}>{LABEL[overall]}</Chip>
-                <span className="font-medium">{SUMMARY[overall]}</span>
+                <span className="font-medium">
+                    {plural(counts.problem, 'problem', 'problems')},{' '}
+                    {plural(counts.warning, 'warning', 'warnings')}
+                </span>
+                <span>{SUMMARY[overall]}</span>
                 <span className="text-muted-foreground">
                     Checked {formatDateTime(checked_at)}
                 </span>
             </p>
 
             <section className="rounded-lg border bg-card">
+                <div className="flex flex-wrap items-center gap-2 border-b px-4 py-3">
+                    <label className="flex items-center gap-2 text-sm">
+                        Show
+                        <NativeSelect
+                            value={filter}
+                            className="h-8 w-auto py-0"
+                            onChange={(e) =>
+                                router.visit(
+                                    healthUrl(
+                                        e.target.value as HealthFilter,
+                                        1,
+                                        checks.meta.per_page,
+                                    ),
+                                    { preserveScroll: true },
+                                )
+                            }
+                        >
+                            {(
+                                Object.keys(FILTER_LABEL) as HealthFilter[]
+                            ).map((value) => (
+                                <option key={value} value={value}>
+                                    {FILTER_LABEL[value]}
+                                    {value === 'all'
+                                        ? ` (${counts.total})`
+                                        : ` (${counts[value]})`}
+                                </option>
+                            ))}
+                        </NativeSelect>
+                    </label>
+                </div>
                 <DataTable
                     columns={columns}
-                    rows={checks}
+                    rows={checks.data}
                     rowKey={(check) => check.key}
-                    caption="System health checks"
+                    caption="System health checks, problems first"
+                    empty={
+                        <EmptyState message="No checks match this filter." />
+                    }
+                    footer={
+                        checks.meta.total > 0 ? (
+                            <Pagination
+                                meta={checks.meta}
+                                pageUrl={(page) =>
+                                    healthUrl(filter, page, checks.meta.per_page)
+                                }
+                                perPageUrl={(size) => healthUrl(filter, 1, size)}
+                                noun="checks"
+                                alwaysShow
+                            />
+                        ) : undefined
+                    }
                 />
             </section>
 

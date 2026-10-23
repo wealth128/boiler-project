@@ -38,21 +38,21 @@ it('lists accounts not in Trash, with what the signed-in user may do', function 
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('users/index')
-            ->has('users', 3)
-            ->where('users.0.name', 'Garcia, Elena')
+            ->has('users.data', 3)
+            ->where('users.data.0.name', 'Garcia, Elena')
             // The System Admin can only unlock the Admin, and it isn't locked.
-            ->where('users.0.can', [
+            ->where('users.data.0.can', [
                 'update' => false, 'change_role' => false, 'delete' => false,
                 'unlock' => false, 'reset_password' => false, 'toggle_active' => false,
             ])
-            ->where('users.1.name', 'Ramos, Carlo')
-            ->where('users.1.is_locked', true)
-            ->where('users.1.can.unlock', true)
-            ->where('users.2.is_self', true)
-            ->where('users.2.can.delete', false)
-            ->where('users.2.can.reset_password', false)
-            ->missing('users.0.password')
-            ->missing('users.0.failed_attempts')
+            ->where('users.data.1.name', 'Ramos, Carlo')
+            ->where('users.data.1.is_locked', true)
+            ->where('users.data.1.can.unlock', true)
+            ->where('users.data.2.is_self', true)
+            ->where('users.data.2.can.delete', false)
+            ->where('users.data.2.can.reset_password', false)
+            ->missing('users.data.0.password')
+            ->missing('users.data.0.failed_attempts')
             ->has('roles', 4)
             ->has('encoderOffices', 3)
             ->where('maxAttempts', 5)

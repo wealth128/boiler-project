@@ -28,3 +28,9 @@ export function pagingQuery(
 export function showsPaging(meta: PageMeta): boolean {
     return meta.total > PER_PAGE_OPTIONS[0];
 }
+
+/**
+ * Up to this many pages "Page [dropdown] of N" lists every page; with more
+ * it is a number box with a Go button.
+ */
+export const JUMP_SELECT_MAX = 200;

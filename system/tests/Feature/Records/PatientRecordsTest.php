@@ -118,7 +118,7 @@ it('shows 10 patients per page by default, with page numbers', function () {
         ->get('/records/patients')
         ->assertInertia(fn (Assert $page) => $page
             ->has('patients.data', 10)
-            ->where('patients.meta', ['current_page' => 1, 'last_page' => 3, 'per_page' => 10, 'total' => 25, 'from' => 1, 'to' => 10]));
+            ->where('patients.meta', ['current_page' => 1, 'last_page' => 3, 'per_page' => 10, 'total' => 25, 'from' => 1, 'to' => 10, 'pages' => [1, 2, 3]]));
 
     $this->actingAs($this->admin)
         ->get('/records/patients?page=3')

@@ -86,6 +86,6 @@ class UserAccountController extends Controller
     {
         Inertia::flash('toast', ['type' => $type, 'message' => $message]);
 
-        return to_route('users.index');
+        return back(fallback: route('users.index'));
     }
 }
