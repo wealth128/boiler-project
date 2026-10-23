@@ -26,14 +26,29 @@ class ReportWorkbook implements Export, WithMultipleSheets
         private readonly array $sheet,
         private readonly ?array $snapshot,
         private readonly CarbonInterface $generatedAt,
+        private readonly string $generatedBy,
+        private readonly ?string $logoPath = null,
     ) {}
 
     public function sheets(): array
     {
-        $sheets = [new SummarySheet($this->report, $this->sheet, $this->snapshot, $this->generatedAt)];
+        $meta = [
+            'hospital_name' => $this->sheet['hospital_name'],
+            'office' => $this->sheet['office'],
+            'prepared_by' => $this->sheet['prepared_by'],
+            'prepared_by_title' => $this->sheet['prepared_by_title'],
+            'noted_by' => $this->sheet['noted_by'],
+            'noted_by_title' => $this->sheet['noted_by_title'],
+            'period_label' => $this->sheet['period_label'],
+            // Exactly as on screen: "Final", or the reason it is not.
+            'status' => $this->sheet['signature_note'] ?? 'Final',
+            'generated' => 'Generated '.$this->generatedAt->format('d-M-Y H:i').' by '.$this->generatedBy,
+        ];
+
+        $sheets = [new SummarySheet($this->report, $this->sheet, $this->snapshot, $meta, $this->logoPath)];
 
         foreach ($this->report['categories'] as $name => $data) {
-            $sheets[] = new CategorySheet($name, $data);
+            $sheets[] = new CategorySheet($name, $data, $this->sheet['title'], $meta, $this->logoPath);
         }
 
         return $sheets;

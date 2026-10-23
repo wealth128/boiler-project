@@ -8,9 +8,12 @@ use App\Models\Patient;
 use App\Models\Rank;
 use App\Models\Setting;
 use App\Models\Visit;
+use App\Services\HospitalSettings;
 use App\Services\MonthService;
 use App\Services\ReportSheetResolver;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -151,9 +154,7 @@ it('has a Summary sheet and one sheet per category, with the same numbers as the
 
     $summary = sheetRows($book, 'Summary');
 
-    expect($summary[0][0])->toBe('[Hospital Name] · Admission / Administrative Office')
-        ->and($summary[1][0])->toBe('Monthly Patient Census Report')
-        ->and($summary[2][0])->toBe('September 2026')
+    expect(collect($summary)->pluck(0)->all())->toContain('[Hospital Name]', 'Admission / Administrative Office', 'Monthly Patient Census Report', 'September 2026')
         ->and(valueNextTo($summary, 'Total'))->toBe($screen['totals']['patients'])
         ->and(collect($summary)->first(fn ($r) => $r[0] === 'Total')[2])->toBe($screen['totals']['visits']);
 
@@ -168,7 +169,10 @@ it('has a Summary sheet and one sheet per category, with the same numbers as the
     }
 
     // Numbers are stored as numbers, not text.
-    expect($book->getSheetByName('ER')->getCell('B2')->getDataType())->toBe('n');
+    $er = $book->getSheetByName('ER');
+    $patientsRow = collect(sheetRows($book, 'ER'))->search(fn ($r) => $r[0] === 'Patients') + 1;
+
+    expect($er->getCell('B'.$patientsRow)->getDataType())->toBe('n');
 });
 
 it('writes a Summary sheet and one sheet per category, whichever tab is open', function (string $tab) {
@@ -177,7 +181,7 @@ it('writes a Summary sheet and one sheet per category, whichever tab is open', f
     $book = workbookOf($this->actingAs($this->admin)->get('/reports/export/excel?type=monthly&month=2026-09&category='.$tab));
 
     expect($book->getSheetNames())->toBe(['Summary', 'OPD', 'ER', 'Admission'])
-        ->and(sheetRows($book, 'Summary')[2][0])->toBe('September 2026');
+        ->and(collect(sheetRows($book, 'Summary'))->pluck(0)->all())->toContain('September 2026');
 })->with(['opd', 'er', 'admission', 'summary', 'nonsense']);
 
 it('lists every diagnosis in both files, not just ten', function () {
@@ -226,7 +230,7 @@ it('puts the header, signatures and generated time on the sheet from the setting
 
     $summary = sheetRows(workbookOf($this->actingAs($this->admin)->get('/reports/export/excel')), 'Summary');
 
-    expect(collect($summary)->pluck(0)->all())->toContain('Generated 15-Oct-2026 10:00')
+    expect(collect($summary)->pluck(0)->all())->toContain('Generated 15-Oct-2026 10:00 by '.$this->admin->name)
         ->and(collect($summary)->firstWhere(0, 'Prepared by · Admission / Admin Office')[1])->toBe('SSG Dela Cruz');
 });
 
@@ -247,7 +251,7 @@ it('exports the saved copy of a closed month', function () {
     expect(valueNextTo($summary, 'Total'))->toBe(1)
         ->and(valueNextTo($er, 'Hypertension'))->toBe(1)
         ->and(valueNextTo($er, 'High blood pressure'))->toBeNull()
-        ->and($summary[3][0])->toStartWith('Saved copy, taken when September 2026 was closed on 15-Oct-2026 10:00');
+        ->and(collect($summary)->pluck(0)->first(fn ($v) => str_starts_with((string) $v, 'Saved copy')))->toStartWith('Saved copy, taken when September 2026 was closed on 15-Oct-2026 10:00');
 
     $data = app(ReportSheetResolver::class)->resolve(['type' => 'monthly', 'month' => '2026-09']);
     $html = view('reports.pdf', [...$data, 'generatedAt' => now()])->render();
@@ -332,4 +336,201 @@ it('keeps dompdf remote resources and PHP execution off', function () {
     $source = file_get_contents(app_path('Http/Controllers/Reports/ReportExportController.php'));
 
     expect($source)->toContain("'isRemoteEnabled' => false")->toContain("'isPhpEnabled' => false");
+});
+
+// --- Presentable workbook (Step 7d) -------------------------------------------------
+
+/** The row number of the first row whose column A holds a text, on a sheet. */
+function rowOf(Spreadsheet $book, string $sheet, string $text): int
+{
+    $worksheet = $book->getSheetByNameOrThrow($sheet);
+
+    foreach ($worksheet->toArray(null, false, false) as $index => $cells) {
+        if (($cells[0] ?? null) === $text) {
+            return $index + 1;
+        }
+    }
+
+    throw new RuntimeException("No cell with \"{$text}\" on {$sheet}.");
+}
+
+function exportBook(object $test, string $query = 'type=monthly&month=2026-09'): Spreadsheet
+{
+    return workbookOf($test->actingAs($test->admin)->get('/reports/export/excel?'.$query)->assertOk());
+}
+
+/** The label and number pairs of a sheet, in order: what the old export held. */
+function labelCountPairs(Spreadsheet $book, string $sheet): array
+{
+    return collect(sheetRows($book, $sheet))
+        ->filter(fn ($r) => is_string($r[0] ?? null) && is_int($r[1] ?? null))
+        ->map(fn ($r) => array_values(array_filter($r, fn ($v) => $v !== null)))
+        ->values()
+        ->all();
+}
+
+it('keeps every label and number of a category sheet the same as the screen', function () {
+    exportVisit($this, '2026-09-05 09:00');
+    exportVisit($this, '2026-09-06 09:00');
+
+    $screen = $this->actingAs($this->admin)->get('/reports?type=monthly&month=2026-09')->inertiaProps('report')['categories']['ER'];
+    $expected = [['Patients', $screen['patients']], ['Visits', $screen['visits']]];
+
+    foreach ($screen['sex'] as $l) {
+        $expected[] = [$l['label'], $l['count']];
+    }
+    $expected[] = ['Total', $screen['patients']];
+
+    foreach ($screen['age'] as $l) {
+        $expected[] = [$l['label'], $l['count']];
+    }
+
+    foreach ($screen['diagnoses'] as $l) {
+        $expected[] = [$l['label'], $l['count']];
+    }
+    $expected[] = ['Total', $screen['visits']];
+
+    foreach ($screen['branches'] as $branch) {
+        $expected[] = [$branch['name'], $branch['total']];
+
+        foreach ($branch['ranks'] as $rank) {
+            $expected[] = ['    '.$rank['label'], $rank['count']];
+        }
+    }
+
+    expect(labelCountPairs(exportBook($this), 'ER'))->toBe($expected)
+        ->and($screen['visits'])->toBe(2);
+});
+
+it('keeps the summary numbers: grand total and each category', function () {
+    exportVisit($this, '2026-09-05 09:00');
+    exportVisit($this, '2026-09-07 09:00', category: 'OPD');
+
+    expect(labelCountPairs(exportBook($this), 'Summary'))->toBe([
+        ['Total', 2, 2],
+        ['OPD', 1, 1],
+        ['ER', 1, 1],
+        ['Admission', 0, 0],
+    ]);
+});
+
+it('puts the title block on every sheet', function (string $sheet) {
+    Setting::query()->updateOrCreate(['key' => 'hospital_name'], ['value' => 'AFP Medical Center']);
+    exportVisit($this, '2026-09-05 09:00');
+
+    $labels = collect(sheetRows(exportBook($this), $sheet))->pluck(0)->filter()->values();
+    $title = $sheet === 'Summary' ? 'Monthly Patient Census Report' : 'Monthly Patient Census Report – '.$sheet;
+
+    expect($labels->take(6)->all())->toBe([
+        'AFP Medical Center',
+        'Admission / Administrative Office',
+        $title,
+        'September 2026',
+        'Not final – month still open',
+        'Generated 15-Oct-2026 10:00 by '.$this->admin->name,
+    ]);
+})->with(['Summary', 'OPD', 'ER', 'Admission']);
+
+it('says Final for a closed month and shows the other period labels', function () {
+    exportVisit($this, '2026-09-05 09:00');
+    app(MonthService::class)->close('2026-09', $this->admin);
+
+    expect(collect(sheetRows(exportBook($this), 'ER'))->pluck(0))->toContain('Final')
+        ->and(collect(sheetRows(exportBook($this, 'type=quarterly&year=2026&quarter=3'), 'ER'))->pluck(0)->all())->toContain('Q3 2026 (Jul–Sep)')
+        ->and(collect(sheetRows(exportBook($this, 'type=custom&from=2026-10-01&to=2026-10-15'), 'ER'))->pluck(0)->all())
+        ->toContain('01-Oct-2026 to 15-Oct-2026', 'Not final – custom range');
+});
+
+it('writes Prepared by and Noted by at the bottom of every sheet, as text only', function (string $sheet) {
+    Setting::query()->updateOrCreate(['key' => 'prepared_by'], ['value' => 'SSG Dela Cruz']);
+    Setting::query()->updateOrCreate(['key' => 'noted_by'], ['value' => 'COL Reyes']);
+
+    $book = exportBook($this);
+    $worksheet = $book->getSheetByNameOrThrow($sheet);
+    $prepared = rowOf($book, $sheet, 'Prepared by · Admission / Admin Office');
+    $noted = rowOf($book, $sheet, 'Noted by · Commanding Officer');
+
+    expect($worksheet->getCell('B'.$prepared)->getValue())->toBe('SSG Dela Cruz')
+        ->and($worksheet->getCell('B'.$noted)->getValue())->toBe('COL Reyes')
+        ->and($noted)->toBe($worksheet->getHighestDataRow())
+        // The signature line over the name.
+        ->and($worksheet->getStyle('B'.$noted)->getBorders()->getTop()->getBorderStyle())->toBe('thin')
+        ->and($worksheet->getDrawingCollection())->toHaveCount(0);
+})->with(['Summary', 'OPD', 'ER', 'Admission']);
+
+it('styles the tables: navy bold header, borders, zebra, bold totals, number format', function () {
+    exportVisit($this, '2026-09-05 09:00');
+    $book = exportBook($this);
+    $er = $book->getSheetByNameOrThrow('ER');
+
+    $header = 'A'.rowOf($book, 'ER', 'Branch / Rank');
+    $visits = rowOf($book, 'ER', 'Visits');
+    $total = 'A'.rowOf($book, 'ER', 'Total');
+    $first = 'A'.rowOf($book, 'ER', 'Patients');
+
+    expect($er->getStyle($header)->getFont()->getBold())->toBeTrue()
+        ->and($er->getStyle($header)->getFont()->getColor()->getRGB())->toBe('FFFFFF')
+        ->and($er->getStyle($header)->getFill()->getStartColor()->getRGB())->toBe('1F3864')
+        ->and($er->getStyle($header)->getBorders()->getBottom()->getBorderStyle())->toBe('thin')
+        // Zebra: the second row of a table is shaded, the first is not.
+        ->and($er->getStyle('A'.$visits)->getFill()->getStartColor()->getRGB())->toBe('F2F5FA')
+        ->and($er->getStyle($first)->getFill()->getFillType())->toBe('none')
+        ->and($er->getStyle($total)->getFont()->getBold())->toBeTrue()
+        ->and($er->getStyle('B'.$visits)->getNumberFormat()->getFormatCode())->toBe('#,##0')
+        ->and($er->getStyle('B'.$visits)->getAlignment()->getHorizontal())->toBe('right')
+        ->and($er->getStyle('A'.$visits)->getAlignment()->getHorizontal())->toBe('left')
+        ->and($er->getStyle('A'.$visits)->getAlignment()->getWrapText())->toBeTrue();
+
+    $title = 'A'.rowOf($book, 'ER', '[Hospital Name]');
+    expect($er->getStyle($title)->getFont()->getBold())->toBeTrue()
+        ->and($er->getStyle($title)->getFont()->getSize())->toBeGreaterThan(12);
+});
+
+it('sets up the page: A4, one page wide, 1.5 cm margins, footer, frozen title block', function (string $sheet) {
+    Setting::query()->updateOrCreate(['key' => 'hospital_name'], ['value' => 'AFP Medical Center']);
+    $worksheet = exportBook($this)->getSheetByNameOrThrow($sheet);
+    $setup = $worksheet->getPageSetup();
+
+    expect($setup->getPaperSize())->toBe(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::PAPERSIZE_A4)
+        ->and($setup->getOrientation())->toBe('portrait')
+        ->and($setup->getFitToPage())->toBeTrue()
+        ->and($setup->getFitToWidth())->toBe(1)
+        ->and($setup->getFitToHeight())->toBe(0)
+        ->and(round($worksheet->getPageMargins()->getLeft() * 2.54, 2))->toBe(1.5)
+        ->and(round($worksheet->getPageMargins()->getBottom() * 2.54, 2))->toBe(1.5)
+        ->and($worksheet->getHeaderFooter()->getOddFooter())->toBe('&LAFP Medical Center&RPage &P of &N')
+        ->and($worksheet->getFreezePane())->toBe('A8')
+        ->and($setup->isRowsToRepeatAtTopSet())->toBeTrue();
+})->with(['Summary', 'OPD', 'ER', 'Admission']);
+
+it('draws the logo on every sheet when one is set, and none when not', function () {
+    Storage::fake('local');
+    $without = exportBook($this);
+
+    app(HospitalSettings::class)->storeImage('logo', UploadedFile::fake()->image('logo.png', 200, 100));
+    $with = exportBook($this);
+
+    foreach (['Summary', 'OPD', 'ER', 'Admission'] as $sheet) {
+        expect($without->getSheetByNameOrThrow($sheet)->getDrawingCollection())->toHaveCount(0)
+            ->and($with->getSheetByNameOrThrow($sheet)->getDrawingCollection())->toHaveCount(1)
+            ->and($with->getSheetByNameOrThrow($sheet)->getDrawingCollection()[0]->getCoordinates())->toBe('A1');
+    }
+
+    // The signature pictures never go into Excel.
+    app(HospitalSettings::class)->storeImage('prepared_signature', UploadedFile::fake()->image('s.png', 200, 100));
+
+    expect(exportBook($this)->getSheetByNameOrThrow('ER')->getDrawingCollection())->toHaveCount(1);
+});
+
+it('has no formula in any cell', function () {
+    $diagnosis = Diagnosis::factory()->create(['name' => '=1+1']);
+    exportVisit($this, '2026-09-05 09:00', ['diagnosis_id' => $diagnosis->id]);
+
+    foreach (exportBook($this)->getAllSheets() as $sheet) {
+        foreach ($sheet->getRowIterator() as $row) {
+            foreach ($row->getCellIterator() as $cell) {
+                expect($cell->isFormula())->toBeFalse();
+            }
+        }
+    }
 });

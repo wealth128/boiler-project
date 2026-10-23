@@ -83,6 +83,17 @@ Every screen fits the screen it is opened on. Nothing makes the whole page slide
 - **Warning bars, messages and dialogs** fit the screen. A tall dialog scrolls inside itself.
 - Text is at least 14 px and every button, box and menu link is at least 40 px high on a phone or tablet.
 
+### Reports: the Excel file (Admin and Viewer)
+
+**Where.** Left menu **Reports**, choose the period, click **Generate**, then click **Export Excel**. The browser saves `census-report_<period>_all.xlsx`. A sample is in `docs/samples/census-report-sample.xlsx` (made-up names and a made-up logo).
+
+**What is in it.** Four sheets: **Summary**, **OPD**, **ER** and **Admission**. The file always holds every category, whichever tab is open. The numbers are the ones on the screen; only the look is made for reading and printing.
+
+- **Top of every sheet.** The hospital logo (when one is set in Hospital settings), the hospital name, the office, the report title (for example "Monthly Patient Census Report – ER"), the period, **Final** or **Not final – …** exactly as on the screen, and "Generated 23-Oct-2026 14:05 by <your name>".
+- **Tables.** Each table has a heading, a dark blue header row, thin borders, light stripes, bold totals, and numbers lined up on the right with thousands separators. Long names wrap.
+- **Bottom of every sheet.** Prepared by and Noted by, with their titles and a signature line above each name. No signature pictures are put in Excel; use the PDF for those.
+- **Printing from Excel.** A4 portrait, fitted to one page wide, 1.5 cm margins, footer with the hospital name and "Page x of y". The top rows stay in view while you scroll. Excel can repeat only one block of rows on each printed page, so the report title and period repeat, not each table header.
+
 ### The hospital logo
 
 When the Admin has set a logo in **Hospital settings**, it also shows in the blue bar at the top of every page, next to the hospital name (every role), and above the form on the login page. With no logo, only the hospital name shows.

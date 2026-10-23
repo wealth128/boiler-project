@@ -278,7 +278,7 @@ One category is shown at a time (ER when none is chosen). The tab is kept in the
 | **Enter** / **Space** | Open the tab that has the focus (the report loads again for that tab) |
 
 ### Export PDF, Export Excel and Print (Admin and Viewer)
-They use the report on the screen, so press **Generate** first if you changed a choice. **Print / PDF** takes **This category** (the open tab) or **All categories** (the summary and each category, every one on a new page with its own header and signatures). Excel always has a Summary sheet and one sheet per category.
+They use the report on the screen, so press **Generate** first if you changed a choice. **Print / PDF** takes **This category** (the open tab) or **All categories** (the summary and each category, every one on a new page with its own header and signatures). Excel always has a Summary sheet and one sheet per category, each with a title block, styled tables and the Prepared by and Noted by lines (see the user manual, "Reports: the Excel file").
 
 | Key | What it does |
 |---|---|
