@@ -1,0 +1,18 @@
+# Prompt 7g for Claude Code: Make the whole system faster
+
+_Paste after 7f is merged and pushed. Report export speed is already handled in 7d-3; this step covers every other screen._
+
+```
+Step 7g – System-wide performance. Create branch step-7g-performance. No new packages. Don't change any rule or number. MEASURE first, fix, measure again, and report before/after for each screen.
+1. Measure in BOTH modes on the dev PC with realistic data (seed on patient_census_test only: ~1 year of ER visits ~60/day, ~15,000 patients, 100,000 audit entries, 300 backups runs): (a) dev mode as I run it, (b) production mode (APP_ENV=production, APP_DEBUG=false, php artisan optimize, npm run build, no Vite dev server). For each screen record server time, number of queries and page size: login, Encode (open, patient search as you type, Save & New), Records Visits/Patients (with filters, page 1 and a late page), Lists, Reports (Generate), Trash, Audit log (filters, late page), Backups, System health, Users, Hospital settings, Import preview.
+2. Every request: check the shared Inertia props (HandleInertiaRequests: backupAlerts, schedulerAlert, auth, logo) – they run on EVERY page. Make them cheap: cache the backup/scheduler/health results for a short time (e.g. 60 s, cleared when a backup, test restore, USB copy or heartbeat changes them), never touch the disk or run slow checks per request, and use Inertia lazy/deferred props where a value is only needed on some pages.
+3. Database: find slow queries (log queries > 50 ms) and N+1 patterns; add the missing indexes (with a migration) for the filters used in Records, Audit log, Trash, patient search and reports; Records/Audit late pages must not slow down (avoid big OFFSET scans where possible, or keep them acceptable at 100,000 rows).
+4. Patient search as you type: debounce on the client (e.g. 250 ms), cancel the previous request, limit results, use an index that fits the search (prefix search on last/first name, Patient ID exact).
+5. Front end: code-split pages (Inertia page components loaded per page), make sure the production build is used on the server, no huge JS bundle (report the bundle sizes before/after), images (logo) small and cached.
+6. Laravel production settings for the server (document in docs/operations-guide.md and check in install.bat / census:install / census:health): config, route, view and event caches; OPcache on in php.ini (with recommended settings); APP_DEBUG=false; the log level not debug; session and cache in the database stay (needed), but make sure the cache table is indexed and old cache/session rows are cleaned by the scheduler.
+7. Explain what is slow only because of dev mode (APP_DEBUG, Vite dev server, no caches, Xdebug if present) so I know what to expect on the real server.
+8. Targets in production mode: every screen under 300 ms server time for normal pages and under 1 s for Reports Generate (monthly), patient search under 150 ms. If a target can't be met, say why.
+9. Tests: query-count bounds for Records, Audit log, Trash, Encode save and patient search; shared props don't run the slow checks on every request (cache hit). Add a "Performance" section to docs/developer-guide.md (or a draft) with the measured numbers and how to measure again.
+10. When I approve, before the commit, update planning/project-history.md (section 0, section 5, decisions log), planning/deployment-handover.md (OPcache and cache steps) and docs/requirements.md (php.ini OPcache settings).
+Run the FULL php artisan test (patient_census_test only), npm run types:check and npm run build. Stop and summarize with the before/after table. Don't commit until I say okay.
+```
