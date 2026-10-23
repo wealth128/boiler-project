@@ -6,6 +6,7 @@ import type { ReportPageKey } from "@/features/reports/report-sheet";
 import type {
     Report,
     ReportFilters,
+    ReportSections,
     Sheet,
     Snapshot,
 } from "@/features/reports/types";
@@ -14,6 +15,7 @@ type Props = {
     filters: ReportFilters;
     sheet: Sheet;
     report: Report;
+    sections: ReportSections;
     snapshot: Snapshot | null;
     /** What to print, in order: "summary" or a category name. */
     pages: ReportPageKey[];
@@ -26,7 +28,13 @@ type Props = {
  * signature block. The browser's Print dialog opens by itself; the buttons
  * above (not printed) print again or close the tab.
  */
-export default function ReportPrint({ sheet, report, snapshot, pages }: Props) {
+export default function ReportPrint({
+    sheet,
+    report,
+    sections,
+    snapshot,
+    pages,
+}: Props) {
     useEffect(() => {
         // Let the page draw first, then open the Print dialog.
         const timer = window.setTimeout(() => window.print(), 400);
@@ -63,6 +71,7 @@ export default function ReportPrint({ sheet, report, snapshot, pages }: Props) {
                         page={page}
                         sheet={sheet}
                         report={report}
+                        sections={sections}
                         snapshot={snapshot}
                         // Every page after the first starts on a new sheet.
                         className={index > 0 ? "print:break-before-page" : undefined}

@@ -30,7 +30,7 @@ class ReportController extends Controller
     {
         Gate::authorize(Permission::ViewReports->value);
 
-        ['filters' => $filters, 'report' => $report, 'sheet' => $sheet, 'snapshot' => $snapshot] = $resolver->resolve($request->query());
+        ['filters' => $filters, 'report' => $report, 'sections' => $sections, 'sheet' => $sheet, 'snapshot' => $snapshot] = $resolver->resolve($request->query());
 
         return Inertia::render('reports/index', [
             'filters' => $filters->toArray(),
@@ -41,6 +41,8 @@ class ReportController extends Controller
             ],
             'sheet' => $sheet,
             'report' => $report,
+            // The tables of every page; the tab picks the page.
+            'sections' => $sections,
             // The month's status for a monthly report: null for other periods.
             'month_status' => $this->monthStatus($filters, $snapshot !== null),
             // Admin only: the reasons for "Delete month report".

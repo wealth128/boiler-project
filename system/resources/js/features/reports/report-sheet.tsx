@@ -1,13 +1,13 @@
-import type { ReactNode } from "react";
 import { CategoryChip } from "@/components/shared/category-chip";
 import {
     ReportHeader,
     ReportSignatures,
 } from "@/components/shared/report-sheet-parts";
+import { ReportTables } from "@/features/reports/report-tables";
 import type {
     CategoryReport,
-    CountLine,
     Report,
+    ReportSections,
     Sheet,
     Snapshot,
 } from "@/features/reports/types";
@@ -23,12 +23,13 @@ type ReportPageProps = {
     page: ReportPageKey;
     sheet: Sheet;
     report: Report;
+    /** The tables of every page, from the server. */
+    sections: ReportSections;
     snapshot: Snapshot | null;
     className?: string;
+    /** On screen the tables are panels that can be folded; the print view shows them plain. */
+    collapsible?: boolean;
 };
-
-const boxTitle =
-    "mb-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase print:break-after-avoid";
 
 /** The note above a saved copy of a closed month. */
 export function SnapshotNote({ snapshot }: { snapshot: Snapshot }) {
@@ -55,8 +56,10 @@ export function ReportPage({
     page,
     sheet,
     report,
+    sections,
     snapshot,
     className,
+    collapsible = false,
 }: ReportPageProps) {
     const categories = Object.entries(report.categories) as [
         Category,
@@ -85,24 +88,37 @@ export function ReportPage({
             )}
 
             {page === "summary" ? (
-                <Totals
-                    tiles={[
-                        {
-                            value: report.totals.patients,
-                            label: "Total patients (all categories)",
-                        },
-                        {
-                            value: report.totals.visits,
-                            label: "Total visits",
-                        },
-                        ...categories.map(([name, category]) => ({
-                            value: category.patients,
-                            label: `${name} patients`,
-                        })),
-                    ]}
-                />
+                <>
+                    <Totals
+                        tiles={[
+                            {
+                                value: report.totals.patients,
+                                label: "Total patients (all categories)",
+                            },
+                            {
+                                value: report.totals.visits,
+                                label: "Total visits",
+                            },
+                            ...categories.map(([name, category]) => ({
+                                value: category.patients,
+                                label: `${name} patients`,
+                            })),
+                        ]}
+                    />
+                    <ReportTables
+                        tables={sections.summary ?? []}
+                        collapsible={collapsible}
+                    />
+                </>
             ) : (
-                data && <CategorySection name={page} data={data} />
+                data && (
+                    <CategorySection
+                        name={page}
+                        data={data}
+                        tables={sections[page] ?? []}
+                        collapsible={collapsible}
+                    />
+                )
             )}
 
             <ReportSignatures sheet={sheet} />
@@ -147,9 +163,13 @@ function Totals({ tiles }: { tiles: { value: number; label: string }[] }) {
 function CategorySection({
     name,
     data,
+    tables,
+    collapsible,
 }: {
     name: Category;
     data: CategoryReport;
+    tables: ReportSections[string];
+    collapsible: boolean;
 }) {
     return (
         <section className="mt-6" aria-label={`${name} report`}>
@@ -169,168 +189,8 @@ function CategorySection({
                     No visits encoded for {name} in this period.
                 </p>
             ) : (
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 print:grid-cols-2">
-                    <Box title="Sex">
-                        <Lines lines={data.sex} />
-                        <TotalLine count={data.patients} />
-                    </Box>
-                    <Box title="Age range">
-                        <Lines lines={data.age} />
-                    </Box>
-                    <Box
-                        title="Diagnosis (per visit)"
-                        scroll
-                        className="print:col-span-2"
-                    >
-                        <Lines lines={data.diagnoses} />
-                        <TotalLine count={data.visits} sticky />
-                    </Box>
-                    <div className="md:col-span-2">
-                        <h4 className={boxTitle}>Branch of service and rank</h4>
-                        <div className="relative overflow-x-auto">
-                            <table className="w-full border-collapse text-sm">
-                                <thead>
-                                    <tr>
-                                        <th
-                                            scope="col"
-                                            className="border-b bg-muted px-2 py-1.5 text-left text-xs font-semibold text-muted-foreground"
-                                        >
-                                            Branch / Rank
-                                        </th>
-                                        <th
-                                            scope="col"
-                                            className="border-b bg-muted px-2 py-1.5 text-right text-xs font-semibold text-muted-foreground"
-                                        >
-                                            Patients
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {data.branches.map((branch) => (
-                                        <BranchRows
-                                            key={branch.name}
-                                            name={branch.name}
-                                            total={branch.total}
-                                            ranks={branch.ranks}
-                                        />
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
+                <ReportTables tables={tables} collapsible={collapsible} />
             )}
         </section>
-    );
-}
-
-/**
- * A small table with a title. With `scroll`, it shows at most 10 rows plus
- * the Total line (every row is 2rem high, so 11 rows = 22rem). A longer list
- * scrolls inside the box and the Total line stays at the bottom. On paper the
- * box shows the whole list.
- */
-function Box({
-    title,
-    children,
-    scroll = false,
-    className,
-}: {
-    title: string;
-    children: ReactNode;
-    scroll?: boolean;
-    className?: string;
-}) {
-    return (
-        <div className={className}>
-            <h4 className={boxTitle}>{title}</h4>
-            <div
-                className={
-                    scroll
-                        ? "max-h-[22rem] overflow-y-auto print:max-h-none print:overflow-visible"
-                        : undefined
-                }
-                // A scrolling box must be reachable with the keyboard.
-                {...(scroll
-                    ? {
-                          role: "region",
-                          tabIndex: 0,
-                          "aria-label": `${title}, scrollable list`,
-                      }
-                    : {})}
-            >
-                <table className="w-full border-collapse text-sm">
-                    <tbody className="[&>tr]:border-b">{children}</tbody>
-                </table>
-            </div>
-        </div>
-    );
-}
-
-function Lines({ lines }: { lines: CountLine[] }) {
-    return (
-        <>
-            {lines.map((line, index) => (
-                <tr key={`${index}-${line.label}`} className="h-8">
-                    <td className="px-2 py-1.5">{line.label}</td>
-                    <td className="px-2 py-1.5 text-right tabular-nums">
-                        {formatCount(line.count)}
-                    </td>
-                </tr>
-            ))}
-        </>
-    );
-}
-
-/** The Total line. In a scrolling box, `sticky` keeps it in view at the bottom. */
-function TotalLine({
-    count,
-    sticky = false,
-}: {
-    count: number;
-    sticky?: boolean;
-}) {
-    return (
-        <tr
-            className={
-                sticky
-                    ? "h-8 [&>td]:sticky [&>td]:bottom-0 [&>td]:bg-card [&>td]:shadow-[inset_0_1px_0_var(--color-border)]"
-                    : "h-8"
-            }
-        >
-            <td className="px-2 py-1.5 font-bold">Total</td>
-            <td className="px-2 py-1.5 text-right font-bold tabular-nums">
-                {formatCount(count)}
-            </td>
-        </tr>
-    );
-}
-
-function BranchRows({
-    name,
-    total,
-    ranks,
-}: {
-    name: string;
-    total: number;
-    ranks: CountLine[];
-}) {
-    return (
-        <>
-            <tr className="border-b bg-muted/60 font-bold">
-                <td className="px-2 py-1.5">{name}</td>
-                <td className="px-2 py-1.5 text-right tabular-nums">
-                    {formatCount(total)}
-                </td>
-            </tr>
-            {ranks.map((rank) => (
-                <tr key={rank.label} className="border-b">
-                    <td className="py-1.5 pr-2 pl-5">{rank.label}</td>
-                    <td className="px-2 py-1.5 text-right tabular-nums">
-                        {formatCount(rank.count)}
-                    </td>
-                </tr>
-            ))}
-        </>
     );
 }

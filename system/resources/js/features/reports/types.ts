@@ -39,14 +39,43 @@ export type BranchLine = {
     ranks: CountLine[];
 };
 
+export type AgeSexLine = { label: string; male: number; female: number };
+
 export type CategoryReport = {
     patients: number;
     visits: number;
     sex: CountLine[];
     age: CountLine[];
+    age_sex: AgeSexLine[];
     diagnoses: CountLine[];
     branches: BranchLine[];
+    afp: { afp: number; others: number };
+    returning: { new: number; returning: number };
 };
+
+/** How a column of a report table is shown. */
+export type ColumnType = 'text' | 'int' | 'pct' | 'delta' | 'deltapct';
+
+/** A figure of a table: text, a number, or null for "no figure". */
+export type ReportCell = string | number | null;
+
+/**
+ * A table of a report page (ReportSections). The screen, Print, the PDF and
+ * the Excel file all draw these same tables, in this order.
+ */
+export type ReportTable = {
+    key: string;
+    title: string;
+    note: string | null;
+    columns: { label: string; type: ColumnType }[];
+    rows: {
+        cells: ReportCell[];
+        style: 'body' | 'child' | 'group' | 'total';
+    }[];
+};
+
+/** The tables of each page: "summary", and each category by its name. */
+export type ReportSections = Record<string, ReportTable[]>;
 
 export type Report = {
     /** First and last day of the period, "2026-09-01". */
@@ -55,6 +84,22 @@ export type Report = {
     generated_at: DateTimeString;
     totals: { patients: number; visits: number };
     categories: Partial<Record<Category, CategoryReport>>;
+    /** Every category together, each patient once. */
+    summary: {
+        sex: CountLine[];
+        age: CountLine[];
+        age_sex: AgeSexLine[];
+        diagnoses: CountLine[];
+        branches: BranchLine[];
+        afp: { afp: number; others: number };
+        returning: { new: number; returning: number };
+    };
+    daily: {
+        by: 'day' | 'month';
+        rows: { label: string; counts: Partial<Record<Category, number>> }[];
+    };
+    /** The period of the same length before, or null. */
+    previous: { label: string; patients: number; visits: number } | null;
 };
 
 /** Header and signatures of the report sheet. */

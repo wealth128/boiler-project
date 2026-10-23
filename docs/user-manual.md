@@ -83,6 +83,37 @@ Every screen fits the screen it is opened on. Nothing makes the whole page slide
 - **Warning bars, messages and dialogs** fit the screen. A tall dialog scrolls inside itself.
 - Text is at least 14 px and every button, box and menu link is at least 40 px high on a phone or tablet.
 
+### Reports: what each page shows (Admin and Viewer)
+
+The **Summary** tab and the **OPD**, **ER** and **Admission** tabs show the same tables on the screen, in Print, in the PDF and in the Excel file, in the same order and with the same numbers. On the screen each table is a panel: click its title (or press **Enter** or **Space** on it) to fold or open it. Folding is only for reading on the screen: **Ctrl + P** and **Print** always show every panel open, even one you folded.
+
+**How patients are counted.** A patient counts once in each category in the period, using their latest visit there for age, branch and rank. **Visits** counts every visit. Diagnoses are counted per visit. Visits in Trash are never counted. On the **Summary** tab a patient seen in two categories counts once, using their latest visit in any category, so the Summary total can be less than the three categories added together.
+
+**Summary tab** (all categories together)
+1. **Patients and visits**: each category and the total.
+2. **Sex**: Male, Female and total patients for OPD, ER, Admission and all categories.
+3. **Age range by sex**: one row for each age range from Dropdown Lists, with Male, Female and Total. "No bracket" appears only when an age fits no range.
+4. **Top 20 diagnoses (per visit, all categories)**: highest first, with the visits and the percent of all visits. There is no "Others" line. The full list is on each category page.
+5. **Branch of service**: patients of each branch with the percent, then AFP personnel (Army, Navy, Air Force, Marines) against Others (Dependent, Retiree, Civilian Employee, Civilian, Other).
+6. **Ranks by branch**: patients of each rank, grouped by branch in seniority order, with the branch subtotal.
+7. **New and returning patients**: new means no earlier visit before the period; returning means seen before.
+8. **Daily census (visits)**: one row for each day with OPD, ER, Admission and total visits, a total row, and the busiest day. A period longer than 31 days (a quarter, a year or a long custom range) shows one row for each month instead.
+9. **Compared with the previous period**: patients and visits now and in the period of the same length just before (the month before, the quarter before, the year before, or the same number of days before a custom range), with the change and the percent change. It is left out when that earlier period starts before January 2026.
+
+**OPD, ER and Admission tabs**
+1. **Sex**, with the total.
+2. **Age range by sex**, with the totals.
+3. **Diagnosis (per visit)**: every diagnosis, highest count first (equal counts by name), with the percent of the category's visits and a total row.
+4. **Branch of service and rank**: each branch with its subtotal and its ranks, then AFP personnel and Others.
+5. **New and returning patients**: new means no earlier visit in this category before the period.
+6. **Daily census** for the category (by month for a long period), with the busiest day.
+
+A category with no patients shows "No visits encoded for ... in this period." on the screen, in Print and in the PDF. Its Excel sheet shows the same tables with zeros.
+
+**Closed months.** Closing a month saves all of these tables, including the comparison, so they do not change when a patient is corrected later. A closed month saved by an older version of the system (this can only happen on a test PC) is counted live and shows "Not final – no saved copy".
+
+**Print and PDF.** Each table is kept together on one page where it fits. With **All categories** the order is Summary, OPD, ER, Admission, each on a new page.
+
 ### Reports: the Excel file (Admin and Viewer)
 
 **Where.** Left menu **Reports**, choose the period, click **Generate**, then click **Export Excel**. The browser saves `census-report_<period>_all.xlsx`. A sample is in `docs/samples/census-report-sample.xlsx` (made-up names and a made-up logo).

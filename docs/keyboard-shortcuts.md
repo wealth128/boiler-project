@@ -277,6 +277,14 @@ One category is shown at a time (ER when none is chosen). The tab is kept in the
 | **Home** / **End** | Move the focus to the first (OPD) / last (Summary) tab |
 | **Enter** / **Space** | Open the tab that has the focus (the report loads again for that tab) |
 
+### Report panels (Admin and Viewer)
+Each table of the open tab is a panel with its title on top.
+
+| Key | What it does |
+|---|---|
+| **Tab** | Move to the next panel title (and through the buttons of the page) |
+| **Enter** / **Space** | Fold or open the panel that has the focus. Ctrl + P and the Print view always show every panel open, even one you folded. |
+
 ### Export PDF, Export Excel and Print (Admin and Viewer)
 They use the report on the screen, so press **Generate** first if you changed a choice. **Print / PDF** takes **This category** (the open tab) or **All categories** (the summary and each category, every one on a new page with its own header and signatures). Excel always has a Summary sheet and one sheet per category, each with a title block, styled tables and the Prepared by and Noted by lines (see the user manual, "Reports: the Excel file").
 

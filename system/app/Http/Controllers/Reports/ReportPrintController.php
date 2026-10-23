@@ -34,6 +34,7 @@ class ReportPrintController extends Controller
             'filters' => $filters->toArray(),
             'sheet' => $data['sheet'],
             'report' => $data['report'],
+            'sections' => $data['sections'],
             'snapshot' => $snapshot === null ? null : [
                 'month_label' => $snapshot['month_label'],
                 'taken_at' => $snapshot['taken_at']->toIso8601String(),

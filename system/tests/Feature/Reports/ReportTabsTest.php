@@ -372,12 +372,13 @@ it('has one sheet per category and a Summary sheet, for an open and a closed mon
 it('has the same numbers in the Summary sheet as the Summary tab', function () {
     $path = tabExcelPath($this->actingAs($this->admin)->get('/reports/export/excel?'.SEP.'&category=opd'));
     $rows = IOFactory::load($path)->getSheetByNameOrThrow('Summary')->toArray(null, false, false);
-    $byLabel = collect($rows)->filter(fn ($r) => is_string($r[0] ?? null))->mapWithKeys(fn ($r) => [$r[0] => [$r[1] ?? null, $r[2] ?? null]]);
+    // The first row with each label: the Patients and visits table comes first on the sheet.
+    $first = fn (string $label) => collect($rows)->first(fn ($r) => ($r[0] ?? null) === $label);
 
-    expect($byLabel['Total'])->toBe([3, 4])
-        ->and($byLabel['OPD'])->toBe([1, 1])
-        ->and($byLabel['ER'])->toBe([2, 3])
-        ->and($byLabel['Admission'])->toBe([0, 0]);
+    expect(array_slice($first('Total (all categories)'), 1, 2))->toBe([3, 4])
+        ->and(array_slice($first('OPD'), 1, 2))->toBe([1, 1])
+        ->and(array_slice($first('ER'), 1, 2))->toBe([2, 3])
+        ->and(array_slice($first('Admission'), 1, 2))->toBe([0, 0]);
 });
 
 /** Save an Excel response to a temporary file and return its path (removed at the end of the test run by the OS). */

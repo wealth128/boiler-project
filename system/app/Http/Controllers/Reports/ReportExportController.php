@@ -75,6 +75,7 @@ class ReportExportController extends Controller
 
         $workbook = new ReportWorkbook(
             $data['report'],
+            $data['sections'],
             [...$data['sheet'], 'category' => null],
             $data['snapshot'],
             now(),

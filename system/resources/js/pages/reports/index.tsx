@@ -16,6 +16,7 @@ import type {
     Report,
     ReportFilters,
     ReportOptions,
+    ReportSections,
     Sheet,
     Snapshot,
 } from "@/features/reports/types";
@@ -25,6 +26,8 @@ type Props = {
     options: ReportOptions;
     sheet: Sheet;
     report: Report;
+    /** The tables of every page. */
+    sections: ReportSections;
     /** Only for a monthly report. */
     month_status: MonthStatus | null;
     /** Admin only: reasons for Delete month report. */
@@ -42,6 +45,7 @@ export default function Reports({
     options,
     sheet,
     report,
+    sections,
     month_status,
     month_delete_reasons,
     snapshot,
@@ -92,7 +96,9 @@ export default function Reports({
                     page={pageOfTab(filters.category)}
                     sheet={sheet}
                     report={report}
+                    sections={sections}
                     snapshot={snapshot}
+                    collapsible
                 />
             </div>
         </>
