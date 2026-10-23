@@ -89,6 +89,45 @@ class HealthChecker
             : self::OK;
     }
 
+    /**
+     * Problems first, then Warnings, then OK. The order inside each group is
+     * the order the checks run in.
+     *
+     * @template T of array{status: string}
+     *
+     * @param  list<T>  $checks
+     * @return list<T>
+     */
+    public static function sortBySeverity(array $checks): array
+    {
+        $rank = [self::PROBLEM => 0, self::WARNING => 1, self::OK => 2];
+
+        return collect($checks)
+            ->values()
+            ->sortBy(fn (array $check, int $index): array => [$rank[$check['status']] ?? 3, $index])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * How many checks are in each state, for "2 problems, 1 warning" at the
+     * top of the page.
+     *
+     * @param  list<array{status: string}>  $checks
+     * @return array{problem: int, warning: int, ok: int, total: int}
+     */
+    public static function counts(array $checks): array
+    {
+        $by = collect($checks)->countBy('status');
+
+        return [
+            'problem' => $by[self::PROBLEM] ?? 0,
+            'warning' => $by[self::WARNING] ?? 0,
+            'ok' => $by[self::OK] ?? 0,
+            'total' => count($checks),
+        ];
+    }
+
     /** "2M", "512K", "1G" or plain bytes, as written in php.ini. -1 means no limit. */
     public static function iniBytes(string $value): int
     {

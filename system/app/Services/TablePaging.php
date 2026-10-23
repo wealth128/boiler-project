@@ -5,6 +5,7 @@ namespace App\Services;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 
 /**
  * Paging shared by every long table (Patient Records, Trash, Audit log): 10 rows per
@@ -34,11 +35,51 @@ final class TablePaging
         return self::DEFAULT_PER_PAGE;
     }
 
+    /** Page numbers shown at once around the current page: 4 5 6. */
+    public const WINDOW = 3;
+
+    /**
+     * The page numbers to show around the current page, never more than
+     * three: 4 5 6, or 1 2 3 at the start and 8 9 10 at the end. First, Last,
+     * Previous, Next and the jump list do the rest.
+     *
+     * @return list<int>
+     */
+    public static function window(int $current, int $last): array
+    {
+        $last = max(1, $last);
+        $current = min(max(1, $current), $last);
+        $start = max(1, min($current - 1, $last - self::WINDOW + 1));
+
+        return range($start, min($last, $start + self::WINDOW - 1));
+    }
+
+    /**
+     * Page an in-memory list (the System health checks) the same way the
+     * database tables are paged, so the footer and the redirect work alike.
+     *
+     * @param  Collection<int, mixed>  $items
+     * @return LengthAwarePaginator<int, mixed>
+     */
+    public static function fromCollection(Request $request, Collection $items): LengthAwarePaginator
+    {
+        $perPage = self::perPage($request);
+        $current = max(1, (int) $request->query('page', 1));
+
+        return (new LengthAwarePaginator(
+            $items->forPage($current, $perPage)->values(),
+            $items->count(),
+            $perPage,
+            $current,
+            ['path' => $request->url()],
+        ))->withQueryString();
+    }
+
     /**
      * Page numbers for the table footer.
      *
      * @param  LengthAwarePaginator<int, mixed>  $page
-     * @return array{current_page: int, last_page: int, per_page: int, total: int, from: int|null, to: int|null}
+     * @return array{current_page: int, last_page: int, per_page: int, total: int, from: int|null, to: int|null, pages: list<int>}
      */
     public static function meta(LengthAwarePaginator $page): array
     {
@@ -49,6 +90,7 @@ final class TablePaging
             'total' => $page->total(),
             'from' => $page->firstItem(),
             'to' => $page->lastItem(),
+            'pages' => self::window($page->currentPage(), $page->lastPage()),
         ];
     }
 

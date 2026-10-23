@@ -156,18 +156,19 @@ it('sends a signed-out visitor to the login page', function () {
 });
 
 it('lists every check with a result and one "what to do" line', function () {
-    $this->actingAs(userWithRole('admin'))->get('/system/health')
+    $this->actingAs(userWithRole('admin'))->get('/system/health?per_page=50')
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('system/health')
             ->where('overall', 'ok')
-            ->has('checks', 15)
-            ->where('checks.0.key', 'database')
-            ->where('checks.0.status', 'ok')
-            ->where('checks.10.key', 'mysql_client')
-            ->where('checks.14.key', 'version')
-            ->where('checks.14.detail', '1.2.3.')
-            ->has('checks.0.todo'));
+            ->has('checks.data', 15)
+            ->where('counts', ['problem' => 0, 'warning' => 0, 'ok' => 15, 'total' => 15])
+            ->where('checks.data.0.key', 'database')
+            ->where('checks.data.0.status', 'ok')
+            ->where('checks.data.10.key', 'mysql_client')
+            ->where('checks.data.14.key', 'version')
+            ->where('checks.data.14.detail', '1.2.3.')
+            ->has('checks.data.0.todo'));
 });
 
 it('does not show passwords, .env contents or connection details', function () {

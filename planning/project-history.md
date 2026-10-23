@@ -1,6 +1,6 @@
 # Project History & Handover: AFP Hospital Patient Encoding & Reporting System
 
-_Last updated: 2026-10-21 (Step 7a Security review done and merged; next 7b pagination) · Read this first in any new Claude conversation about this project._
+_Last updated: 2026-10-23 (Step 7b Pagination done and merged; next 7c responsive UI) · Read this first in any new Claude conversation about this project._
 
 This file carries over what was discussed in the first planning-and-review conversation (Oct 3–15, 2026), so a new conversation can continue without starting over. The official rules are still in `CLAUDE.md` and the other `planning/` files. This file explains **what was decided, why, where we are, and how to work with me.**
 
@@ -9,11 +9,11 @@ This file carries over what was discussed in the first planning-and-review conve
 ## 0. Quick Start (read this first; it may be all you need)
 | | |
 |---|---|
-| **Current step** | **7a Security review is done and merged (2026-10-21):** every route against every kind of sender (70 routes, 490 cases, a new route without an entry fails), every form with the browser checks removed, an audit entry for every kind of change, no secret in the audit log, logs or pages, code scans, production settings (security headers with a CSP, cookie flags, no developer routes, friendly 500 page, log cleaner), login and session rules, uploads and path traversal. 15 findings (1 medium: no security headers; 6 low: server errors on list-shaped input; the rest low or informational), all fixed or explained. 1,585 new tests (suite: 3,394). Report: `docs/security-review-2026-10.md`. Before it: **6j Downtime import (2026-10-21)**, **6i-3 Backup care**, **6i-2 Windows scripts** and **6i-1 / 6i-1-fix** (see section 5). |
-| **Next step** | **7b Pagination**, then **7c Responsive UI**, then **7d Excel export**, then **7e Audit retention** (prompts in `planning/Prompts/`: `prompt-7b-pagination.md`, `prompt-7c-responsive-ui.md`, `prompt-7d-excel-export.md`, `prompt-7e-audit-retention.md`). After them: the spare-PC test, then the Phase 7 parallel run. Start a **new conversation** for each step. |
+| **Current step** | **7b Pagination is done and merged (2026-10-23):** one shared footer on every long list (Records Visits and Patients, Past imports, Trash, Audit log, Backups history, User accounts, System health): 10 / 20 / 50 rows (`?per_page=`), « First, ‹ Prev, at most 3 page numbers, Next ›, Last », "Page [ ] of N" jump (dropdown up to 200 pages, number box with Go beyond), "Showing 41–50 of 1,234", phone layout. User accounts are now paged. System health lists Problems, then Warnings, then OK, with a Show filter and "N problems, N warnings" on top. Reports: Year dropdown for the monthly period (screen only). 3,518 tests in the suite. Before it: **7a Security review is done and merged (2026-10-21):** every route against every kind of sender (70 routes, 490 cases, a new route without an entry fails), every form with the browser checks removed, an audit entry for every kind of change, no secret in the audit log, logs or pages, code scans, production settings (security headers with a CSP, cookie flags, no developer routes, friendly 500 page, log cleaner), login and session rules, uploads and path traversal. 15 findings (1 medium: no security headers; 6 low: server errors on list-shaped input; the rest low or informational), all fixed or explained. 1,585 new tests (suite: 3,394). Report: `docs/security-review-2026-10.md`. Before it: **6j Downtime import (2026-10-21)**, **6i-3 Backup care**, **6i-2 Windows scripts** and **6i-1 / 6i-1-fix** (see section 5). |
+| **Next step** | **7c Responsive UI**, then **7d Excel export**, then **7e Audit retention** (prompts in `planning/Prompts/`: `prompt-7c-responsive-ui.md`, `prompt-7d-excel-export.md`, `prompt-7e-audit-retention.md`). After them: the spare-PC test, then the Phase 7 parallel run. Start a **new conversation** for each step. |
 | **Still to prove** | The downtime import was tested with generated .xlsx and .csv files only: try it once with a real Excel file and a real Google Sheets download from an office. The 6i-3 test restore (creating `census_restore_test`, loading a dump into the scratch database) and Copy to USB (a real removable drive) were only tested with fakes: include them in the spare-PC test. `census:install`, `census:update` and `census:restore` were only tested with fakes (no real MySQL root login, no real restore). **They need a real test on a spare PC** before handover. The `.bat` files and the Laragon service setup were also written without a real Laragon at hand: `docs/windows-scripts-manual-test.md` is the test list (install, run again, services, reboot with no one logged in, crash restart, firewall, backup, update, restore). |
-| **Next prompt file** | `planning/Prompts/prompt-7b-pagination.md`. Last prompt used: `prompt-7a-security-review.md` |
-| **Last merged commit** | cf93834 (Step 7a merge, 2026-10-21; step commit f890835) |
+| **Next prompt file** | `planning/Prompts/prompt-7c-responsive-ui.md`. Last prompt used: `prompt-7b-pagination.md` |
+| **Last merged commit** | MERGEHASH (Step 7b merge, 2026-10-23; step commits STEPHASH and YEARHASH) |
 | **Open decisions** | HTTPS vs HTTP on the hospital LAN (Phase 8); if HTTPS, set `SESSION_SECURE_COOKIE=true` and think about the HSTS header. Whether to update `vite-plus` (see the open items). |
 | **Open items (from 7a and before)** | **(1) Spare-PC test of 6i-1, 6i-2 and 6i-3 is still required before Phase 8:** a fresh Windows PC with only the `docs/requirements.md` items, then `docs/windows-scripts-manual-test.md` from section 0 to the end. Fill in the installer versions in `docs/requirements.md` at the same time. **(2) HTTPS decision.** **(3) BitLocker** on the server and backup PCs. **(4) Windows firewall** check on the real server (`install.bat` sets it). **(5) `vite-plus` dev-only audit finding:** `npm audit` reports 1 high (`launch-editor` inside `vite-plus`); it is the developer build tool and does not run on the server (`npm audit --omit=dev` and `composer audit` are clean). The only fix is `npm audit fix --force` (vite-plus 1.3.0, breaking; move the vite alias in `package.json` with it): decide later. |
 | **Notes and passwords** | Personal notes: planning/my-project-notes.md. Passwords: _private/credentials.md (never committed). |
@@ -156,6 +156,17 @@ This file carries over what was discussed in the first planning-and-review conve
 - **Test rules learned:** global helper functions in test files share one namespace (give new ones a prefix); in Pest datasets a value that is an array is spread into arguments (wrap it in another array); a `Visit` or `Patient` created already in Trash gets no number (create it, then trash it).
 - **Left open on purpose:** a user with a temporary password gets "not found" for a record number that does not exist (the record is looked up before the redirect): no data is exposed.
 
+### Pagination (7b, decided 2026-10-23)
+- **One shared footer, changed once and used everywhere:** `TablePaging` (server) and `components/shared/pagination.tsx` (client). Every long list uses it: Records Visits and Patients, Past imports, Trash, Audit log, Backups history, User accounts and System health.
+- **Rows per page:** default 10, choices 10 / 20 / 50, kept in the address as `?per_page=`. The server accepts only those three; anything else (text, a list, 999) is 10. Changing it goes back to page 1 and keeps the filters. A page past the end goes to the last page.
+- **At most 3 page numbers** around the current page (4 5 6; 1 2 3 at the start; last three at the end), plus « First, ‹ Prev, Next ›, Last ». The three numbers are worked out in PHP (`TablePaging::window`, sent as `meta.pages`) because the project has no JavaScript test runner.
+- **Page jump:** "Page [ ] of N", a dropdown up to 200 pages, a number box with Go beyond that. The current page has `aria-current="page"`. On a phone only Prev, "Page x of N" and Next show.
+- **User accounts are paged** (10 per page, by name). Add, edit, unlock, reset, deactivate and Trash return to the page the user was on (`back()` with the users list as the fallback).
+- **System health:** Problems first, then Warnings, then OK (order of the checks kept inside each group), so page 2 never hides a problem. A Show filter (All / Problems / Warnings / OK, `?status=`, unknown values mean All) and the same paging. The top line says "N problems, N warnings" and always counts every check.
+- **Left unpaged on purpose:** the import preview (client-side, has its own filter), the Dropdown Lists panels (short, admin-managed) and the report sheets. There is no test-restore history list, only the latest result.
+- **Reports: Year dropdown for the monthly period (screen only).** Period type, Month, Year. Year decides which months the Month list shows; changing it keeps the same month when that year has it. The server still receives `month=YYYY-MM`, so Print, PDF and Excel did not change.
+- **Test rule learned:** the test files in this project use Windows line endings, so a multi-line text replace can silently miss: use single-line edits there.
+
 ### Stack
 - Laravel 13 (PHP 8.4.1 or newer) + official React starter kit (Inertia, TypeScript, Tailwind), Fortify, Wayfinder, Pest, MySQL. Monolith. **No Sanctum, no Spatie.** Allowed packages: maatwebsite/excel, barryvdh/laravel-dompdf. vite-plus 0.3.3 (when updating it, update the `vite` alias in package.json to match).
 - Databases: `patient_census` (dev), `patient_census_test` (**tests only**). User `census_app`.
@@ -193,7 +204,7 @@ This file carries over what was discussed in the first planning-and-review conve
 - **Security plan:** `planning/security.md`. Every step follows its section 2. HTTPS vs HTTP on the LAN is **still to decide** with hospital IT/CO (Phase 8).
 - **Documentation phase 7.5** added: developer guide, database guide, how-to, learning path, operations guide, user manual, keyboard shortcuts (collected in `docs/keyboard-shortcuts.md` as each screen is built).
 
-## 5. Where We Are (2026-10-21, after 7a)
+## 5. Where We Are (2026-10-23, after 7b)
 | Step | Status |
 |---|---|
 | 1–5, 5b, 5c (foundation, login, RBAC, audit, Trash service, backup, temp passwords) | Done, merged |
@@ -213,8 +224,8 @@ This file carries over what was discussed in the first planning-and-review conve
 | **6i-3 Backup care** (automatic monthly test restore, Run test restore now, Copy to USB, health checks, x on warning bars, review fixes) | **Done, merged (2026-10-19).** Real MySQL scratch restore and real USB drive still to prove on the spare PC |
 | **6j Downtime import** (template download, upload, preview, confirm, Past imports, Undo import) + review fixes + page limit 60 a minute | **Done, merged (2026-10-21).** Tested with generated files; a real Excel / Google Sheets file from an office still to try |
 | **7a Security review** (`planning/security.md` section 3, report `docs/security-review-2026-10.md`) | **Done, merged (2026-10-21).** Open items: see section 0 |
-| 7b Pagination (`planning/Prompts/prompt-7b-pagination.md`) | **Next** |
-| 7c Responsive UI (`planning/Prompts/prompt-7c-responsive-ui.md`) | Then |
+| **7b Pagination** (`planning/Prompts/prompt-7b-pagination.md`; also the Reports Year dropdown) | **Done, merged (2026-10-23).** Browser checks are in the step summary |
+| 7c Responsive UI (`planning/Prompts/prompt-7c-responsive-ui.md`) | **Next** |
 | 7d Excel export (`planning/Prompts/prompt-7d-excel-export.md`) | Then |
 | 7e Audit retention (`planning/Prompts/prompt-7e-audit-retention.md`) | Then |
 | Phase 7 parallel run (1 month beside Google Sheets) · 7.5 Docs · 8 Deploy · 9 Training | Later |

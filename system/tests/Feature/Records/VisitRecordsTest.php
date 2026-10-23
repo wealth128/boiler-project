@@ -272,7 +272,7 @@ it('shows 10 visits per page by default, with page numbers', function () {
             ->has('visits.data', 10)
             ->where('visits.meta', [
                 'current_page' => 1, 'last_page' => 3, 'per_page' => 10,
-                'total' => 25, 'from' => 1, 'to' => 10,
+                'total' => 25, 'from' => 1, 'to' => 10, 'pages' => [1, 2, 3],
             ]));
 
     $this->actingAs($this->admin)

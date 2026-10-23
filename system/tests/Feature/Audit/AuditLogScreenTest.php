@@ -382,7 +382,7 @@ it('pages 10 entries at a time by default and sends the user to the last page wh
 
     auditGet($this)->assertInertia(fn (Assert $page) => $page
         ->has('entries.data', 10)
-        ->where('entries.meta', ['current_page' => 1, 'last_page' => 3, 'per_page' => 10, 'total' => 25, 'from' => 1, 'to' => 10]));
+        ->where('entries.meta', ['current_page' => 1, 'last_page' => 3, 'per_page' => 10, 'total' => 25, 'from' => 1, 'to' => 10, 'pages' => [1, 2, 3]]));
 
     auditGet($this, '?page=3')->assertInertia(fn (Assert $page) => $page
         ->has('entries.data', 5)

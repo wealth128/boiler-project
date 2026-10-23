@@ -213,7 +213,7 @@ it('shows 10 rows per page by default, with page numbers', function () {
 
     $this->get('/trash')->assertInertia(fn (Assert $page) => $page
         ->has('items.data', 10)
-        ->where('items.meta', ['current_page' => 1, 'last_page' => 3, 'per_page' => 10, 'total' => 25, 'from' => 1, 'to' => 10]));
+        ->where('items.meta', ['current_page' => 1, 'last_page' => 3, 'per_page' => 10, 'total' => 25, 'from' => 1, 'to' => 10, 'pages' => [1, 2, 3]]));
 
     $this->get('/trash?page=3')->assertInertia(fn (Assert $page) => $page
         ->has('items.data', 5)

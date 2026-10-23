@@ -1,6 +1,6 @@
 # Keyboard Shortcuts
 
-_Last updated: 2026-10-21 · One section per screen. Print and post beside each PC._
+_Last updated: 2026-10-21 (Step 7b paging) · One section per screen. Print and post beside each PC._
 
 You can do everything on these screens without the mouse.
 
@@ -170,7 +170,7 @@ Same keys as on Patient Records: choose a reason, **Enter** to move it to Trash,
 | **Tab** to **Move to Trash**, then **Enter** | Move the account to Trash |
 | **Esc** | Close without moving anything |
 
-The User Accounts list has no pages: every account is on one screen, so there are no page numbers or "Rows per page" box.
+The User Accounts list is paged like every long list (see **Pages and rows per page**): 10 accounts per page, ordered by name. After adding, editing or moving an account to Trash you stay on the same page.
 
 ---
 
@@ -200,7 +200,7 @@ Rows that can't be deleted permanently show "Can't delete permanently" with the 
 ### Pages
 | Key | What it does |
 |---|---|
-| **Tab** to **Previous**, a page number or **Next**, then **Enter** | Go to that page (10 rows per page unless you change it) |
+| **Tab** to **‹ Prev**, a page number, **Next ›**, **First** or **Last**, then **Enter** | Go to that page (10 rows per page unless you change it) |
 | **Tab** to **Rows per page**, then type `1`, `2` or `5`, or **↑ / ↓** | Show 10, 20 or 50 rows; goes back to page 1 and keeps the choice after Refresh |
 
 ---
@@ -223,7 +223,7 @@ Read-only. No new shortcuts: it uses the same keys as Patient Records.
 | Record | Type | The list updates after a short pause. Type a Visit No., Patient ID or username exactly, e.g. `V-000045`. |
 | Record | **Esc** | Clear the box |
 
-The filters stay in the address, so **F5 (Refresh)** and **Alt + ← (Back)** keep them. Pages: **Tab** to **Previous**, a page number or **Next**, then **Enter** (10 entries per page unless you change it). **Tab** to **Rows per page** and choose 10, 20 or 50 (type `1`, `2` or `5`, or **↑ / ↓**); it goes back to page 1 and keeps the choice after Refresh.
+The filters stay in the address, so **F5 (Refresh)** and **Alt + ← (Back)** keep them. Pages: **Tab** to **‹ Prev**, a page number, **Next ›**, **First** or **Last**, then **Enter** (10 entries per page unless you change it). **Tab** to **Rows per page** and choose 10, 20 or 50 (type `1`, `2` or `5`, or **↑ / ↓**); it goes back to page 1 and keeps the choice after Refresh.
 
 ---
 
@@ -252,7 +252,7 @@ No new shortcuts. The screen uses the standard keys: **Tab** / **Shift + Tab** t
 | **Esc** | Cancel the question |
 | **↑ / ↓** | In the "Copy the latest backup to USB?" window: choose the USB drive in the list (type its letter to jump to it). **Tab** to **Look again** or **Copy to USB**, then **Enter**. |
 
-Pages: **Tab** to **Previous**, a page number or **Next**, then **Enter** (10 backups per page unless you change it). **Tab** to **Rows per page** and choose 10, 20 or 50; the choice stays in the address.
+Pages: **Tab** to **‹ Prev**, a page number, **Next ›**, **First** or **Last**, then **Enter** (10 backups per page unless you change it). **Tab** to **Rows per page** and choose 10, 20 or 50; the choice stays in the address.
 
 ---
 
@@ -325,6 +325,35 @@ Opens after you choose a picture file. **Tab** goes through: crop area → Zoom 
 | **Enter** or **Space** (on Rotate 90°) | Turn the picture a quarter turn |
 | **Space** (on Remove white background) | Tick / untick |
 | **Esc** | Close the dialog and keep nothing (same as Cancel) |
+
+---
+
+## Pages and rows per page (every long list)
+
+The same footer is under Visits, Patients, Past imports, User Accounts, Trash, Audit Log, Backup history and System health. It says "Showing 41–50 of 1,234", then **« First**, **‹ Prev**, up to three page numbers around the page you are on (for example 4 5 6), **Next ›**, **Last »**, "Page [ ] of N" and "Rows per page".
+
+| Key | What it does |
+|---|---|
+| **Tab** / **Shift + Tab** | Move between the page buttons, the page box and **Rows per page** |
+| **Enter** on **« First**, **‹ Prev**, a page number, **Next ›** or **Last »** | Go to that page. The page you are on is read out as "current page". |
+| **Tab** to **Page [ ] of N**, then **↑ / ↓** or type the number | Jump to any page (a list when there are up to 200 pages) |
+| With more than 200 pages: type the number in the small box, then **Enter** (or **Tab** to **Go**, then **Enter**) | Jump to that page. A number past the end goes to the last page. |
+| **Tab** to **Rows per page**, then type `1`, `2` or `5`, or **↑ / ↓** | Show 10, 20 or 50 rows. It goes back to page 1, keeps the filters, and stays in the address, so **F5** keeps it. The default is 10. |
+
+On a phone only **‹ Prev**, "Page x of N" and **Next ›** show, with **Rows per page**.
+
+Each screen below only adds where the footer sits in its Tab order.
+
+---
+
+## System Health (Admin)
+
+| Key | What it does |
+|---|---|
+| **Tab** / **Shift + Tab** | Next / previous. Order: **Check again** → **Show** (All, Problems, Warnings, OK) → page buttons → **Rows per page** |
+| **Tab** to **Show**, then **↑ / ↓** or type the first letter | Choose All, Problems, Warnings or OK. It goes back to page 1 and stays in the address. |
+
+Problems come first, then Warnings, then OK, so a problem is never on page 2 while OK checks fill page 1. The top line always says how many problems and warnings there are, whatever you show.
 
 ---
 

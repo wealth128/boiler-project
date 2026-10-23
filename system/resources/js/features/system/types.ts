@@ -10,3 +10,14 @@ export type HealthCheck = {
     /** The one line telling Admin what to do. */
     todo: string;
 };
+
+/** The "Show" filter on the System health page (?status=). */
+export type HealthFilter = 'all' | HealthStatus;
+
+/** Every check counted by result, for "2 problems, 1 warning". */
+export type HealthCounts = {
+    problem: number;
+    warning: number;
+    ok: number;
+    total: number;
+};
