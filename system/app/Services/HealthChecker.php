@@ -63,6 +63,7 @@ class HealthChecker
             $this->mysqlRoot(),
             $this->testRestore(),
             $this->usbCopy(),
+            $this->auditCleanup(),
             $this->version(),
         ];
     }
@@ -397,6 +398,27 @@ class HealthChecker
         }
 
         return $this->row('usb_copy', $label, self::OK, 'Last copy to USB: '.$mark['last']->marked_at->format('d-M-Y').'.', 'Nothing to do.');
+    }
+
+    /** @return array{key: string, label: string, status: string, detail: string, todo: string} */
+    private function auditCleanup(): array
+    {
+        $label = 'Audit log clean-up';
+        $last = $this->safely(fn () => app(AuditPruner::class)->latest());
+
+        if ($last === null) {
+            return $this->row('audit_cleanup', $label, self::WARNING, 'The clean-up of old audit entries has not run yet. It runs every day at 04:30.', 'Nothing to do yet. If this stays after tomorrow, check the Automatic tasks line.');
+        }
+
+        if ($last->status === BackupStatus::Failed) {
+            return $this->row('audit_cleanup', $label, self::PROBLEM, 'The last clean-up failed on '.$last->started_at->format('d-M-Y H:i').': '.$this->backups->shortError($last->message).'. Old entries stay in the audit log until it works.', 'Tell IT: check that the backup folder is reachable and has free space. The clean-up tries again at 04:30.');
+        }
+
+        if ($last->started_at->lt(now()->subDays(2))) {
+            return $this->row('audit_cleanup', $label, self::WARNING, 'The last clean-up ran on '.$last->started_at->format('d-M-Y H:i').', more than 2 days ago.', 'Tell IT: check that no backup is stuck and the scheduler is running.');
+        }
+
+        return $this->row('audit_cleanup', $label, self::OK, 'Last ran on '.$last->started_at->format('d-M-Y H:i').'.', 'Nothing to do.');
     }
 
     /** @return array{key: string, label: string, status: string, detail: string, todo: string} */

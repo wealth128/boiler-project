@@ -2,6 +2,7 @@
 
 use App\Enums\BackupStatus;
 use App\Enums\BackupMarkType;
+use App\Models\AuditPruneRun;
 use App\Models\BackupMark;
 use App\Models\BackupRun;
 use App\Models\TestRestoreRun;
@@ -156,18 +157,22 @@ it('sends a signed-out visitor to the login page', function () {
 });
 
 it('lists every check with a result and one "what to do" line', function () {
+    // A clean-up that ran last night: the Audit log clean-up line is OK.
+    AuditPruneRun::create(['started_at' => now()->subHours(9), 'finished_at' => now()->subHours(9), 'status' => BackupStatus::Success, 'rows_count' => 0]);
+
     $this->actingAs(userWithRole('admin'))->get('/system/health?per_page=50')
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('system/health')
             ->where('overall', 'ok')
-            ->has('checks.data', 15)
-            ->where('counts', ['problem' => 0, 'warning' => 0, 'ok' => 15, 'total' => 15])
+            ->has('checks.data', 16)
+            ->where('counts', ['problem' => 0, 'warning' => 0, 'ok' => 16, 'total' => 16])
             ->where('checks.data.0.key', 'database')
             ->where('checks.data.0.status', 'ok')
             ->where('checks.data.10.key', 'mysql_client')
-            ->where('checks.data.14.key', 'version')
-            ->where('checks.data.14.detail', '1.2.3.')
+            ->where('checks.data.14.key', 'audit_cleanup')
+            ->where('checks.data.15.key', 'version')
+            ->where('checks.data.15.detail', '1.2.3.')
             ->has('checks.data.0.todo'));
 });
 

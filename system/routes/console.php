@@ -39,3 +39,10 @@ Schedule::call(fn () => app(CacheCleaner::class)->purgeExpired())
 Schedule::call(fn () => app(ImportFileStore::class)->purgeExpired())
     ->name('import-files-purge')
     ->everyFifteenMinutes();
+
+// Audit log retention: entries older than 1 year are archived to the backup folder and
+// then removed (App\Services\AuditPruner). After the 02:00 backup, and it takes the
+// backup lock, so it never runs during a backup or a test restore.
+Schedule::command('census:prune-audit')
+    ->dailyAt('04:30')
+    ->withoutOverlapping();

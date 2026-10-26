@@ -63,10 +63,10 @@ Running `install.bat` again on a server that already works is safe. It only re-c
 ### 2. Daily and weekly checks
 
 **Every morning (Admin, 1 minute):**
-1. Log in. Look for a red bar at the top. A red bar means the last backup or the test restore failed, or automatic tasks are not running. Tell IT the same day. A yellow bar means the weekly USB copy or the monthly test restore is overdue.
+1. Log in. Look for a red bar at the top. A red bar means the last backup or the test restore failed, the audit log clean-up failed, or automatic tasks are not running. Tell IT the same day. A yellow bar means the weekly USB copy or the monthly test restore is overdue.
 
    **The x only hides a warning. It comes back tomorrow (yellow) or at your next sign-in (red) until the problem is fixed.** Closing a bar never fixes or marks anything. The **Backups** and **System health** pages always show the full status.
-2. Open **System health** (left menu, under Administration). Every line should say OK.
+2. Open **System health** (left menu, under Administration). Every line should say OK. One line is **Audit log clean-up**: OK means it ran in the last 2 days.
 
 **The custodian's tasks in one place** (the one-page card will copy this):
 - **Daily:** log in, look for a red bar, open **System health**. The x on a bar only hides it until tomorrow (yellow) or your next sign-in (red).
@@ -87,6 +87,15 @@ If it says "No USB drive found", the drive is in the wrong PC or is not ready. P
 **Every month (IT):** check free disk space on the server and the backup PC. A restore on a spare PC (section 4) is now only needed to practise, for example once a year or after moving to a new server.
 
 **After updating from an older version:** run `install.bat` once as administrator. It creates the MySQL account `census_restore_test` (rights on the scratch database `patient_census_restore_test` only) and saves its password in `.env`. It asks for the MySQL root password once. Until then, the test restore says "The test restore account is not set up".
+
+### Audit log: kept for 1 year
+
+Every day at 04:30 the system removes audit log entries older than 1 year. **Before it deletes anything, it writes them to a file** in the backup folder (`BACKUP_PATH`), named `audit-archive_YYYY-MM-DD.csv.gz`, and checks the file. Then it adds one entry, **Old audit entries archived and removed**, with the count and the dates. Nobody can delete audit entries by hand: there is no button for it.
+
+- The archive files are small. **Keep them.** The 30-day backup cleanup never deletes them. **Copy to USB** also copies the newest one.
+- Open an archive file with a program that reads `.csv.gz` (for example 7-Zip, then Excel). The details column holds the old and new values as JSON.
+- If the archive cannot be written (backup folder missing, disk full), **nothing is deleted** and Admin sees a red bar: "Audit log clean-up failed: ...". It tries again the next night and the bar goes away after a run that works. See Troubleshooting.
+- **Data Privacy:** Confirm the 1-year audit retention with the hospital's Data Protection Officer; the archive files keep older entries if needed.
 
 ### 3. Update to a new version
 

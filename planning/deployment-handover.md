@@ -49,7 +49,9 @@ All software used is free/open source (Laravel, React, MySQL Community, Laragon)
 ## 4. The Database: What to Know
 - **What's in it:** patients (names, birthdates), visits (diagnoses, categories), lists, users, audit log, saved month reports. It is **personal and health information** under the Data Privacy Act of 2012: the hospital is responsible for it. Confirm with the hospital's Data Protection Officer what registration or records they need.
 - **Who has access:** only the system (through `census_app`) and IT (MySQL root, kept in the sealed envelope). Nobody edits tables directly; all changes go through the system so they're audited.
-- **Nothing is ever removed automatically.** Deleted records go to Trash; only Admin deletes permanently. Backups keep 30 days.
+- **Patient data is never removed automatically.** Deleted records go to Trash; only Admin deletes permanently. Backups keep 30 days.
+- **The audit log keeps 1 year.** Every day at 04:30 the system writes audit entries older than 1 year to a file `audit-archive_YYYY-MM-DD.csv.gz` in the backup folder and then removes them from the database. Nobody can delete audit entries by hand. The archive files are never deleted by the 30-day backup cleanup, and **Copy to USB** copies the newest one.
+- **Data Privacy:** Confirm the 1-year audit retention with the hospital's Data Protection Officer; the archive files keep older entries if needed.
 - **Growth:** small (text only). Check free disk space monthly; the Backups page shows backup sizes.
 
 ## 5. Backups: What to Do

@@ -492,3 +492,19 @@ it('fails when there is no successful backup yet, and still writes an audit entr
         ->and($entry->changes['drive'])->toBe('E:')
         ->and($entry->changes['error'])->toBe('There is no successful backup to copy yet. Run a backup first.');
 });
+
+it('also copies the newest audit archive file, and leaves older archives on the USB alone', function () {
+    $run = usbBackup($this);
+    file_put_contents($this->folder.'/audit-archive_2026-01-05.csv.gz', 'older');
+    file_put_contents($this->folder.'/audit-archive_2026-10-18.csv.gz', 'newest');
+    touch($this->folder.'/audit-archive_2026-01-05.csv.gz', time() - 9000);
+    File::ensureDirectoryExists($this->usb.'/census-backups');
+    file_put_contents($this->usb.'/census-backups/audit-archive_2025-01-01.csv.gz', 'on usb already');
+
+    $result = withUsbRoot($this, fn () => app(UsbCopyService::class)->copyLatestIfIdle('E:', $this->admin));
+
+    expect($result['files'])->toBe([$run->file_name, $run->zip_name, 'audit-archive_2026-10-18.csv.gz'])
+        ->and($this->usb.'/census-backups/audit-archive_2026-10-18.csv.gz')->toBeFile()
+        ->and($this->usb.'/census-backups/audit-archive_2026-01-05.csv.gz')->not->toBeFile()
+        ->and($this->usb.'/census-backups/audit-archive_2025-01-01.csv.gz')->toBeFile();
+});

@@ -34,6 +34,13 @@ return [
         'mysql_path' => env('MYSQL_PATH') ?: null,
     ],
 
+    // The audit log keeps entries for this many days. Older entries are written to
+    // an archive file in the backup folder and then removed by census:prune-audit
+    // (daily at 04:30). Not editable in the UI.
+    'audit' => [
+        'retention_days' => 365,
+    ],
+
     // The automatic test restore (planning/architecture.md section 4) loads the
     // latest backup into a scratch database, patient_census_restore_test, as
     // the MySQL account census_restore_test (rights on that database only).

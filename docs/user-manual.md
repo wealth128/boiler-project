@@ -12,6 +12,10 @@ Under **Settings > Hospital settings**, the **Preview** shows the report header 
 
 On a wide screen (1280 px and up) the form is on the left and the preview stays in view on the right while you scroll. On a smaller screen the preview is under the form. On a phone the sheet is small to fit; the form above it is the readable part.
 
+### Audit log: how long entries are kept (Admin)
+
+The **Audit log** page keeps the last **1 year**. Under the title it says: "Entries older than 1 year are removed automatically (archived to the backup folder)." Every night the system first saves the older entries to a file named `audit-archive_YYYY-MM-DD.csv.gz` in the backup folder, and only then removes them. You cannot delete audit entries yourself. The **From** date cannot go back further than one year. If the clean-up ever fails, a red bar says "Audit log clean-up failed: ..." and nothing is removed. Tell IT.
+
 ### Importing visits after a downtime (draft)
 
 **When to use it.** The system was down and the offices wrote their visits in the downtime template (or on paper). Now the system is back and you bring those visits in. It is only for visits written during a downtime. It does not import old Google Sheets history.
