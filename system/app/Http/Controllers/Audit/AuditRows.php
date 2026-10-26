@@ -17,6 +17,7 @@ use App\Services\AuditActions;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
@@ -109,6 +110,19 @@ final class AuditRows
     }
 
     /**
+     * Every "deleted permanently" action ("visit.purged", "patient.purged" ...), as the observer
+     * names them: the record type in the singular, then ".purged". The same entries as
+     * action LIKE '%.purged', listed so the index on action is used. A test fails when a
+     * ".purged" action exists in the code that is not in this list.
+     *
+     * @return list<string>
+     */
+    public static function purgedActions(): array
+    {
+        return array_values(array_map(fn (string $type): string => Str::singular($type).'.purged', array_keys(Relation::morphMap())));
+    }
+
+    /**
      * Exact match on a Visit No., Patient ID or username. A record deleted
      * permanently is found by the ID or name saved in its entry.
      *
@@ -116,14 +130,24 @@ final class AuditRows
      */
     private static function matchRecord(Builder $query, string $record): void
     {
-        $query->where(function (Builder $q) use ($record): void {
-            $q->where(fn (Builder $w) => $w->where('subject_type', 'visits')
-                ->whereIn('subject_id', Visit::withTrashed()->where('visit_no', $record)->select('id')))
-                ->orWhere(fn (Builder $w) => $w->where('subject_type', 'patients')
-                    ->whereIn('subject_id', Patient::withTrashed()->where('patient_no', $record)->select('id')))
-                ->orWhere(fn (Builder $w) => $w->where('subject_type', 'users')
-                    ->whereIn('subject_id', User::withTrashed()->where('username', $record)->select('id')))
-                ->orWhere(fn (Builder $w) => $w->where('action', 'like', '%.purged')->where('changes->label', $record));
+        // The record's id, looked up first by its unique number or name (one small query
+        // each), so the entries are then found through the subject index.
+        $ids = [
+            'visits' => Visit::withTrashed()->where('visit_no', $record)->pluck('id')->all(),
+            'patients' => Patient::withTrashed()->where('patient_no', $record)->pluck('id')->all(),
+            'users' => User::withTrashed()->where('username', $record)->pluck('id')->all(),
+        ];
+
+        $purged = self::purgedActions();
+
+        $query->where(function (Builder $q) use ($ids, $purged, $record): void {
+            foreach ($ids as $type => $found) {
+                if ($found !== []) {
+                    $q->orWhere(fn (Builder $w) => $w->where('subject_type', $type)->whereIn('subject_id', $found));
+                }
+            }
+
+            $q->orWhere(fn (Builder $w) => $w->whereIn('action', $purged)->where('changes->label', $record));
         });
     }
 

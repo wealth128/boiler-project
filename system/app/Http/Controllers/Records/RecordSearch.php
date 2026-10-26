@@ -80,9 +80,13 @@ final class RecordSearch
 
         [$type, $digits] = self::idSearch($q);
 
+        // A name: the matching patients are found first, in one query over the patients
+        // table, and the visits are then read through the patient index. Asked as one
+        // query, MySQL would rather check the name again for every visit of the year.
+        // Patients in Trash never match (the Patient query leaves them out, as whereHas did).
         $visits->where(function (Builder $where) use ($q, $type, $digits): void {
             if ($digits === null) {
-                $where->whereHas('patient', fn (Builder $patient) => self::nameMatches($patient, $q));
+                $where->whereIn('patient_id', Patient::query()->where(fn (Builder $patient) => self::nameMatches($patient, $q))->pluck('id')->all());
 
                 return;
             }
@@ -92,7 +96,7 @@ final class RecordSearch
             }
 
             if ($type !== 'v') {
-                $where->orWhereHas('patient', fn (Builder $patient) => $patient->where('patient_no', 'like', self::contains($digits)));
+                $where->orWhereIn('patient_id', Patient::query()->select('id')->where('patient_no', 'like', self::contains($digits)));
             }
         });
     }

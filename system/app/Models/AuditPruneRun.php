@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\BackupStatus;
+use App\Models\Concerns\ClearsAdminAlerts;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
@@ -21,6 +22,8 @@ use Illuminate\Support\Carbon;
 #[Fillable(['started_at', 'finished_at', 'status', 'rows_count', 'archive_name', 'message'])]
 class AuditPruneRun extends Model
 {
+    use ClearsAdminAlerts;
+
     public $timestamps = false;
 
     protected function casts(): array

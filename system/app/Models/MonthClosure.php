@@ -40,7 +40,37 @@ class MonthClosure extends Model
      */
     public static function isClosed(string $period): bool
     {
+        if (self::$remembered !== null) {
+            return isset(self::$remembered[$period]);
+        }
+
         return static::query()->where('period', $period)->where('is_closed', true)->exists();
+    }
+
+    /** @var array<string, int>|null The closed months while remembering() runs: period => index. */
+    private static ?array $remembered = null;
+
+    /**
+     * Runs $callback with the closed months read once, so isClosed() answers
+     * from memory instead of asking the database for every row of a list
+     * ("can this visit be edited?" on Encode's today list, Trash). Only for
+     * building a page: never around a close or reopen.
+     *
+     * @template T
+     *
+     * @param  callable(): T  $callback
+     * @return T
+     */
+    public static function remembering(callable $callback): mixed
+    {
+        $outer = self::$remembered;
+        self::$remembered ??= static::query()->where('is_closed', true)->pluck('period')->flip()->all();
+
+        try {
+            return $callback();
+        } finally {
+            self::$remembered = $outer;
+        }
     }
 
     /**

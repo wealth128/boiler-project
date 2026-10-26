@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Trash;
 
 use App\Models\AgeBracket;
 use App\Models\Diagnosis;
+use App\Models\MonthClosure;
 use App\Models\MonthDeletion;
 use App\Models\Patient;
 use App\Models\Rank;
 use App\Models\User;
 use App\Models\Visit;
+use App\Policies\TrashPolicy;
 use App\Services\TablePaging;
 use App\Services\TrashService;
 use Carbon\Carbon;
@@ -87,17 +89,24 @@ final class TrashRows
 
             $models[$type] = $query
                 ->with($class === Rank::class ? ['branch', 'deletedBy'] : ['deletedBy'])
+                // "Still used?" for Delete permanently, for the whole page in one query (TrashPolicy::forceDelete).
+                ->when(in_array($class, [Patient::class, Diagnosis::class, Rank::class], true), fn ($q) => $q->withExists(['visits as '.TrashPolicy::HAS_VISITS => fn ($visits) => $visits->withTrashed()]))
+                ->when($class === User::class, fn ($q) => $q->withExists([
+                    'encodedVisits as '.TrashPolicy::HAS_VISITS => fn ($visits) => $visits->withTrashed(),
+                    'auditLogs as '.TrashPolicy::HAS_AUDIT,
+                ]))
                 ->whereKey($group->pluck('id')->all())
                 ->get()
                 ->keyBy('id');
         }
 
-        return $entries
+        // Each row asks whether its month is closed: the closed months are read once for the page.
+        return MonthClosure::remembering(fn (): array => $entries
             ->map(fn (object $entry): ?Model => $models[$entry->type][$entry->id] ?? null)
             ->filter()
             ->map(fn (Model $item): array => self::row($item, $actor))
             ->values()
-            ->all();
+            ->all());
     }
 
     /**

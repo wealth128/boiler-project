@@ -5,7 +5,9 @@ namespace App\Services;
 use App\Enums\BackupMarkType;
 use App\Enums\BackupStatus;
 use App\Services\Setup\MysqlAdmin;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\Number;
 use Throwable;
 
@@ -56,6 +58,7 @@ class HealthChecker
             $this->serverDisk(),
             $this->scheduler(),
             $this->environment(),
+            $this->speed(),
             $this->storage(),
             $this->uploadLimits(),
             $this->php(),
@@ -278,6 +281,91 @@ class HealthChecker
         return $this->row('environment', $label, self::OK, 'Production mode, debug off.', 'Nothing to do.');
     }
 
+    /**
+     * The speed settings of docs/operations-guide.md ("Speed settings"):
+     * OPcache on, the config, route and event caches built and the log not
+     * at debug level. Missing ones are a Warning: everything still works,
+     * only slower. A public/hot file is a Problem: the pages would load their
+     * scripts from a developer's Vite server, which does not run on the server.
+     *
+     * @return array{key: string, label: string, status: string, detail: string, todo: string}
+     */
+    private function speed(): array
+    {
+        $label = 'Speed settings';
+        ['problems' => $problems, 'warnings' => $warnings] = $this->speedFindings();
+
+        if ($problems !== []) {
+            return $this->row('speed', $label, self::PROBLEM, implode(' ', $problems), 'Tell IT: delete the file public\\hot in the system folder (it is only for developers), then reload the page.');
+        }
+
+        if ($warnings !== []) {
+            return $this->row('speed', $label, self::WARNING, implode(' ', $warnings), 'Tell IT: see "Speed settings" in the operations guide (OPcache in php.ini, then "php artisan optimize").');
+        }
+
+        return $this->row('speed', $label, self::OK, 'OPcache on, caches built, log level '.$this->logLevel().'.', 'Nothing to do.');
+    }
+
+    /**
+     * @return array{problems: list<string>, warnings: list<string>}
+     */
+    protected function speedFindings(): array
+    {
+        $warnings = [];
+
+        if (! $this->opcacheOn()) {
+            $warnings[] = 'OPcache is off.';
+        }
+
+        if ($missing = $this->missingCaches()) {
+            $warnings[] = 'The '.implode(', ', $missing).' cache is not built.';
+        }
+
+        if ($this->logLevel() === 'debug') {
+            $warnings[] = 'The log level is debug.';
+        }
+
+        return [
+            'problems' => $this->viteHotFile() ? ['The Vite development file public/hot is present.'] : [],
+            'warnings' => $warnings,
+        ];
+    }
+
+    /** OPcache is loaded and switched on for the web server (php.ini opcache.enable). */
+    protected function opcacheOn(): bool
+    {
+        return extension_loaded('Zend OPcache') && filter_var(ini_get('opcache.enable'), FILTER_VALIDATE_BOOLEAN);
+    }
+
+    /** @return list<string> the caches "php artisan optimize" builds that are missing */
+    protected function missingCaches(): array
+    {
+        return array_keys(array_filter([
+            'config' => ! app()->configurationIsCached(),
+            'route' => ! app()->routesAreCached(),
+            'event' => ! app()->eventsAreCached(),
+        ]));
+    }
+
+    /** Laravel's own test: with public/hot the pages load their scripts from a Vite dev server. */
+    protected function viteHotFile(): bool
+    {
+        return Vite::isRunningHot();
+    }
+
+    /** The lowest level written by the default log channel (or the channels of its stack). */
+    private function logLevel(): string
+    {
+        $default = (string) config('logging.default');
+        $channels = config("logging.channels.{$default}.driver") === 'stack'
+            ? (array) config("logging.channels.{$default}.channels")
+            : [$default];
+
+        $levels = array_map(fn ($channel): string => strtolower((string) config("logging.channels.{$channel}.level", 'debug')), $channels);
+
+        return in_array('debug', $levels, true) ? 'debug' : (string) ($levels[0] ?? 'debug');
+    }
+
     /** @return array{key: string, label: string, status: string, detail: string, todo: string} */
     private function storage(): array
     {
@@ -440,10 +528,20 @@ class HealthChecker
         return app(MysqlAdmin::class)->rootHasNoPassword();
     }
 
-    /** Runs "mysql --version". */
+    /**
+     * Runs "mysql --version". Starting the program takes about 0.2 seconds, so
+     * the System health page remembers the answer for 10 minutes for the same
+     * program path (a new MYSQL_PATH is asked at once). census:health always runs it.
+     */
     protected function mysqlClientWorks(): bool
     {
-        return app(MysqlAdmin::class)->clientWorks();
+        $mysql = app(MysqlAdmin::class);
+
+        if (app()->runningInConsole()) {
+            return $mysql->clientWorks();
+        }
+
+        return Cache::remember('health.mysql-client:'.md5($mysql->mysqlClientPath()), 600, fn (): bool => $mysql->clientWorks());
     }
 
     protected function isWritable(string $path): bool

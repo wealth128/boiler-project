@@ -143,7 +143,10 @@ class HospitalController extends Controller
             'Content-Type' => $this->settings->imageMime($file),
             'X-Content-Type-Options' => 'nosniff',
             'Content-Security-Policy' => "default-src 'none'; img-src 'self'",
-            'Cache-Control' => 'private, no-cache',
+            // The logo's address changes with every new logo (?v=), so the browser may keep it
+            // for a day instead of downloading it again on every page load. Signatures are
+            // never kept.
+            'Cache-Control' => $image === 'logo' ? 'private, max-age=86400' : 'private, no-cache',
         ]);
     }
 

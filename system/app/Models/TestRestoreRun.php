@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\BackupStatus;
+use App\Models\Concerns\ClearsAdminAlerts;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
@@ -23,6 +24,8 @@ use Illuminate\Support\Carbon;
 #[Fillable(['trigger', 'status', 'backup_run_id', 'started_by', 'started_at', 'finished_at', 'message'])]
 class TestRestoreRun extends Model
 {
+    use ClearsAdminAlerts;
+
     public $timestamps = false;
 
     protected function casts(): array

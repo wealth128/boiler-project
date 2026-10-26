@@ -2,9 +2,12 @@
 
 namespace App\Services;
 
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Collection;
 
 /**
@@ -75,6 +78,49 @@ final class TablePaging
         $start = max(1, min($current - 1, $last - self::WINDOW + 1));
 
         return range($start, min($last, $start + self::WINDOW - 1));
+    }
+
+    /**
+     * One page of a long table (Records, Audit log), read in two steps so a
+     * late page stays fast: first only the ids of that page, which MySQL
+     * finds in an index while skipping the earlier rows without reading
+     * them, then the full rows of those ids with their relations and counts.
+     * Same rows, same order and same page numbers as Eloquent's paginate():
+     * page 2,000 of the Audit log no longer reads 20,000 whole rows first.
+     *
+     * @template TModel of Model
+     *
+     * @param  Builder<TModel>  $query  with its filters and orderBy, without limit
+     * @return LengthAwarePaginator<int, TModel>
+     */
+    public static function paginate(Builder $query, Request $request): LengthAwarePaginator
+    {
+        $perPage = self::perPage($request);
+        $current = Paginator::resolveCurrentPage();
+        $model = $query->getModel();
+
+        $total = (clone $query)->toBase()->getCountForPagination();
+
+        // A copy: without global scopes toBase() is the query itself, and select() would change it.
+        $ids = $total === 0 ? [] : (clone $query)->toBase()
+            ->select($model->getQualifiedKeyName())
+            ->forPage($current, $perPage)
+            ->pluck($model->getKeyName())
+            ->all();
+
+        $position = array_flip($ids);
+
+        $rows = $ids === [] ? $model->newCollection() : (clone $query)
+            ->reorder()
+            ->whereKey($ids)
+            ->get()
+            ->sortBy(fn (Model $row): int => $position[$row->getKey()])
+            ->values();
+
+        return new LengthAwarePaginator($rows, $total, $perPage, $current, [
+            'path' => Paginator::resolveCurrentPath(),
+            'pageName' => 'page',
+        ]);
     }
 
     /**

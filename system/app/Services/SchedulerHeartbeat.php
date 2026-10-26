@@ -19,7 +19,14 @@ class SchedulerHeartbeat
 
     public function beat(): void
     {
+        $wasStale = $this->isStale();
+
         Cache::forever(self::KEY, now()->getTimestamp());
+
+        // The scheduler is back: the remembered red bar goes at once (AdminAlerts).
+        if ($wasStale) {
+            AdminAlerts::forget();
+        }
     }
 
     public function lastBeat(): ?CarbonImmutable

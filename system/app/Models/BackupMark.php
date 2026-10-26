@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\BackupMarkType;
+use App\Models\Concerns\ClearsAdminAlerts;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -19,6 +20,8 @@ use Illuminate\Support\Carbon;
 #[Fillable(['type', 'marked_by', 'marked_at'])]
 class BackupMark extends Model
 {
+    use ClearsAdminAlerts;
+
     public $timestamps = false;
 
     protected function casts(): array

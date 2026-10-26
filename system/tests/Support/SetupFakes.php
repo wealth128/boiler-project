@@ -266,7 +266,7 @@ class FakeRequirements extends InstallRequirements
 
     protected function ini(string $key): string
     {
-        return '8M';
+        return $key === 'opcache.enable' ? '1' : '8M';
     }
 
     protected function phpVersion(): string

@@ -4,12 +4,9 @@ namespace App\Http\Middleware;
 
 use App\Enums\Permission;
 use App\Enums\Role;
-use App\Models\Setting;
 use App\Models\User;
-use App\Services\AuditPruner;
-use App\Services\BackupMonitor;
+use App\Services\AdminAlerts;
 use App\Services\HospitalSettings;
-use App\Services\SchedulerHeartbeat;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
@@ -48,6 +45,12 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        // The warning bars, read once per page from the 60-second cache (AdminAlerts).
+        $alerts = null;
+        $adminAlerts = function () use (&$alerts): array {
+            return $alerts ??= app(AdminAlerts::class)->current();
+        };
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
@@ -56,28 +59,12 @@ class HandleInertiaRequests extends Middleware
                 'loginAt' => $this->loginAt($request),
             ],
             'hospital' => fn (): array => $this->hospital($request),
-            // Backup warnings at the top of every page: Admin only.
-            'backupAlerts' => fn (): array => $request->user()?->role === Role::Admin ? $this->adminAlerts() : [],
+            // Backup warnings and the failed audit clean-up at the top of every page: Admin only.
+            'backupAlerts' => fn (): array => $request->user()?->role === Role::Admin ? $adminAlerts()['alerts'] : [],
             // Red bar when the scheduler stopped (no backup, no 8 PM sign-out): Admin only.
-            'schedulerAlert' => fn (): ?string => $request->user()?->role === Role::Admin ? app(SchedulerHeartbeat::class)->alert() : null,
+            'schedulerAlert' => fn (): ?string => $request->user()?->role === Role::Admin ? $adminAlerts()['scheduler'] : null,
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
-    }
-
-    /**
-     * Backup warnings plus the red bar when the audit log clean-up failed.
-     *
-     * @return list<array{level: string, message: string}>
-     */
-    private function adminAlerts(): array
-    {
-        $alerts = app(BackupMonitor::class)->alerts();
-
-        if ($message = app(AuditPruner::class)->alert()) {
-            $alerts[] = ['level' => 'error', 'message' => $message];
-        }
-
-        return $alerts;
     }
 
     /** The sign-in time with a random tail, so two sign-ins never share a value. */
@@ -132,32 +119,32 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
-     * Hospital name and subtitle for the top bar and login screen, read in
-     * one query from the settings table (seeded by SettingSeeder).
+     * Hospital name and subtitle for the top bar and login screen, and the
+     * logo addresses. Read from the settings table and the disk at most once
+     * a minute (HospitalSettings::shared), not on every page.
      *
      * @return array{name: string, subtitle: string, logo_url: string|null, login_logo_url: string|null}
      */
     private function hospital(Request $request): array
     {
-        $values = Setting::query()
-            ->whereIn('key', ['hospital_name', 'hospital_subtitle'])
-            ->pluck('value', 'key');
-
-        $pictures = app(HospitalSettings::class);
+        $shared = app(HospitalSettings::class)->shared();
+        $version = $shared['logo_version'];
         $user = $request->user();
 
+        // Login page logo: from the public, logo-only route. Null when no logo is set.
+        $public = $version === null ? null : route('hospital.logo.public', ['v' => $version], false);
+
         return [
-            'name' => $values->get('hospital_name') ?: '[Hospital Name]',
-            'subtitle' => $values->get('hospital_subtitle') ?: '',
+            'name' => $shared['name'],
+            'subtitle' => $shared['subtitle'],
             // Top bar logo, for every signed-in role: the signed-in route for the roles that may load it
             // (Admin, Viewer), the public logo-only route for the others (Encoder, System Admin).
-            'logo_url' => $user === null
+            'logo_url' => $user === null || $version === null
                 ? null
                 : (Gate::forUser($user)->allows(Permission::ViewReports->value)
-                    ? $pictures->imageUrl('logo')
-                    : $pictures->publicLogoUrl()),
-            // Login page logo: from the public, logo-only route. Null when no logo is set.
-            'login_logo_url' => $pictures->publicLogoUrl(),
+                    ? route('hospital.logo', ['v' => $version], false)
+                    : $public),
+            'login_logo_url' => $public,
         ];
     }
 }

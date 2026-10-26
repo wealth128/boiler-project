@@ -42,6 +42,14 @@ class InstallRequirements
             ];
         }
 
+        // Speed (Step 7g): without OPcache every page reads and compiles the PHP files again.
+        // The web server reads the same php.ini as this command (Laragon), so opcache.enable is checked.
+        $results[] = [
+            'label' => 'OPcache is on (opcache.enable)',
+            'ok' => $this->extensionLoaded('Zend OPcache') && filter_var($this->ini('opcache.enable'), FILTER_VALIDATE_BOOLEAN),
+            'fix' => 'Turn on OPcache in php.ini with the settings in docs/requirements.md ("OPcache"), restart the web server, then try again.',
+        ];
+
         foreach ([storage_path(), base_path('bootstrap/cache')] as $path) {
             $results[] = [
                 'label' => 'Folder '.basename(dirname($path)).'/'.basename($path).' is writable',

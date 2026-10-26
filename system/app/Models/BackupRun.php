@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\BackupStatus;
+use App\Models\Concerns\ClearsAdminAlerts;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
@@ -27,6 +28,8 @@ use Illuminate\Support\Carbon;
 #[Fillable(['started_at', 'finished_at', 'status', 'file_name', 'size_bytes', 'zip_name', 'zip_size_bytes', 'patients_count', 'visits_count', 'users_count', 'closed_months_count', 'patients_count_max', 'visits_count_max', 'users_count_max', 'closed_months_count_max', 'message'])]
 class BackupRun extends Model
 {
+    use ClearsAdminAlerts;
+
     public $timestamps = false;
 
     protected function casts(): array

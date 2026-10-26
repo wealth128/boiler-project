@@ -1,6 +1,6 @@
 # Operations Guide
 
-_Version: DRAFT (Step 6j) · Matches system: Step 6j · Phase 7.5 will finish this guide, add screenshots and have it tested by someone who did not write it._
+_Version: DRAFT (Step 6j, speed settings 7g) · Matches system: Step 7g · Phase 7.5 will finish this guide, add screenshots and have it tested by someone who did not write it._
 
 This guide is for the person who looks after the server PC. You do not need to type commands. Everything is a file you double-click.
 
@@ -66,7 +66,7 @@ Running `install.bat` again on a server that already works is safe. It only re-c
 1. Log in. Look for a red bar at the top. A red bar means the last backup or the test restore failed, the audit log clean-up failed, or automatic tasks are not running. Tell IT the same day. A yellow bar means the weekly USB copy or the monthly test restore is overdue.
 
    **The x only hides a warning. It comes back tomorrow (yellow) or at your next sign-in (red) until the problem is fixed.** Closing a bar never fixes or marks anything. The **Backups** and **System health** pages always show the full status.
-2. Open **System health** (left menu, under Administration). Every line should say OK. One line is **Audit log clean-up**: OK means it ran in the last 2 days.
+2. Open **System health** (left menu, under Administration). Every line should say OK. One line is **Audit log clean-up**: OK means it ran in the last 2 days. Another is **Speed settings** (section 11).
 
 **The custodian's tasks in one place** (the one-page card will copy this):
 - **Daily:** log in, look for a red bar, open **System health**. The x on a bar only hides it until tomorrow (yellow) or your next sign-in (red).
@@ -234,6 +234,39 @@ When a month, quarter or year is closed, the system saves its report as a copy, 
 4. It says "Rebuilt N saved copies". The Audit log shows one entry, **Saved report copies rebuilt**, with the number.
 
 If it says a month is being closed or reopened, nothing was changed. Wait a minute and run it again. If it fails halfway, nothing is changed: all copies are rebuilt together or none.
+
+### 11. Speed settings
+
+**System health** checks these on the line **Speed settings**. OK means all are in place. A Warning means the system works but is slower than it should be. `install.bat` and `update.bat` already do the server side; this section is for IT when that line is not OK.
+
+| Setting | On the hospital server | Why |
+|---|---|---|
+| OPcache | On, with the `php.ini` lines below | Without it PHP reads and compiles about 1,500 program files on every click. |
+| Laravel caches | Built: `php artisan optimize` (config, routes, views and events) | `install.bat` and `update.bat` build them. Run `php artisan optimize` again after any change to `.env`. |
+| `APP_DEBUG` | `false` | Also a safety setting (section 9). Debug mode is slower too. |
+| `LOG_LEVEL` | `warning` (never `debug`) | `debug` writes many lines on every click. |
+| `public\hot` | Must **not** exist | It is a developer file. If it is there, pages look for a developer server and do not load. System health shows a **Problem**; delete the file. |
+| Windows power plan | **High performance** (or "Best performance" in Settings > System > Power) | On "Balanced", Windows moves background programs such as the web server to the slow, power-saving cores of the processor. On the developer's laptop this made every page 2 to 4 times slower. |
+
+**OPcache lines for `php.ini`** (Laragon: Menu > PHP > php.ini). With PHP 8.4 also make sure the line `zend_extension=opcache` has no `;` in front; PHP 8.5 has OPcache built in.
+
+```ini
+[opcache]
+opcache.enable=1
+opcache.enable_cli=0
+opcache.memory_consumption=128
+opcache.interned_strings_buffer=16
+opcache.max_accelerated_files=20000
+opcache.validate_timestamps=1
+opcache.revalidate_freq=2
+opcache.save_comments=1
+```
+
+Restart the web server after changing `php.ini` (restart the **CensusApache** service, or restart the PC). `validate_timestamps=1` keeps an update simple: new program files are picked up within 2 seconds, no restart needed.
+
+**Kept on purpose:** sessions and the cache stay in the database (`SESSION_DRIVER=database`, `CACHE_STORE=database`). The nightly clean-up at **1:30 AM** deletes expired cache rows; expired sessions are deleted by Laravel itself now and then (about 1 in 50 clicks), using the index on the sessions table. Nothing to do.
+
+**Built pages and pictures:** the scripts and styles in `public\build` have a new name with every update, so browsers keep them for a year (`public\.htaccess`) and download them only once per update. The hospital logo is kept for a day and downloaded again only when a new logo is uploaded.
 
 ---
 

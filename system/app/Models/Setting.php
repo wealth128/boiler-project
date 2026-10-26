@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\HospitalSettings;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 
@@ -21,6 +22,13 @@ class Setting extends Model
     public $incrementing = false;
 
     public $timestamps = false;
+
+    protected static function booted(): void
+    {
+        // The top bar's name, subtitle and logo are remembered for a minute: a change shows at once.
+        static::saved(fn () => HospitalSettings::forgetShared());
+        static::deleted(fn () => HospitalSettings::forgetShared());
+    }
 
     /**
      * Read one setting, e.g. Setting::valueOf('hospital_name').
