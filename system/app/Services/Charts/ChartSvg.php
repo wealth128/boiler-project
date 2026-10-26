@@ -80,7 +80,7 @@ final class ChartSvg
         return sprintf(
             '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 %s %d" width="%s" height="%d" role="img" aria-label="%s" font-family="%s">',
             $w, $height, $w, $height, $this->e($chart['aria']), $this->e(self::FONT),
-        ).'<rect x="0" y="0" width="'.$w.'" height="'.$height.'" fill="#FFFFFF"/>'.implode('', $this->out).'</svg>';
+        ).'<rect x="0" y="0" width="'.$w.'" height="'.$height.'" fill="#FFFFFF" class="rc-bg"/>'.implode('', $this->out).'</svg>';
     }
 
     // --- Parts shared by every chart -----------------------------------------------
@@ -242,7 +242,7 @@ final class ChartSvg
 
             // The share inside the segment when it fits; the legend below always has it.
             if ($segment > $this->textWidth($percent, 13, bold: true) + 10) {
-                $parts[] = $this->text($at + $segment / 2, $this->y + 20, $percent, 13, $ink, anchor: 'middle', bold: true);
+                $parts[] = $this->text($at + $segment / 2, $this->y + 20, $percent, 13, $ink, anchor: 'middle', bold: true, onBar: true);
             }
 
             $at += $segment;
@@ -523,16 +523,32 @@ final class ChartSvg
         return $lines;
     }
 
-    private function text(float $x, float $y, string $text, float $size, string $color, string $anchor = 'start', bool $bold = false): string
+    /**
+     * $onBar: the text sits on a colored bar, so it keeps its color on a dark
+     * screen. Any other text is tagged so a dark screen can recolor it.
+     */
+    private function text(float $x, float $y, string $text, float $size, string $color, string $anchor = 'start', bool $bold = false, bool $onBar = false): string
     {
-        return '<text x="'.$this->n($x).'" y="'.$this->n($y).'" font-family="'.$this->e(self::FONT).'" font-size="'.$this->n($size).'" fill="'.$color.'"'
+        $class = $onBar ? '' : match ($color) {
+            ChartPalette::INK => ' class="rc-ink"',
+            ChartPalette::MUTED => ' class="rc-muted"',
+            default => '',
+        };
+
+        return '<text x="'.$this->n($x).'" y="'.$this->n($y).'" font-family="'.$this->e(self::FONT).'" font-size="'.$this->n($size).'" fill="'.$color.'"'.$class
             .($anchor === 'start' ? '' : ' text-anchor="'.$anchor.'"')
             .($bold ? ' font-weight="bold"' : '').'>'.$this->e($text).'</text>';
     }
 
     private function line(float $x1, float $y1, float $x2, float $y2, string $color): string
     {
-        return '<line x1="'.$this->n($x1).'" y1="'.$this->n($y1).'" x2="'.$this->n($x2).'" y2="'.$this->n($y2).'" stroke="'.$color.'" stroke-width="1"/>';
+        $class = match ($color) {
+            ChartPalette::GRID => ' class="rc-grid"',
+            ChartPalette::AXIS => ' class="rc-axis"',
+            default => '',
+        };
+
+        return '<line x1="'.$this->n($x1).'" y1="'.$this->n($y1).'" x2="'.$this->n($x2).'" y2="'.$this->n($y2).'" stroke="'.$color.'" stroke-width="1"'.$class.'/>';
     }
 
     private function num(float|int $value): string

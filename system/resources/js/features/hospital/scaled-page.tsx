@@ -53,7 +53,7 @@ export function ScaledPage({ children, label }: ScaledPageProps) {
             >
                 <article
                     aria-label={label}
-                    className="paper origin-top-left overflow-hidden rounded-sm shadow-md ring-1 ring-black/10"
+                    className="paper origin-top-left overflow-hidden rounded-sm shadow-md ring-1 ring-border"
                     style={{
                         width: PAGE_WIDTH,
                         height: PAGE_HEIGHT,

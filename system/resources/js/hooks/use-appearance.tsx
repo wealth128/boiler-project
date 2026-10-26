@@ -10,7 +10,7 @@ export type UseAppearanceReturn = {
 };
 
 const listeners = new Set<() => void>();
-let currentAppearance: Appearance = 'system';
+let currentAppearance: Appearance = 'light';
 
 const prefersDark = (): boolean => {
     if (typeof window === 'undefined') {
@@ -29,12 +29,53 @@ const setCookie = (name: string, value: string, days = 365): void => {
     document.cookie = `${name}=${value};path=/;max-age=${maxAge};SameSite=Lax`;
 };
 
-const getStoredAppearance = (): Appearance => {
-    if (typeof window === 'undefined') {
-        return 'system';
+const isAppearance = (value: unknown): value is Appearance =>
+    value === 'light' || value === 'dark' || value === 'system';
+
+const getCookie = (name: string): string | null => {
+    if (typeof document === 'undefined') {
+        return null;
     }
 
-    return (localStorage.getItem('appearance') as Appearance) || 'system';
+    const match = document.cookie.match(
+        new RegExp(`(?:^|; )${name}=([^;]*)`),
+    );
+
+    return match ? decodeURIComponent(match[1]) : null;
+};
+
+/**
+ * The cookie is what the server used for the first paint, so it wins; then
+ * localStorage; then Light, the default.
+ */
+const getStoredAppearance = (): Appearance => {
+    if (typeof window === 'undefined') {
+        return 'light';
+    }
+
+    const fromCookie = getCookie('appearance');
+
+    if (isAppearance(fromCookie)) {
+        return fromCookie;
+    }
+
+    try {
+        const stored = localStorage.getItem('appearance');
+
+        return isAppearance(stored) ? stored : 'light';
+    } catch {
+        return 'light';
+    }
+};
+
+const storeAppearance = (mode: Appearance): void => {
+    try {
+        localStorage.setItem('appearance', mode);
+    } catch {
+        // Blocked storage: the cookie below still remembers the choice.
+    }
+
+    setCookie('appearance', mode);
 };
 
 const isDarkMode = (appearance: Appearance): boolean => {
@@ -75,23 +116,23 @@ export function initializeTheme(): void {
         return;
     }
 
-    if (!localStorage.getItem('appearance')) {
-        localStorage.setItem('appearance', 'system');
-        setCookie('appearance', 'system');
-    }
-
     currentAppearance = getStoredAppearance();
+    storeAppearance(currentAppearance);
     applyTheme(currentAppearance);
 
     // Set up system theme change listener
     mediaQuery()?.addEventListener('change', handleSystemThemeChange);
+
+    // Paper is always light: take the dark theme off while printing.
+    window.addEventListener('beforeprint', () => applyTheme('light'));
+    window.addEventListener('afterprint', () => applyTheme(currentAppearance));
 }
 
 export function useAppearance(): UseAppearanceReturn {
     const appearance: Appearance = useSyncExternalStore(
         subscribe,
         () => currentAppearance,
-        () => 'system',
+        () => 'light',
     );
 
     const resolvedAppearance: ResolvedAppearance = isDarkMode(appearance)
@@ -101,11 +142,8 @@ export function useAppearance(): UseAppearanceReturn {
     const updateAppearance = (mode: Appearance): void => {
         currentAppearance = mode;
 
-        // Store in localStorage for client-side persistence...
-        localStorage.setItem('appearance', mode);
-
-        // Store in cookie for SSR...
-        setCookie('appearance', mode);
+        // The cookie is read by the server for the first paint (no flash).
+        storeAppearance(mode);
 
         applyTheme(mode);
         notify();

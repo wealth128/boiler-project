@@ -54,7 +54,7 @@ export function RecordsTabs({ current, url }: RecordsTabsProps) {
                     className={cn(
                         '-mb-px inline-flex items-center border-b-2 px-3.5 py-2 text-sm font-semibold max-lg:min-h-10 focus-visible:outline-2 focus-visible:outline-ring',
                         tab.key === current
-                            ? 'border-navy text-navy'
+                            ? 'border-link text-link'
                             : 'border-transparent text-muted-foreground hover:text-foreground',
                     )}
                 >

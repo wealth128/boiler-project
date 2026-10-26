@@ -140,7 +140,7 @@ export function DataTable<T>({
                                         <Fragment key={rowKey(row)}>
                                             <tr
                                                 className={cn(
-                                                    "bg-card",
+                                                    "bg-card even:bg-navy-soft hover:bg-accent",
                                                     rowClassName?.(row),
                                                 )}
                                             >

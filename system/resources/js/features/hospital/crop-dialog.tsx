@@ -270,7 +270,7 @@ function CropBody({
                     tabIndex={0}
                     role="img"
                     aria-label={`Crop area. Drag, or use the arrow keys to move the ${noun}, and plus and minus to zoom.`}
-                    className="h-auto w-full cursor-grab touch-none rounded-md border bg-white active:cursor-grabbing"
+                    className="h-auto w-full cursor-grab touch-none rounded-md border paper active:cursor-grabbing"
                     style={{ aspectRatio: `${frame.width} / ${frame.height}` }}
                     onPointerDown={onPointerDown}
                     onPointerMove={onPointerMove}

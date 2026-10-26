@@ -268,7 +268,7 @@ function PageLink({
             className={cn(
                 buttonClass,
                 current
-                    ? "border-navy bg-navy text-white dark:text-background"
+                    ? "border-navy bg-navy text-navy-foreground"
                     : "bg-background text-foreground hover:bg-muted",
             )}
         >

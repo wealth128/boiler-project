@@ -250,7 +250,7 @@ export default function TrashIndex({ items }: Props) {
                             rowKey={(item) => item.key}
                             caption="Items in Trash"
                             rowClassName={(item) =>
-                                isPurging(item) ? "bg-bad-soft" : undefined
+                                isPurging(item) ? "bg-bad-soft!" : undefined
                             }
                             rowDetail={(item) => {
                                 if (isPurging(item)) {

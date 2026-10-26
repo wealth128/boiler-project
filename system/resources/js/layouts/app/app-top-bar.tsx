@@ -1,5 +1,6 @@
 import { usePage } from "@inertiajs/react";
 import { ROLE_LABELS } from "@/lib/format";
+import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { MobileMenu } from "./app-side-nav";
 
 /**
@@ -11,7 +12,7 @@ export function AppTopBar() {
     const user = auth.user as typeof auth.user | null;
 
     return (
-        <header className="flex flex-wrap items-center gap-x-3 gap-y-2 bg-navy px-3 py-2 text-navy-foreground sm:px-4 print:hidden">
+        <header className="flex flex-wrap items-center gap-x-3 gap-y-2 bg-bar px-3 py-2 text-bar-foreground sm:px-4 print:hidden">
             <MobileMenu />
             {hospital.logo_url && (
                 // Decorative: the hospital name is written next to it.
@@ -39,6 +40,7 @@ export function AppTopBar() {
                     </span>
                 </div>
             )}
+            {user && <ThemeToggle />}
         </header>
     );
 }

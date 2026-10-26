@@ -313,9 +313,9 @@ export function PreviewPanel({ preview }: PreviewPanelProps) {
                 empty={<EmptyState message="No rows to show." />}
                 rowClassName={(row) =>
                     row.status === 'error'
-                        ? 'bg-bad-soft'
+                        ? 'bg-bad-soft!'
                         : row.status === 'warning'
-                          ? 'bg-warn-soft'
+                          ? 'bg-warn-soft!'
                           : undefined
                 }
             />

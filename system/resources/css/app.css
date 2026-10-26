@@ -5,7 +5,7 @@
 @source '../views';
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:where(.dark, .dark *):not(:where(.paper, .paper *)));
 
 @theme {
     --font-sans:
@@ -68,6 +68,12 @@
     --color-sidebar-ring: var(--sidebar-ring);
 
     --color-page: var(--page);
+    --color-bar: var(--bar);
+    --color-bar-foreground: var(--bar-foreground);
+    --color-link: var(--link);
+    --color-scrim: var(--scrim);
+    --color-sidebar-muted: var(--sidebar-muted);
+    --color-sidebar-bad: var(--sidebar-bad);
     --color-navy: var(--navy);
     --color-navy-foreground: var(--navy-foreground);
     --color-navy-soft: var(--navy-soft);
@@ -80,118 +86,136 @@
 }
 
 /*
- * Colors follow prototype/prototype.html: white surfaces, a light grey-blue
- * page, navy accent. The starter kit's components read the shadcn names
- * (--primary, --muted…); the extra names (--navy, --ok, --warn, --bad,
- * --page) are for our own shared components.
+ * Theme tokens (Step 7f). Light = blue and white with navy; Dark = the same
+ * family on a deep blue-grey. Every screen reads these names, never a fixed
+ * white or black. The list with both values and the contrast of each pair is
+ * checked by tests/Feature/Theme/ThemeContrastTest.php (keep the values on
+ * one line each: the test reads this file).
+ *
+ *   navy   brand ink: headings, selected fills (light navy, dark light blue)
+ *   bar    the top bar and the sidebar (navy in both themes)
+ *   link   links, selected tabs, focus rings (medium blue)
+ *   navy-soft  hover and zebra rows, panel headers (very light blue)
+ *   ok / warn / bad (+ -soft)  status text and its background
  */
 :root {
-    --page: #f3f5f8;
+    --page: #ffffff;
     --background: #ffffff;
-    --foreground: #16202e;
+    --foreground: #0f1e33;
     --card: #ffffff;
-    --card-foreground: #16202e;
+    --card-foreground: #0f1e33;
     --popover: #ffffff;
-    --popover-foreground: #16202e;
-    --primary: #1b3a6b;
+    --popover-foreground: #0f1e33;
+    --primary: #0b2545;
     --primary-foreground: #ffffff;
-    --secondary: #eef1f6;
-    --secondary-foreground: #16202e;
-    --muted: #eef1f6;
-    --muted-foreground: #5b6678;
-    --accent: #e3eaf6;
-    --accent-foreground: #1b3a6b;
-    --destructive: #b3261e;
-    --destructive-foreground: #b3261e;
-    --border: #d6dce6;
-    --input: #d6dce6;
-    --ring: #3b6fd1;
-    --chart-1: oklch(0.646 0.222 41.116);
-    --chart-2: oklch(0.6 0.118 184.704);
-    --chart-3: oklch(0.398 0.07 227.392);
-    --chart-4: oklch(0.828 0.189 84.429);
-    --chart-5: oklch(0.769 0.188 70.08);
+    --secondary: #eef4fb;
+    --secondary-foreground: #0b2545;
+    --muted: #eef4fb;
+    --muted-foreground: #566377;
+    --accent: #e1ecf8;
+    --accent-foreground: #0b2545;
+    --destructive: #b42318;
+    --destructive-foreground: #b42318;
+    --border: #d5deea;
+    --input: #7d8ca3;
+    --ring: #1e5aa8;
+    --chart-1: #8fb4e3;
+    --chart-2: #1f3864;
+    --chart-3: #2e8b72;
+    --chart-4: #27508c;
+    --chart-5: #f0a93b;
     --radius: 0.5rem;
-    --sidebar: #ffffff;
-    --sidebar-foreground: #16202e;
-    --sidebar-primary: #1b3a6b;
-    --sidebar-primary-foreground: #ffffff;
-    --sidebar-accent: #e3eaf6;
-    --sidebar-accent-foreground: #1b3a6b;
-    --sidebar-border: #d6dce6;
-    --sidebar-ring: #3b6fd1;
 
-    --navy: #1b3a6b;
+    --sidebar: #0b2545;
+    --sidebar-foreground: #e6eef9;
+    --sidebar-primary: #1e5aa8;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #173a68;
+    --sidebar-accent-foreground: #ffffff;
+    --sidebar-border: #264674;
+    --sidebar-ring: #9cc2f5;
+    --sidebar-muted: #a9bcd8;
+    --sidebar-bad: #ff9c94;
+
+    --bar: #0b2545;
+    --bar-foreground: #ffffff;
+    --link: #1e5aa8;
+    --scrim: rgb(5 15 30 / 0.6);
+    --navy: #0b2545;
     --navy-foreground: #ffffff;
-    --navy-soft: #e3eaf6;
-    --ok: #1f7a4d;
-    --ok-soft: #e1f2e9;
-    --warn: #9a5b00;
-    --warn-soft: #fbefd9;
-    --bad: #b3261e;
-    --bad-soft: #fbe4e2;
+    --navy-soft: #eef4fb;
+    --ok: #1b6b45;
+    --ok-soft: #e3f3ea;
+    --warn: #8a5300;
+    --warn-soft: #fff1d6;
+    --bad: #b42318;
+    --bad-soft: #fdeae8;
 }
 
-.dark {
-    --page: #0f141c;
-    --background: #161d28;
-    --foreground: #e5eaf2;
-    --card: #161d28;
-    --card-foreground: #e5eaf2;
-    --popover: #161d28;
-    --popover-foreground: #e5eaf2;
-    --primary: #7fa6e6;
-    --primary-foreground: #0f141c;
-    --secondary: #1d2633;
-    --secondary-foreground: #e5eaf2;
-    --muted: #1d2633;
-    --muted-foreground: #9aa6b8;
-    --accent: #1f2c44;
-    --accent-foreground: #7fa6e6;
-    --destructive: #f08079;
-    --destructive-foreground: #f08079;
-    --border: #2c3746;
-    --input: #2c3746;
-    --ring: #8fb3f0;
-    --chart-1: oklch(0.488 0.243 264.376);
-    --chart-2: oklch(0.696 0.17 162.48);
-    --chart-3: oklch(0.769 0.188 70.08);
-    --chart-4: oklch(0.627 0.265 303.9);
-    --chart-5: oklch(0.645 0.246 16.439);
-    --sidebar: #161d28;
-    --sidebar-foreground: #e5eaf2;
-    --sidebar-primary: #7fa6e6;
-    --sidebar-primary-foreground: #0f141c;
-    --sidebar-accent: #1f2c44;
-    --sidebar-accent-foreground: #7fa6e6;
-    --sidebar-border: #2c3746;
-    --sidebar-ring: #8fb3f0;
+/* The dark theme is for the screen only. Print and PDF are paper: always the
+ * light tokens above (the page also takes the "dark" class off while printing). */
+@media screen {
+    .dark {
+        --page: #0b111b;
+        --background: #141e2e;
+        --foreground: #e6ecf5;
+        --card: #141e2e;
+        --card-foreground: #e6ecf5;
+        --popover: #1a2638;
+        --popover-foreground: #e6ecf5;
+        --primary: #8db4ec;
+        --primary-foreground: #0a1626;
+        --secondary: #1a2638;
+        --secondary-foreground: #e6ecf5;
+        --muted: #1a2638;
+        --muted-foreground: #a3b1c6;
+        --accent: #1e3050;
+        --accent-foreground: #e6ecf5;
+        --destructive: #f4837b;
+        --destructive-foreground: #f4837b;
+        --border: #2a3a52;
+        --input: #6b7e99;
+        --ring: #8db4ec;
 
-    --navy: #7fa6e6;
-    --navy-foreground: #0f141c;
-    --navy-soft: #1f2c44;
-    --ok: #5cc28f;
-    --ok-soft: #173326;
-    --warn: #e2a94a;
-    --warn-soft: #352a14;
-    --bad: #f08079;
-    --bad-soft: #3a1d1b;
+        --sidebar-ring: #9cc2f5;
+
+        --link: #8db4ec;
+        --scrim: rgb(0 0 0 / 0.7);
+        --navy: #8db4ec;
+        --navy-foreground: #0a1626;
+        --navy-soft: #1b2b45;
+        --ok: #5cc48f;
+        --ok-soft: #14301f;
+        --warn: #e5ae50;
+        --warn-soft: #33270f;
+        --bad: #f4837b;
+        --bad-soft: #3a1d1f;
+    }
 }
 
 /* A sheet of paper on screen (the Hospital settings preview): always the
  * light colours and the 12 px small text of the printout, in either theme. */
 .paper {
     --background: #ffffff;
-    --foreground: #16202e;
+    --foreground: #0f1e33;
     --card: #ffffff;
-    --card-foreground: #16202e;
-    --muted: #eef1f6;
-    --muted-foreground: #5b6678;
-    --border: #d6dce6;
+    --card-foreground: #0f1e33;
+    --muted: #eef4fb;
+    --muted-foreground: #566377;
+    --border: #d5deea;
+    --navy: #0b2545;
+    --navy-foreground: #ffffff;
+    --navy-soft: #eef4fb;
+    --ok: #1b6b45;
+    --ok-soft: #e3f3ea;
+    --warn: #8a5300;
+    --warn-soft: #fff1d6;
+    --bad: #b42318;
+    --bad-soft: #fdeae8;
     --text-xs: 0.75rem;
     --text-xs--line-height: calc(1 / 0.75);
     background: #ffffff;
-    color: #16202e;
+    color: #0f1e33;
 }
 
 @layer base {
@@ -226,6 +250,13 @@
     body {
         @apply bg-background text-foreground;
     }
+
+    /* Headings are navy (light blue on the dark theme). */
+    h1,
+    h2,
+    h3 {
+        color: var(--navy);
+    }
 }
 
 /* Print: always the light colours, whatever the screen theme. Page size and
@@ -234,52 +265,6 @@
     @page {
         size: A4 portrait;
         margin: 12mm;
-    }
-
-    :root.dark {
-        --page: #f3f5f8;
-        --background: #ffffff;
-        --foreground: #16202e;
-        --card: #ffffff;
-        --card-foreground: #16202e;
-        --popover: #ffffff;
-        --popover-foreground: #16202e;
-        --primary: #1b3a6b;
-        --primary-foreground: #ffffff;
-        --secondary: #eef1f6;
-        --secondary-foreground: #16202e;
-        --muted: #eef1f6;
-        --muted-foreground: #5b6678;
-        --accent: #e3eaf6;
-        --accent-foreground: #1b3a6b;
-        --destructive: #b3261e;
-        --destructive-foreground: #b3261e;
-        --border: #d6dce6;
-        --input: #d6dce6;
-        --ring: #3b6fd1;
-        --chart-1: oklch(0.646 0.222 41.116);
-        --chart-2: oklch(0.6 0.118 184.704);
-        --chart-3: oklch(0.398 0.07 227.392);
-        --chart-4: oklch(0.828 0.189 84.429);
-        --chart-5: oklch(0.769 0.188 70.08);
-        --radius: 0.5rem;
-        --sidebar: #ffffff;
-        --sidebar-foreground: #16202e;
-        --sidebar-primary: #1b3a6b;
-        --sidebar-primary-foreground: #ffffff;
-        --sidebar-accent: #e3eaf6;
-        --sidebar-accent-foreground: #1b3a6b;
-        --sidebar-border: #d6dce6;
-        --sidebar-ring: #3b6fd1;
-        --navy: #1b3a6b;
-        --navy-foreground: #ffffff;
-        --navy-soft: #e3eaf6;
-        --ok: #1f7a4d;
-        --ok-soft: #e1f2e9;
-        --warn: #9a5b00;
-        --warn-soft: #fbefd9;
-        --bad: #b3261e;
-        --bad-soft: #fbe4e2;
     }
 
     body {
@@ -294,9 +279,13 @@
 }
 
 /*
- * Report charts (ReportCharts, drawn on the server as SVG). Hover or keyboard
- * focus on a bar outlines it; its exact value is the bar's tooltip and is
- * already written beside it.
+ * Report charts (ReportCharts, drawn on the server as SVG). The drawing is
+ * always made with paper colours (screen, Print, PDF, Excel). On a dark screen
+ * only the neutral parts are recoloured here (background, text, grid, axis);
+ * the data colors (OPD, ER, Admission, Male, Female) never change, and every
+ * bar gets a thin light edge so the dark ER navy still shows on dark.
+ * Hover or keyboard focus on a bar outlines it; its exact value is the bar's
+ * tooltip and is already written beside it.
  */
 .rc-chart svg .rc-bar {
     outline: none;
@@ -311,4 +300,37 @@
 .rc-chart svg .rc-bar:focus-visible {
     outline: 2px solid var(--color-ring);
     outline-offset: 1px;
+}
+
+@media screen {
+    .dark .rc-chart svg .rc-bg {
+        fill: var(--card);
+    }
+
+    .dark .rc-chart svg .rc-ink {
+        fill: #e6ecf5;
+    }
+
+    .dark .rc-chart svg .rc-muted {
+        fill: #b4c0d2;
+    }
+
+    .dark .rc-chart svg .rc-grid {
+        stroke: #2a3a52;
+    }
+
+    .dark .rc-chart svg .rc-axis {
+        stroke: #8a99ae;
+    }
+
+    .dark .rc-chart svg rect:not(.rc-bg) {
+        stroke: #c3cede;
+        stroke-width: 0.8;
+    }
+
+    .dark .rc-chart svg .rc-bar:hover rect,
+    .dark .rc-chart svg .rc-bar:focus rect {
+        stroke: #ffffff;
+        stroke-width: 1.6;
+    }
 }

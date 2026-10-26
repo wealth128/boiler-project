@@ -945,3 +945,36 @@ it('shows no day by day rows in the daily census table on the screen, Print and 
 
     expect(array_column($table['rows'], 'cells'))->toBe([['All days', 2, 4, 1, 7]]);
 });
+
+it('draws every chart on white paper and tags only its neutral parts, so a dark screen can recolor them and Print, PDF and Excel stay light (Step 7f)', function () {
+    chartsSeed($this);
+
+    foreach (chartsAll(chartsResolved()) as [$page, $chart]) {
+        foreach (['svg', 'svg_narrow'] as $key) {
+            $svg = $chart[$key];
+
+            // The drawing carries its own white page and dark ink: that is what Print and the PDF show.
+            expect($svg)->toContain('fill="#FFFFFF" class="rc-bg"')
+                ->and($svg)->not->toContain('dark')
+                ->and($svg)->not->toContain('var(--');
+
+            // Every neutral text and line is tagged; a data color never is.
+            preg_match_all('/<text [^>]*fill="(#[0-9A-Fa-f]{6})"([^>]*)>/', $svg, $texts, PREG_SET_ORDER);
+
+            foreach ($texts as [, $color, $rest]) {
+                if (in_array($color, [ChartPalette::INK, ChartPalette::MUTED], true) && ! str_contains($rest, 'class=')) {
+                    // Only the share inside a colored bar is left untagged.
+                    expect($color)->toBe(ChartPalette::INK);
+                }
+            }
+
+            preg_match_all('/<line [^>]*stroke="(#[0-9A-Fa-f]{6})"[^>]*\/>/', $svg, $lines, PREG_SET_ORDER);
+
+            foreach ($lines as [$tag, $color]) {
+                if (in_array($color, [ChartPalette::GRID, ChartPalette::AXIS], true)) {
+                    expect($tag)->toContain('class="rc-');
+                }
+            }
+        }
+    }
+});
