@@ -168,6 +168,13 @@ class UsbCopyService
             $sources[$name] = (int) filesize($path);
         }
 
+        // The newest audit archive (older audit entries) travels with the backup. It is small, and optional.
+        $archive = AuditArchive::newest($folder);
+
+        if ($archive !== null) {
+            $sources[$archive] = (int) filesize($folder.DIRECTORY_SEPARATOR.$archive);
+        }
+
         $problem = $this->checker->dumpProblem($folder.DIRECTORY_SEPARATOR.$backup->file_name)
             ?? $this->checker->zipProblem($folder.DIRECTORY_SEPARATOR.$backup->zip_name);
 

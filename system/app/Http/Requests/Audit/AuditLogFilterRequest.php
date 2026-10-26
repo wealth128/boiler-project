@@ -4,6 +4,7 @@ namespace App\Http\Requests\Audit;
 
 use App\Enums\Permission;
 use App\Services\AuditActions;
+use App\Services\AuditPruner;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
@@ -60,12 +61,26 @@ class AuditLogFilterRequest extends FormRequest
         };
 
         return [
-            'from' => $this->dateFilter('from', now()->subMonthNoOverflow()->startOfMonth()->toDateString(), $bad),
+            'from' => $this->notOlderThanRetention($this->dateFilter('from', now()->subMonthNoOverflow()->startOfMonth()->toDateString(), $bad)),
             'to' => $this->dateFilter('to', now()->toDateString(), $bad),
             'user' => $text('user'),
             'action' => $text('action'),
             'record' => $text('record'),
         ];
+    }
+
+    /** The From date can never go back past the retention date: older entries are archived and removed. */
+    private function notOlderThanRetention(string $from): string
+    {
+        $oldest = self::retentionDate();
+
+        return $from !== '' && $from < $oldest ? $oldest : $from;
+    }
+
+    /** The oldest day the Audit log still holds, "2025-10-26". */
+    public static function retentionDate(): string
+    {
+        return AuditPruner::cutoff()->toDateString();
     }
 
     /**

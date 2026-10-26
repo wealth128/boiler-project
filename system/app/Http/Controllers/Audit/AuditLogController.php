@@ -39,6 +39,8 @@ class AuditLogController extends Controller
 
         return Inertia::render('audit/index', [
             'filters' => $filters,
+            // Entries older than this are archived and removed automatically.
+            'retention_from' => AuditLogFilterRequest::retentionDate(),
             'actions' => AuditActions::options(),
             // Every account, including deactivated ones and ones in Trash.
             'users' => User::withTrashed()->orderBy('username')->get(['id', 'username', 'name', 'deleted_at'])

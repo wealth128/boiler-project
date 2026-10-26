@@ -175,7 +175,19 @@ On reopen, the month's copy is discarded together with its frozen signature pict
 | subject_type / subject_id | varchar / bigint | What was changed (e.g. visits / 1532) |
 | changes | JSON, null | Old and new values for edits |
 | ip_address | varchar(45) | Which PC did it |
-| created_at | datetime | Never updated or deleted |
+| created_at | datetime | Never updated. Deleted only by the automatic 1-year clean-up (`census:prune-audit`), after the entry is written to an archive file |
+
+### audit_prune_runs
+One row per run of the audit log clean-up (Step 7e). Read by System health and the red Admin bar. No soft delete.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | bigint | |
+| started_at, finished_at | datetime | |
+| status | enum | `success` or `failed` |
+| rows_count | int | Entries archived and removed (0 = nothing was old enough) |
+| archive_name | varchar, null | `audit-archive_YYYY-MM-DD.csv.gz`, null when nothing was archived |
+| message | text, null | The error, for a failed run |
 
 ### backup_runs
 | Column | Type | Notes |

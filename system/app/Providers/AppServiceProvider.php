@@ -6,6 +6,7 @@ use App\Enums\Permission;
 use App\Http\Middleware\EndSessionAtDailyCutoff;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\AgeBracket;
+use App\Models\AuditPruneRun;
 use App\Models\BackupMark;
 use App\Models\BackupRun;
 use App\Models\Branch;
@@ -166,6 +167,7 @@ class AppServiceProvider extends ServiceProvider
             'report_snapshots' => ReportSnapshot::class,
             'backup_runs' => BackupRun::class,
             'backup_marks' => BackupMark::class,
+            'audit_prune_runs' => AuditPruneRun::class,
             'test_restore_runs' => TestRestoreRun::class,
             'settings' => Setting::class,
         ]);

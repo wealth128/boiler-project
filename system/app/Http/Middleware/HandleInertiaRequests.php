@@ -6,6 +6,7 @@ use App\Enums\Permission;
 use App\Enums\Role;
 use App\Models\Setting;
 use App\Models\User;
+use App\Services\AuditPruner;
 use App\Services\BackupMonitor;
 use App\Services\HospitalSettings;
 use App\Services\SchedulerHeartbeat;
@@ -56,11 +57,27 @@ class HandleInertiaRequests extends Middleware
             ],
             'hospital' => fn (): array => $this->hospital($request),
             // Backup warnings at the top of every page: Admin only.
-            'backupAlerts' => fn (): array => $request->user()?->role === Role::Admin ? app(BackupMonitor::class)->alerts() : [],
+            'backupAlerts' => fn (): array => $request->user()?->role === Role::Admin ? $this->adminAlerts() : [],
             // Red bar when the scheduler stopped (no backup, no 8 PM sign-out): Admin only.
             'schedulerAlert' => fn (): ?string => $request->user()?->role === Role::Admin ? app(SchedulerHeartbeat::class)->alert() : null,
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
+    }
+
+    /**
+     * Backup warnings plus the red bar when the audit log clean-up failed.
+     *
+     * @return list<array{level: string, message: string}>
+     */
+    private function adminAlerts(): array
+    {
+        $alerts = app(BackupMonitor::class)->alerts();
+
+        if ($message = app(AuditPruner::class)->alert()) {
+            $alerts[] = ['level' => 'error', 'message' => $message];
+        }
+
+        return $alerts;
     }
 
     /** The sign-in time with a random tail, so two sign-ins never share a value. */

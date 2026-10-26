@@ -261,6 +261,18 @@ If the template is missing on every PC and the system is down, use any spreadshe
 
 ---
 
-## 11. Still stuck
+## 11. Red bar: "Audit log clean-up failed: ..."
+
+The system archives audit entries older than 1 year to the backup folder (`audit-archive_YYYY-MM-DD.csv.gz`) before removing them. This bar means it could not write that file, so **nothing was removed** and no entry was lost.
+
+1. Read the reason after the colon. Usually the backup folder is not reachable (the second PC is off, the share name changed) or the disk is full.
+2. Fix the backup folder as in section 3 and free some disk space if needed.
+3. Wait for the next run at 04:30, or ask IT to run `php artisan census:prune-audit` on the server. When it works, the bar goes away and **System health > Audit log clean-up** says OK.
+
+The clean-up never runs while a backup or a test restore is running. It waits for the next night, which is not an error.
+
+---
+
+## 12. Still stuck
 
 Write down the exact message, the time, and what you clicked. Check `storage/logs/laravel-<date>.log` (no passwords are written there) and, for setup problems, `storage/logs/install.log`. Then tell the developer or hospital IT.

@@ -21,7 +21,7 @@ The system holds patient names, birthdates and diagnoses, so it is treated as se
 | Everyone signed out daily at 8:00 PM | Step 5 |
 | Every page checks the role on the server, twice (route group + controller/policy) | Step 4 onward |
 | Only one active Admin and one active System Admin; Admin account protected | Steps 5, 5b |
-| Every change written to the audit log, which can't be edited or deleted | Step 5 |
+| Every change written to the audit log, which can't be edited by hand. **Entries older than 1 year are archived to the backup folder (`audit-archive_*.csv.gz`) and then removed automatically, daily at 04:30, and only by that job (no route or button); a failed archive deletes nothing and shows a red Admin bar** | Step 5, 7e |
 | Delete goes to Trash first, with a reason; permanent delete needs the ID typed | Step 5 |
 | Daily backup at 02:00, kept 30 days, each run recorded | Step 5 |
 | Every backup also zips the picture files; a run succeeds only if both files were written | Step 6i-1 |
@@ -80,7 +80,7 @@ A full check of the finished system, by Claude Code and then by me:
 - Don't run the dev seeder. Set the first Admin and System Admin passwords on the server; both must change them at first login.
 - Session cookie: `http_only` and `same_site=lax` are fixed in the code (Step 7a); set `SESSION_SECURE_COOKIE=true` in `.env` if HTTPS is used (never on plain HTTP: nobody could log in). If HTTPS: the `Strict-Transport-Security` header is already sent automatically over HTTPS (7d-4, one year, this host only); switch to HTTPS only after it works on every office PC, because browsers remember the rule.
 
-**HTTPS decision:** on a closed LAN, plain HTTP still lets anyone on the same network read traffic, including passwords. Options: (a) HTTPS with a certificate from an internal certificate authority or a self-signed one installed on each office PC, or (b) accept HTTP on a separate, wired, staff-only network. Decide with the hospital IT/CO.
+**HTTPS decision (decided 2026-10-26: HTTPS, built in Step 7h, `planning/Prompts/prompt-7h-https.md`):** on a closed LAN, plain HTTP still lets anyone on the same network read traffic, including passwords. Options: (a) HTTPS with a certificate from an internal certificate authority or a self-signed one installed on each office PC, or (b) accept HTTP on a separate, wired, staff-only network. Decide with the hospital IT/CO.
 
 **MySQL**
 - Listens on `127.0.0.1` only (not reachable from other PCs).

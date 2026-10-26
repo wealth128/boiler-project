@@ -23,6 +23,8 @@ import type { Paged } from "@/types";
 
 type Props = {
     filters: AuditFilters;
+    /** The oldest day still kept (older entries are archived and removed). */
+    retention_from: string;
     actions: AuditActionGroup[];
     users: AuditUserOption[];
     entries: Paged<AuditEntry>;
@@ -60,6 +62,7 @@ function auditUrl(
  */
 export default function AuditIndex({
     filters,
+    retention_from,
     actions,
     users,
     entries,
@@ -154,6 +157,10 @@ export default function AuditIndex({
                 title="Audit log"
                 description="Who did what, and when. Read-only."
             />
+            <p className="-mt-3 text-sm text-muted-foreground">
+                Entries older than 1 year are removed automatically (archived
+                to the backup folder).
+            </p>
 
             <section className="rounded-lg border bg-card">
                 <div className="border-b px-4 py-3">
@@ -169,6 +176,7 @@ export default function AuditIndex({
                             id="audit-from"
                             type="date"
                             value={values.from}
+                            min={retention_from}
                             max={values.to || undefined}
                             onChange={(e) =>
                                 change({ from: e.target.value }, DATE_DELAY_MS)
@@ -181,7 +189,7 @@ export default function AuditIndex({
                             id="audit-to"
                             type="date"
                             value={values.to}
-                            min={values.from || undefined}
+                            min={values.from || retention_from}
                             onChange={(e) =>
                                 change({ to: e.target.value }, DATE_DELAY_MS)
                             }
