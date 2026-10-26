@@ -17,7 +17,7 @@ import { APP_NAV_GROUPS, APP_NAV_ITEMS } from "./nav-items";
 import type { AppNavItem } from "./nav-items";
 
 const linkClass =
-    "flex min-h-10 items-center rounded-md px-3 py-2 text-left text-sm font-medium whitespace-nowrap text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring";
+    "flex min-h-10 items-center rounded-md px-3 py-2 text-left text-sm font-medium whitespace-nowrap text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline-2 focus-visible:outline-sidebar-ring";
 
 const STORAGE_PREFIX = "nav-group:";
 
@@ -86,7 +86,7 @@ function NavGroup({ groupKey, label, items, isActive }: NavGroupProps) {
                     onClick={toggle}
                     aria-expanded={open}
                     aria-controls={linksId}
-                    className="flex w-full cursor-pointer items-center justify-between rounded-md px-3 pt-4 pb-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+                    className="flex w-full cursor-pointer items-center justify-between rounded-md px-3 pt-4 pb-1 text-xs font-semibold tracking-wide text-sidebar-muted uppercase hover:text-sidebar-foreground focus-visible:outline-2 focus-visible:outline-sidebar-ring"
                 >
                     {label}
                     {open ? (
@@ -112,7 +112,7 @@ function NavGroup({ groupKey, label, items, isActive }: NavGroupProps) {
                             className={cn(
                                 linkClass,
                                 active &&
-                                    "bg-navy-soft font-semibold text-navy hover:bg-navy-soft hover:text-navy",
+                                    "bg-sidebar-primary font-semibold text-sidebar-primary-foreground hover:bg-sidebar-primary hover:text-sidebar-primary-foreground",
                             )}
                         >
                             {item.title}
@@ -157,7 +157,7 @@ function NavContent() {
                 className={cn(
                     linkClass,
                     // A bordered red button, so it reads as clickable at a glance.
-                    "mt-4 cursor-pointer border border-bad font-semibold text-bad hover:bg-bad-soft hover:text-bad lg:mt-auto",
+                    "mt-4 cursor-pointer border border-sidebar-bad font-semibold text-sidebar-bad hover:bg-sidebar-accent hover:text-sidebar-bad lg:mt-auto",
                 )}
                 data-test="logout-button"
             >
@@ -176,7 +176,7 @@ export function AppSideNav() {
     return (
         <nav
             aria-label="Main"
-            className="hidden w-52 shrink-0 flex-col gap-0.5 border-r bg-card px-2 py-3 lg:flex print:hidden"
+            className="hidden w-52 shrink-0 flex-col gap-0.5 border-r border-sidebar-border bg-sidebar px-2 py-3 text-sidebar-foreground lg:flex print:hidden"
         >
             <NavContent />
         </nav>
@@ -216,7 +216,7 @@ export function MobileMenu() {
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="size-10 text-navy-foreground hover:bg-white/15 hover:text-navy-foreground lg:hidden print:hidden"
+                    className="size-10 text-bar-foreground hover:bg-sidebar-accent hover:text-bar-foreground lg:hidden print:hidden"
                     aria-label="Open menu"
                     data-test="menu-button"
                 >
@@ -225,9 +225,9 @@ export function MobileMenu() {
             </SheetTrigger>
             <SheetContent
                 side="left"
-                className="w-72 max-w-[85vw] gap-0 overflow-y-auto bg-card p-0 lg:hidden"
+                className="w-72 max-w-[85vw] gap-0 overflow-y-auto border-sidebar-border bg-sidebar p-0 text-sidebar-foreground lg:hidden"
             >
-                <SheetTitle className="border-b px-4 py-3 text-base">
+                <SheetTitle className="border-b border-sidebar-border px-4 py-3 text-base text-sidebar-foreground">
                     Menu
                 </SheetTitle>
                 <SheetDescription className="sr-only">

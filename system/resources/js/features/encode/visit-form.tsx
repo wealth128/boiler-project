@@ -398,7 +398,7 @@ export function VisitForm({
                         type="button"
                         variant="outline"
                         size="sm"
-                        className="ml-auto border-bad bg-bad-soft font-semibold text-bad hover:bg-bad hover:text-white dark:border-bad dark:bg-bad-soft dark:hover:bg-bad dark:hover:text-background"
+                        className="ml-auto border-bad bg-bad-soft font-semibold text-bad hover:bg-bad hover:text-background"
                         onClick={startOver}
                     >
                         <X aria-hidden="true" />

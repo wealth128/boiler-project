@@ -184,7 +184,7 @@ export default function RecordsPatients({
                     caption="Patients"
                     empty={<EmptyState message="No patients match." />}
                     rowClassName={(patient) =>
-                        patient.id === trashing?.id ? "bg-bad-soft" : undefined
+                        patient.id === trashing?.id ? "bg-bad-soft!" : undefined
                     }
                     rowDetail={(patient) =>
                         patient.id === trashing?.id ? (

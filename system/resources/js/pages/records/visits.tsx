@@ -392,7 +392,7 @@ export default function RecordsVisits({
                         <EmptyState message="No visits match these filters." />
                     }
                     rowClassName={(visit) =>
-                        visit.id === trashing?.id ? "bg-bad-soft" : undefined
+                        visit.id === trashing?.id ? "bg-bad-soft!" : undefined
                     }
                     rowDetail={(visit) =>
                         visit.id === trashing?.id ? (

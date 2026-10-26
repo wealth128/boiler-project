@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" @class(['dark' => ($appearance ?? 'system') == 'dark'])>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" @class(['dark' => ($appearance ?? 'light') == 'dark']) style="color-scheme: {{ ($appearance ?? 'light') == 'dark' ? 'dark' : 'light' }}">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,13 +7,14 @@
         {{-- Inline script to detect system dark mode preference and apply it immediately --}}
         <script nonce="{{ Vite::cspNonce() }}">
             (function() {
-                const appearance = '{{ $appearance ?? "system" }}';
+                const appearance = '{{ $appearance ?? "light" }}';
 
                 if (appearance === 'system') {
                     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
                     if (prefersDark) {
                         document.documentElement.classList.add('dark');
+                        document.documentElement.style.colorScheme = 'dark';
                     }
                 }
             })();
@@ -22,11 +23,11 @@
         {{-- Inline style to set the HTML background color based on our theme in app.css --}}
         <style>
             html {
-                background-color: #f3f5f8;
+                background-color: #ffffff;
             }
 
             html.dark {
-                background-color: #0f141c;
+                background-color: #0b111b;
             }
         </style>
 

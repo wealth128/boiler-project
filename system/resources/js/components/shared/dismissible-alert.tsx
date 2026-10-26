@@ -74,7 +74,7 @@ export function DismissibleAlert({
                 <button
                     type="button"
                     aria-label="Close this warning"
-                    className="-my-0.5 -mr-1 shrink-0 rounded p-1 hover:bg-black/5 focus-visible:ring-2 focus-visible:ring-current focus-visible:outline-none dark:hover:bg-white/10"
+                    className="-my-0.5 -mr-1 shrink-0 rounded p-1 hover:bg-current/10 focus-visible:ring-2 focus-visible:ring-current focus-visible:outline-none"
                     onClick={() => {
                         writeDismissal(userId, message, loginAt);
                         setHidden(true);

@@ -75,6 +75,17 @@ See `docs/troubleshooting.md`, section 9: every message and what to do. The oper
 
 ## All users
 
+### Light or dark screen (all users)
+
+The system opens **Light** (white pages, navy bar and menu, blue links) the first time. To change it:
+
+- **Quick switch.** Click the **sun / moon button** at the right end of the blue bar. The moon changes the screen to Dark; the sun changes it back to Light.
+- **Settings > Appearance.** Choose **Light**, **Dark** or **System**. System follows the setting of the PC: dark when the PC is dark, light when it is light.
+
+The choice is remembered by the **browser on that PC**, so the next page opens in the same theme without a white flash. It is not tied to your account: if two people share one PC and one browser, they share the choice. A different browser or PC starts at Light.
+
+**Paper is always light.** Print, PDF and Excel, the print view of a report, and the A4 preview in Hospital settings look the same in both themes. Report charts keep the same colors (OPD, ER, Admission, Male, Female) on the dark screen; only their background, text and lines change so they stay readable.
+
 ### Using the system on a phone, a tablet or a laptop
 
 Every screen fits the screen it is opened on. Nothing makes the whole page slide sideways.
