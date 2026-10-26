@@ -23,3 +23,18 @@
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
 </IfModule>
+
+# Built scripts, styles and fonts (public/build/assets). Their file names change with
+# every build, so a browser keeps them for a year and never asks for them again; an
+# update gives new names. (Step 7g, docs/operations-guide.md "Speed settings".)
+<IfModule mod_headers.c>
+    <If "%{REQUEST_URI} =~ m#^/build/assets/#">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </If>
+</IfModule>
+
+# Scripts, styles and drawings are sent compressed (about a quarter of the size).
+# Pages and data are not: they hold the sign-in token, and compressing them is unsafe over HTTPS.
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/css text/javascript application/javascript image/svg+xml
+</IfModule>

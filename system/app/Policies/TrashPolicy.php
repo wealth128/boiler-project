@@ -174,12 +174,30 @@ class TrashPolicy
         }
 
         return match (true) {
-            $item instanceof Patient && $item->visits()->withTrashed()->exists() => Response::deny("This patient still has visits, so the record can't be deleted permanently."),
-            $item instanceof Diagnosis && $item->visits()->withTrashed()->exists() => Response::deny("This diagnosis is used by visits, so it can't be deleted permanently."),
-            $item instanceof Rank && $item->visits()->withTrashed()->exists() => Response::deny("This rank is used by visits, so it can't be deleted permanently."),
-            $item instanceof User && ($item->encodedVisits()->withTrashed()->exists() || $item->auditLogs()->exists()) => Response::deny("This account has visits or audit log entries, so it can't be deleted permanently."),
+            $item instanceof Patient && self::stillUsed($item, self::HAS_VISITS, fn (): bool => $item->visits()->withTrashed()->exists()) => Response::deny("This patient still has visits, so the record can't be deleted permanently."),
+            $item instanceof Diagnosis && self::stillUsed($item, self::HAS_VISITS, fn (): bool => $item->visits()->withTrashed()->exists()) => Response::deny("This diagnosis is used by visits, so it can't be deleted permanently."),
+            $item instanceof Rank && self::stillUsed($item, self::HAS_VISITS, fn (): bool => $item->visits()->withTrashed()->exists()) => Response::deny("This rank is used by visits, so it can't be deleted permanently."),
+            $item instanceof User && (self::stillUsed($item, self::HAS_VISITS, fn (): bool => $item->encodedVisits()->withTrashed()->exists()) || self::stillUsed($item, self::HAS_AUDIT, fn (): bool => $item->auditLogs()->exists())) => Response::deny("This account has visits or audit log entries, so it can't be deleted permanently."),
             default => Response::allow(),
         };
+    }
+
+    /** Attribute names TrashRows loads for a whole page of Trash (withExists), so these checks need no query per row. */
+    public const HAS_VISITS = 'trash_has_visits';
+
+    public const HAS_AUDIT = 'trash_has_audit';
+
+    /**
+     * Whether a record in Trash is still used: from the answer TrashRows loaded
+     * for the whole page when it is there, otherwise asked now.
+     *
+     * @param  callable(): bool  $ask
+     */
+    private static function stillUsed(Model $item, string $loaded, callable $ask): bool
+    {
+        $attributes = $item->getAttributes();
+
+        return array_key_exists($loaded, $attributes) ? (bool) $attributes[$loaded] : $ask();
     }
 
     private static function manages(User $actor): bool

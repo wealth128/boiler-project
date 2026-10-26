@@ -7,6 +7,7 @@ use App\Enums\Permission;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Models\Diagnosis;
+use App\Models\MonthClosure;
 use App\Models\Patient;
 use App\Models\Rank;
 use App\Models\User;
@@ -121,13 +122,16 @@ class EncodeController extends Controller
     {
         $gate = Gate::forUser($user);
 
-        return Visit::query()
+        $visits = Visit::query()
             ->where('encoded_by', $user->id)
             ->whereBetween('visited_at', [now()->startOfDay(), now()->endOfDay()])
             ->with(['patient', 'diagnosis'])
             ->orderByDesc('visited_at')
             ->orderByDesc('id')
-            ->get()
+            ->get();
+
+        // "Can edit?" asks whether the month is closed: read the closed months once, not once per row.
+        return MonthClosure::remembering(fn (): array => $visits
             ->map(fn (Visit $visit): array => [
                 'id' => $visit->id,
                 'visit_no' => $visit->visit_no,
@@ -140,7 +144,7 @@ class EncodeController extends Controller
                 'can_edit' => $gate->allows('update', $visit),
             ])
             ->values()
-            ->all();
+            ->all());
     }
 
     /**

@@ -235,8 +235,11 @@ abstract class ReportSheetExport extends DefaultValueBinder implements FromArray
             $sheet->getStyle(implode(',', $ranges))->applyFromArray($this->style($look));
         }
 
+        // The other cells of a merged range are always empty here (a title, note or name
+        // sits in its first cell), so there is nothing to blank out: "hide" skips that walk
+        // over the range and writes the same file.
         foreach ($this->merges as $range) {
-            $sheet->mergeCells($range);
+            $sheet->mergeCells($range, Worksheet::MERGE_CELL_CONTENT_HIDE);
         }
 
         foreach ($this->heights as $row => $height) {

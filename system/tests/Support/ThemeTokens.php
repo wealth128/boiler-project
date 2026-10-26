@@ -13,10 +13,11 @@ final class ThemeTokens
     /** @return array<string, string> name (no dashes prefix) => hex, for 'light' or 'dark' */
     public static function for(string $theme): array
     {
-        $css = file_get_contents(resource_path('css/app.css'));
+        // Windows or Unix line endings, whichever way git checked the file out.
+        $css = str_replace("\r\n", "\n", (string) file_get_contents(resource_path('css/app.css')));
 
         $light = self::block($css, ':root {');
-        $dark = self::block($css, '@media screen {'.PHP_EOL.'    .dark {');
+        $dark = self::block($css, "@media screen {\n    .dark {");
 
         return $theme === 'light' ? $light : [...$light, ...$dark];
     }

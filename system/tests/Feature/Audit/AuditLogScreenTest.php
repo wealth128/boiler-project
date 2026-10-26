@@ -432,6 +432,7 @@ it('does not run a query per row', function () {
     };
 
     $add(3);
+    $queries(); // The first page also fills the one-minute caches of the shared props (Step 7g).
     $few = $queries();
     $add(40);
 

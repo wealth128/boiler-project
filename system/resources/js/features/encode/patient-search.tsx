@@ -8,7 +8,7 @@ import type { PatientMatch } from './types';
 
 /** Same as PatientSearchController::MIN_LENGTH. */
 const MIN_LENGTH = 2;
-const DEBOUNCE_MS = 200;
+const DEBOUNCE_MS = 250;
 
 type PatientSearchProps = {
     query: string;

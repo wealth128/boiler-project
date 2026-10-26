@@ -1,6 +1,6 @@
 # Troubleshooting
 
-_Last updated: 2026-10-23 · For the developer and for hospital IT. Each problem says what you see, why it happens, and what to type._
+_Last updated: 2026-10-26 (Step 7g) · For the developer and for hospital IT. Each problem says what you see, why it happens, and what to type._
 
 Run commands in the `system` folder. On the hospital server, use the same commands there. A quick overall check, any time:
 
@@ -245,7 +245,7 @@ If the template is missing on every PC and the system is down, use any spreadshe
 
 ## 10. Report files (PDF, Excel, Print) are slow, or a chart looks wrong
 
-**Normal times** on the server PC with a year of busy ER data (about 60 visits a day): a month's PDF about 2 seconds, its Excel file under 1 second, a year's PDF under 4 seconds. The button says **Preparing the file…** while it works and cannot be clicked twice.
+**Normal times** with a year of busy ER data (about 60 visits a day), measured in production mode on the developer's PC (Step 7g): a month's Excel file about 0.3 seconds, its PDF (every tab, about 23 pages) about 1.2 seconds, a year's PDF about 1.6 seconds. Most of a PDF's time is the PDF library laying out the pages. The button says **Preparing the file…** while it works and cannot be clicked twice.
 
 **A period you just looked at is not counted again.** The figures of an open period are kept for up to one hour, and thrown away as soon as any visit, patient, list or month changes (the system keeps one "data changed" number that every change made in the system raises; a change made by hand in MySQL, outside the system, is not noticed until the hour is over). Nothing to clear. To force a fresh count, change nothing and wait an hour, or run `php artisan cache:clear`.
 
@@ -254,6 +254,7 @@ If the template is missing on every PC and the system is down, use any spreadshe
 2. Check the MySQL version in **System health**. The report needs MySQL 8 (it uses one query for each patient's latest visit). With MySQL 5.7 the report stops with a database error.
 3. Antivirus scanning of `storage` can double the time of a PDF. Ask IT to exclude the `system\storage` folder.
 4. Right after a very large load of visits (for example a bulk import of a whole year), the first report can take much longer, because MySQL has not yet gathered fresh statistics about the table. Ask IT to run `ANALYZE TABLE visits, patients;` once (or just wait a few minutes). Reports are normal after that.
+5. Every page is slow too: see section 12.
 
 **A chart is missing.** On a category tab, a chart appears only with its table. A category with no patients shows "No visits encoded for ... in this period." instead of tables and charts. A period with nothing to chart says **No visits in this period**. The **This period vs previous** chart is left out for a period that starts in January 2026 or earlier, because nothing was encoded before.
 
@@ -273,6 +274,16 @@ The clean-up never runs while a backup or a test restore is running. It waits fo
 
 ---
 
-## 12. Still stuck
+## 12. Every page is slow
+
+**Normal times** on the server (production mode): an ordinary page answers in well under 0.3 seconds, the patient search in under 0.1 seconds, a month's report in under 0.3 seconds (the first time) and a year's in about 1.3 seconds.
+
+1. Open **System health** and look at **Speed settings**. If it is not OK, do what its line says ([operations guide](operations-guide.md), section 11: OPcache, `php artisan optimize`, `APP_DEBUG=false`, `LOG_LEVEL=warning`).
+2. Set the server's Windows power plan to **High performance**. On "Balanced", Windows moves background programs (the web server is one) to the slow power-saving cores of newer processors, and every page gets 2 to 4 times slower.
+3. On a **developer PC** in dev mode (`composer run dev`), pages are 2 to 5 times slower than on the server: no caches, debug on, the Vite development server, and Windows power throttling of the background `php` window. That is expected; measure speed with the steps in `docs/developer-guide.md` ("Performance"), not by feel.
+
+---
+
+## 13. Still stuck
 
 Write down the exact message, the time, and what you clicked. Check `storage/logs/laravel-<date>.log` (no passwords are written there) and, for setup problems, `storage/logs/install.log`. Then tell the developer or hospital IT.

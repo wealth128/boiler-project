@@ -410,7 +410,22 @@ it('checks PHP, the extensions, the folders and the upload limits', function () 
         ->toContain('PHP extension mbstring')->toContain('PHP extension pdo_mysql')
         ->toContain('PHP extension fileinfo')->toContain('PHP extension openssl')
         ->toContain('storage')->toContain('bootstrap/cache')
-        ->toContain('upload_max_filesize')->toContain('post_max_size');
+        ->toContain('upload_max_filesize')->toContain('post_max_size')
+        ->toContain('OPcache is on');
+});
+
+it('flags OPcache that is off (Step 7g)', function () {
+    $off = new class extends InstallRequirements
+    {
+        protected function ini(string $key): string
+        {
+            return $key === 'opcache.enable' ? '0' : '8M';
+        }
+    };
+
+    $line = collect($off->results())->firstWhere('label', 'OPcache is on (opcache.enable)');
+
+    expect($line['ok'])->toBeFalse()->and($line['fix'])->toContain('docs/requirements.md');
 });
 
 it('flags a PHP that is too old and upload limits under 2M', function () {

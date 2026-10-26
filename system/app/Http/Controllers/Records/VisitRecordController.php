@@ -53,10 +53,8 @@ class VisitRecordController extends Controller
 
         RecordSearch::visits($query, $filters['q']);
 
-        $page = $query
-            ->orderByDesc('visited_at')
-            ->orderByDesc('id')
-            ->paginate(TablePaging::perPage($request))
+        // Ids first, then the rows of the page (TablePaging::paginate), so a late page stays fast.
+        $page = TablePaging::paginate($query->orderByDesc('visited_at')->orderByDesc('id'), $request)
             ->withQueryString();
 
         if ($redirect = TablePaging::redirectPastLastPage($request, $page)) {

@@ -81,10 +81,17 @@ class PatientSearchController extends Controller
             return;
         }
 
-        $prefix = addcslashes(preg_replace('/\s+/', ' ', $query), '\\%_').'%';
+        $typed = (string) preg_replace('/\s+/', ' ', $query);
+        $prefix = addcslashes($typed, '\\%_').'%';
 
-        $where->where('last_name', 'like', $prefix)
-            ->orWhereRaw("CONCAT(last_name, ' ', first_name) LIKE ?", [$prefix])
-            ->orWhereRaw("CONCAT(last_name, ', ', first_name) LIKE ?", [$prefix]);
+        // Every match begins with the last name, so the last name begins with what was
+        // typed up to its first space or comma ("santos" for "santos ma" or "santos, ma").
+        // Saying so changes no result, but lets MySQL read only that part of the name index.
+        $lastNameStart = addcslashes(preg_split('/[ ,]/', $typed, 2)[0], '\\%_').'%';
+
+        $where->where('last_name', 'like', $lastNameStart)
+            ->where(fn (Builder $name) => $name->where('last_name', 'like', $prefix)
+                ->orWhereRaw("CONCAT(last_name, ' ', first_name) LIKE ?", [$prefix])
+                ->orWhereRaw("CONCAT(last_name, ', ', first_name) LIKE ?", [$prefix]));
     }
 }

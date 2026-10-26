@@ -40,11 +40,8 @@ class PatientRecordController extends Controller
         $query = Patient::query()->withCount('visits');
         RecordSearch::patients($query, $q);
 
-        $page = $query
-            ->orderBy('last_name')
-            ->orderBy('first_name')
-            ->orderBy('id')
-            ->paginate(TablePaging::perPage($request))
+        // Ids first, then the rows of the page with their visit counts (TablePaging::paginate).
+        $page = TablePaging::paginate($query->orderBy('last_name')->orderBy('first_name')->orderBy('id'), $request)
             ->withQueryString();
 
         if ($redirect = TablePaging::redirectPastLastPage($request, $page)) {

@@ -98,7 +98,7 @@ It stops, changes nothing, and says what to do for each line that says **FIX**.
 | PHP is the Thread Safe build | Apache cannot use the Non Thread Safe build. Use the Thread Safe zip. |
 | Port 80 is free | Stop the program that uses it. The message names it. |
 
-The next lines come from `php artisan census:install`, which runs right after: the seven PHP extensions, the writable folders, the upload limits (2 MB or more) and that MySQL can be reached. Each one also says FIX with one line on what to do.
+The next lines come from `php artisan census:install`, which runs right after: the seven PHP extensions, OPcache, the writable folders, the upload limits (2 MB or more) and that MySQL can be reached. Each one also says FIX with one line on what to do.
 
 The Visual C++ check reads the Windows registry. If `php.exe` does not start at all and the registry says it is installed, `install.bat` says so and asks you to choose another PHP in Laragon.
 
@@ -111,6 +111,26 @@ Do this only if Laragon's own PHP is older than 8.4.1.
 3. In Laragon: Menu, PHP, Version. Choose the new folder.
 4. Laragon makes its `php.ini` from the template. Open Menu, PHP, Extensions and tick the seven extensions in step 5 above.
 5. Run `install.bat`. It uses the newest `php-*` folder in `C:\laragon\bin\php`. If Apache still points to another version, it warns you and tells you to choose the right one in Laragon.
+
+### OPcache (php.ini)
+
+OPcache keeps the compiled PHP files in memory, so the system does not read and compile about 1,500 files on every click. `census:install` shows **OPcache is on** as FIX when it is off, and **System health > Speed settings** shows a Warning. Open Laragon's `php.ini` (Menu, PHP, php.ini) and make sure these lines are there. With PHP 8.4 the line `zend_extension=opcache` must have no `;` in front of it; PHP 8.5 and newer have OPcache built in, so that line is not needed.
+
+```ini
+[opcache]
+opcache.enable=1
+opcache.enable_cli=0
+opcache.memory_consumption=128
+opcache.interned_strings_buffer=16
+opcache.max_accelerated_files=20000
+opcache.validate_timestamps=1
+opcache.revalidate_freq=2
+opcache.save_comments=1
+```
+
+Then restart the web server (the **CensusApache** service, or restart the PC). Keep `validate_timestamps=1`: after an update the new files are used within 2 seconds, with no restart. Keep `opcache.save_comments=1`: some libraries read the comments of the code. After `php artisan optimize` (done by `install.bat` and `update.bat`) the server is in its fastest setting; see section 11 of the operations guide.
+
+**Power plan:** set Windows to **High performance** (Settings, System, Power). On "Balanced", Windows moves background programs such as the web server to the slow power-saving cores of newer processors, which made pages 2 to 4 times slower on the developer's laptop.
 
 ---
 

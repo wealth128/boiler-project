@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Setting;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
@@ -87,6 +88,36 @@ class HospitalSettings
         return $changed;
     }
 
+    /** Cache key of shared(); forgotten whenever a setting is saved (Setting model). */
+    public const SHARED_KEY = 'hospital-shared';
+
+    /**
+     * What every page needs for the top bar and the login screen: the hospital
+     * name, the subtitle and the logo's version (the file's time, or null when
+     * no logo is set). Remembered for 60 seconds, because it runs on every page;
+     * saving any setting or picture forgets it at once.
+     *
+     * @return array{name: string, subtitle: string, logo_version: int|null}
+     */
+    public function shared(): array
+    {
+        return Cache::remember(self::SHARED_KEY, 60, function (): array {
+            $values = Setting::query()->whereIn('key', ['hospital_name', 'hospital_subtitle'])->pluck('value', 'key');
+            $logo = $this->imageFile('logo');
+
+            return [
+                'name' => $values->get('hospital_name') ?: self::DEFAULT_NAME,
+                'subtitle' => $values->get('hospital_subtitle') ?: '',
+                'logo_version' => $logo === null ? null : Storage::disk('local')->lastModified($logo),
+            ];
+        });
+    }
+
+    public static function forgetShared(): void
+    {
+        Cache::forget(self::SHARED_KEY);
+    }
+
     private function defaultOf(string $key): string
     {
         return self::DEFAULTS[$key] ?? ($key === 'hospital_name' ? self::DEFAULT_NAME : '');
@@ -147,13 +178,22 @@ class HospitalSettings
             return null;
         }
 
-        $bytes = Storage::disk('local')->get($file);
-
-        if ($maxHeight !== null) {
-            $bytes = $this->shrunk($bytes, $maxHeight) ?? $bytes;
+        if ($maxHeight === null) {
+            return 'data:'.$this->imageMime($file).';base64,'.base64_encode((string) Storage::disk('local')->get($file));
         }
 
-        return 'data:'.$this->imageMime($file).';base64,'.base64_encode($bytes);
+        // The smaller copy is made once and remembered until the picture changes (its
+        // time and size are in the key), not again on every PDF.
+        $disk = Storage::disk('local');
+        $key = sprintf('picture-small:%s:%d:%d:%d', $file, $disk->lastModified($file), $disk->size($file), $maxHeight);
+
+        $encoded = Cache::remember($key, 86400, function () use ($disk, $file, $maxHeight): string {
+            $bytes = (string) $disk->get($file);
+
+            return base64_encode($this->shrunk($bytes, $maxHeight) ?? $bytes);
+        });
+
+        return 'data:'.$this->imageMime($file).';base64,'.$encoded;
     }
 
     /** The picture no taller than $maxHeight pixels, in the same format (PNG keeps transparency), or null when it is small enough or cannot be read. */

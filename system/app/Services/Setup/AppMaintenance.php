@@ -36,7 +36,8 @@ class AppMaintenance
     }
 
     /**
-     * config:cache, route:cache and view:cache in a fresh process.
+     * config:cache, route:cache, view:cache and event:cache in a fresh process
+     * (the caches that make every page faster: docs/operations-guide.md, "Speed settings").
      *
      * @param  list<string>  $envKeys  Names in .env. They are removed from the new
      *                                 process's environment so it reads the file.
@@ -45,7 +46,7 @@ class AppMaintenance
     {
         $environment = array_fill_keys($envKeys, false);
 
-        foreach (['config:cache', 'route:cache', 'view:cache'] as $command) {
+        foreach (['config:cache', 'route:cache', 'view:cache', 'event:cache'] as $command) {
             $result = Process::path(base_path())
                 ->timeout(300)
                 ->env($environment)

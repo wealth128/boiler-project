@@ -42,7 +42,7 @@ afterEach(function () {
 
 /**
  * A server with a few Problems (no database, no backup) and Warnings (low
- * disk space, no USB copy) among the 16 checks.
+ * disk space, no USB copy) among the 17 checks.
  */
 function unhealthyChecker(object $test): void
 {
@@ -144,14 +144,14 @@ it('pages the checks 10 at a time and keeps the counts on every page', function 
             ->has('checks.data', 10)
             ->where('checks.meta', [
                 'current_page' => 1, 'last_page' => 2, 'per_page' => 10,
-                'total' => 16, 'from' => 1, 'to' => 10, 'pages' => [1, 2],
+                'total' => 17, 'from' => 1, 'to' => 10, 'pages' => [1, 2],
             ])
             ->where('counts', $counts)
             ->etc());
 
     $this->get('/system/health?page=2')
         ->assertInertia(fn (Assert $page) => $page
-            ->has('checks.data', 6)
+            ->has('checks.data', 7)
             ->where('checks.meta.current_page', 2)
             ->where('counts', $counts)
             ->etc());
@@ -183,7 +183,7 @@ it('shows every check for an unknown filter', function (mixed $odd) {
 
     $this->actingAs(userWithRole('admin'))->get('/system/health?'.http_build_query(['status' => $odd]))
         ->assertOk()
-        ->assertInertia(fn (Assert $page) => $page->where('filter', 'all')->where('checks.meta.total', 16)->etc());
+        ->assertInertia(fn (Assert $page) => $page->where('filter', 'all')->where('checks.meta.total', 17)->etc());
 })->with([
     'unknown word' => ['bogus'],
     'empty' => [''],

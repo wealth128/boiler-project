@@ -1,7 +1,7 @@
 <?php
 
-use App\Enums\BackupStatus;
 use App\Enums\BackupMarkType;
+use App\Enums\BackupStatus;
 use App\Models\AuditPruneRun;
 use App\Models\BackupMark;
 use App\Models\BackupRun;
@@ -107,6 +107,11 @@ function healthyServer(object $test, array $fake = []): void
         {
             return $this->fake['storage_writable'];
         }
+
+        protected function speedFindings(): array
+        {
+            return $this->fake['speed'] ?? ['problems' => [], 'warnings' => []];
+        }
     });
 }
 
@@ -165,14 +170,15 @@ it('lists every check with a result and one "what to do" line', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->component('system/health')
             ->where('overall', 'ok')
-            ->has('checks.data', 16)
-            ->where('counts', ['problem' => 0, 'warning' => 0, 'ok' => 16, 'total' => 16])
+            ->has('checks.data', 17)
+            ->where('counts', ['problem' => 0, 'warning' => 0, 'ok' => 17, 'total' => 17])
             ->where('checks.data.0.key', 'database')
             ->where('checks.data.0.status', 'ok')
-            ->where('checks.data.10.key', 'mysql_client')
-            ->where('checks.data.14.key', 'audit_cleanup')
-            ->where('checks.data.15.key', 'version')
-            ->where('checks.data.15.detail', '1.2.3.')
+            ->where('checks.data.7.key', 'speed')
+            ->where('checks.data.11.key', 'mysql_client')
+            ->where('checks.data.15.key', 'audit_cleanup')
+            ->where('checks.data.16.key', 'version')
+            ->where('checks.data.16.detail', '1.2.3.')
             ->has('checks.data.0.todo'));
 });
 

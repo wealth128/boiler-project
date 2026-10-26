@@ -29,8 +29,8 @@ class AuditLogController extends Controller
 
         $filters = $request->filters();
 
-        $page = AuditRows::query($filters)
-            ->paginate(TablePaging::perPage($request))
+        // Ids first, then the entries of the page (TablePaging::paginate), so a late page stays fast.
+        $page = TablePaging::paginate(AuditRows::query($filters), $request)
             ->withQueryString();
 
         if ($redirect = TablePaging::redirectPastLastPage($request, $page)) {
